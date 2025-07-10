@@ -1,0 +1,3644 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>隨機單字測驗</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Baloo 2', cursive;
+            background-color: #a7e6ff; /* Light sky blue */
+            position: relative;
+        }
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.9;
+            filter: blur(2px);
+            animation: moveClouds 25s linear infinite;
+        }
+        .cloud:before, .cloud:after {
+            content: '';
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+        }
+        .cloud1 { width: 100px; height: 100px; top: 10%; left: -150px; }
+        .cloud1:before { width: 60px; height: 60px; top: -30px; left: 20px; }
+        .cloud1:after { width: 80px; height: 80px; top: -10px; right: 10px; }
+        
+        .cloud2 { width: 150px; height: 150px; top: 30%; left: -200px; animation-duration: 35s; }
+        .cloud2:before { width: 90px; height: 90px; top: -50px; left: 30px; }
+        .cloud2:after { width: 120px; height: 120px; top: -20px; right: 20px; }
+
+        .cloud3 { width: 80px; height: 80px; top: 70%; left: -120px; animation-duration: 20s; }
+        .cloud3:before { width: 50px; height: 50px; top: -25px; left: 15px; }
+        .cloud3:after { width: 60px; height: 60px; top: -10px; right: 10px; }
+
+        @keyframes moveClouds {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(calc(100vw + 200px)); }
+        }
+
+        .card {
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .card.is-flipped {
+            transform: rotateY(180deg);
+        }
+        .card-face {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border: 5px solid white;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15), inset 0 0 10px rgba(255,255,255,0.5);
+        }
+        .card-face-back {
+            transform: rotateY(180deg);
+        }
+        .perspective-1000 {
+            perspective: 1500px;
+        }
+        
+        .custom-choice input:checked + div {
+            background-color: #34d399; /* emerald-400 */
+            border-color: white;
+            transform: scale(1.05);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .custom-choice input:checked + div span {
+            color: white;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.1);
+        }
+        .custom-choice input:checked + div .icon-container {
+            background-color: white;
+        }
+        .custom-choice input:checked + div .selection-icon {
+            transform: scale(1);
+            opacity: 1;
+            color: #10b981; /* emerald-500 */
+        }
+        .custom-choice .selection-icon {
+            transform: scale(0);
+            opacity: 0;
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .btn-bouncy {
+            transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+        }
+        .btn-bouncy:hover {
+            transform: translateY(-4px) scale(1.02);
+        }
+        .btn-bouncy:active {
+            transform: translateY(2px) scale(0.98);
+        }
+    </style>
+</head>
+<body class="bg-sky-200">
+    <div class="cloud cloud1"></div>
+    <div class="cloud cloud2"></div>
+    <div class="cloud cloud3"></div>
+    
+    <div class="relative container mx-auto p-4 md:p-6 max-w-4xl w-full flex items-center justify-center min-h-screen">
+        <div class="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl p-6 md:p-8 border-4 border-white w-full">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-center text-sky-600 mb-8" style="text-shadow: 2px 2px 0 white;">隨機單字測驗</h1>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Left Column -->
+                <div class="md:col-span-1 flex flex-col gap-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-700 mb-4 text-center md:text-left">選擇單字庫</h2>
+                        <div id="word-lists-container" class="grid grid-cols-1 gap-3 max-h-48 md:max-h-64 overflow-y-auto pr-3"></div>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-700 mb-4 text-center md:text-left">選擇模式</h2>
+                        <div id="quiz-mode-container" class="flex flex-col space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="md:col-span-2 flex flex-col">
+                    <div id="quiz-area" class="mb-8 flex-grow">
+                        <div class="perspective-1000 relative h-full">
+                             <div id="timer-display" class="absolute top-4 left-1/2 -translate-x-1/2 bg-black/40 text-white text-3xl font-bold rounded-full w-16 h-16 flex items-center justify-center z-10 hidden transition-opacity duration-300"></div>
+                            <div id="card" class="card relative w-full h-52 md:h-full">
+                                <div id="word-display" class="card-face card-face-front absolute w-full h-full flex items-center justify-center bg-gradient-to-br from-yellow-400 to-orange-500 text-white rounded-2xl p-4">
+                                    <span id="word-text" class="text-4xl md:text-5xl font-bold text-center tracking-wide" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">?</span>
+                                    <button id="speak-btn-front" class="absolute bottom-4 right-4 p-3 bg-white/20 rounded-full hover:bg-white/40 transition-transform duration-200 hover:scale-125 hover:rotate-12 hidden">
+                                        <i class="fas fa-volume-high text-white text-2xl"></i>
+                                    </button>
+                                </div>
+                                <div id="answer-display" class="card-face card-face-back absolute w-full h-full flex items-center justify-center bg-gradient-to-br from-teal-400 to-cyan-500 text-white rounded-2xl p-4">
+                                    <span id="answer-text" class="text-3xl md:text-4xl font-semibold text-center" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.2);"></span>
+                                     <button id="speak-btn-back" class="absolute bottom-4 right-4 p-3 bg-white/20 rounded-full hover:bg-white/40 transition-transform duration-200 hover:scale-125 hover:rotate-12 hidden">
+                                        <i class="fas fa-volume-high text-white text-2xl"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="controls" class="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-auto">
+                        <button id="show-answer-btn" class="btn-bouncy w-full bg-pink-500 hover:bg-pink-400 text-white font-bold py-3 px-4 rounded-full text-xl shadow-lg border-2 border-white/50 disabled:bg-gray-300 disabled:shadow-none disabled:transform-none">看答案</button>
+                        <button id="next-word-btn" class="btn-bouncy w-full bg-lime-500 hover:bg-lime-400 text-white font-bold py-3 px-4 rounded-full text-xl shadow-lg border-2 border-white/50 disabled:bg-gray-300 disabled:shadow-none disabled:transform-none">開始</button>
+                    </div>
+                    <div id="message-area" class="text-center text-red-500 font-bold text-lg mt-6 h-6"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 嵌入的 CSV 檔案內容
+        const fileContents = {
+            "進階800字": `accept 接受
+account 帳戶；說明
+achieve 完成；達到
+act 活動；扮演
+action 行動
+active 活耀的
+activity 活動
+add 添加
+address 地址；稱呼
+admire 欽佩；欣賞
+adult 成人
+advertisement 廣告
+advice 忠告,建議
+affect 影響
+alike 相同的,相像的
+alive 活著的；有活力的
+allow 允許
+alone 單獨的
+amuse 使快樂,使歡樂
+ancient 古代的
+appear 出現
+argue 爭論
+argument 爭論
+arm 手臂
+army 軍隊
+arrange 安排
+arrangement 安排
+artist 藝術家
+asleep 睡著的
+attack 攻擊
+attract 吸引
+attractive 動人的；有吸引力的
+audience 聽眾,觀眾
+available 可用的,可得到的
+average 平均,平均數
+avoid 避免
+awake 醒著的
+background 背景
+bake 烘；烤
+balance 平衡
+bar 酒吧
+base 基礎
+basic 基本的
+basis 基礎,根據
+bean 豆子
+bear 承受
+beat 打；擊敗
+beauty 美麗；美人
+beer 啤酒
+belief 相信；信仰
+bell 鐘；鈴
+belong 屬於
+bench 長凳
+besides 而且
+beyond 超過
+bill 帳單；鈔票
+blame 責備,歸咎於
+blank 空白的
+blood 血液
+board 木板；膳食；車上/船上/飛機上
+boil (使)沸騰
+bone 骨頭
+bow 鞠躬；弓
+brain 腦
+branch 樹枝；分支
+brave 勇敢的
+brick 磚塊
+broadcast 廣播
+broom 掃帚
+bucket 水桶
+burst 爆炸；衝刺
+button 按鈕
+cabbage 甘藍菜
+calm 平靜的
+cancel 取消
+cancer 癌症
+captain 隊長；機長
+cause 原因；導致
+cell 細胞
+central 中央的
+century 世紀
+cereal 穀類食品
+certain 確定的
+character 性格；角色
+charge 索價；控告
+chart 圖表
+chase 追逐
+chemistry 化學
+childhood 童年
+choice 選擇
+citizen 公民
+claim 要求；聲稱
+clap 拍手；鼓掌
+classic 古典的；第一流的
+classical 古典的
+climb 爬
+climate 氣候
+closet 衣櫥
+coach 教練
+coast 海岸
+cockroach 蟑螂
+coin 硬幣
+college 大學
+command 命令
+comment 評論
+commercial 商業的
+communicate 溝通
+communication 溝通
+compare 比較
+comparison 比較
+complain 抱怨
+complaint 抱怨
+complete 完成
+complex 複雜的
+concern 關心；關於
+conclude 下結論
+conclusion 結論
+condition 狀況；條件
+conduct 行為；指揮
+confidence 信心
+confident 有信心的
+confirm 確認
+confuse 使困惑
+connect 連接
+connection 關係,關聯
+consider 考慮
+consideration 考慮
+contact 接觸；聯繫
+contain 包含
+continue 繼續
+contract 合約
+control 控制
+convenience 便利
+conversation 對話
+corner 角落
+cost 費用；成本
+cough 咳嗽
+couple 一對；夫婦
+courage 勇氣
+court 法庭；球場
+crayon 蠟筆
+create 創造
+credit 信用
+crime 罪
+crisis 危機
+crowd 群眾
+cruel 殘酷的
+culture 文化
+cure 治療
+curious 好奇的
+current 目前的；水流
+curtain 窗簾
+custom 習俗
+customer 顧客
+daily 每日的
+damage 損害
+danger 危險
+deal 交易；處理
+deaf 聾的
+death 死亡
+debate 辯論
+debt 債務
+decision 決定
+decorate 裝飾
+decrease 減少
+deep 深的
+deer 鹿
+degree 度數；學位
+delay 延遲
+deliver 遞送
+department 部門
+depend 依賴
+describe 描述
+description 描述
+design 設計
+desire 慾望
+develop 發展
+development 發展
+dial 撥號
+diamond 鑽石
+diary 日記
+diet 飲食
+difference 不同
+difficulty 困難
+dinosaur 恐龍
+direction 方向
+discuss 討論
+discussion 討論
+disease 疾病
+distance 距離
+divide 分開
+double 雙倍的
+doubt 懷疑
+doughnut 甜甜圈
+downtown 市中心
+draw 畫；拉
+drawer 抽屜
+dream 夢想
+drug 藥；毒品
+dumb 啞的
+duty 責任
+earth 地球
+earthquake 地地震
+edge 邊緣
+education 教育
+effect 影響；效果
+effective 有效的
+effort 努力
+elect 選舉
+electric 電的
+electricity 電
+element 要素,成份
+emotion 情緒
+encourage 鼓勵
+enemy 敵人
+energy 精力；能源
+engine 引擎
+entrance 入口
+environment 環境
+envy 羨慕；嫉妒
+equal 相等的
+error 錯誤
+especially 特別是
+event 事件
+everywhere 到處
+evil 邪惡的
+exam 考試
+examine 檢查
+exchange 交換
+excite 使興奮
+exist 存在
+exit 出口
+expect 期望
+explain 解釋
+express 表達
+extra 額外的
+fail 失敗
+failure 失敗
+fair 公平的
+family 家
+fan 風扇；迷
+fancy 喜好；昂貴的
+fantastic 極好的
+fashion 時尚
+fault 過錯
+favor 恩惠；善意的行為
+fear 害怕
+feather 羽毛
+feature 特色
+fence 籬笆
+field 田野；領域
+file 檔案
+firm 公司；穩固的
+fit 適合
+flag 旗幟
+flash 閃光
+flat 平的
+flight 班機；飛行
+float 漂浮
+flood 洪水
+flour 麵粉
+flow 流動
+flower 花
+focus 焦點；集中
+fog 霧
+fool 傻瓜
+force 力量；強迫
+forest 森林
+form 形式；形成
+formal 正式的
+former 前者
+forward 向前
+frank 坦白的
+freedom 自由
+freeze 結冰
+friendship 友情
+frighten 使害怕
+function 功能
+gain 獲得
+garage 車庫
+gate 門
+gather 聚集
+general 一般的
+generous 慷慨的
+genius 天才
+gentle 溫和的
+gentleman 紳士
+geography 地理
+gesture 手勢
+goal 目標
+god 神
+gold 黃金
+golden 金色的
+government 政府
+grand 雄偉的
+grandchild 孫子/女
+granddaughter 孫女/外孫女
+grandfather 祖父/外祖父
+grandmother 祖母/外祖母
+grandson 孫子/外孫子
+grape 葡萄
+grass 草
+great
+greet 問候
+guard 守衛
+guide 嚮導
+gun 槍
+habit 習慣
+haircut 剪髮
+hall 大廳
+ham 火腿
+handkerchief 手帕
+handle 處理
+hang 掛
+hardly 幾乎不
+hat 帽子
+headache 頭痛
+heat 熱
+heaven 天堂
+height 高度
+helicopter 直升機
+hero 英雄
+hide 躲藏
+highway 公路
+hip 臀部
+hire 雇用
+hole 洞
+homepage 首頁
+hometown 故鄉
+honey 蜂蜜
+honor 榮譽
+hope 希望
+horrible 可怕的
+host 主人
+however 然而
+human 人類的
+humble 謙虛的
+humor 幽默
+humorous 幽默的
+hunt 打獵
+hunter 獵人
+ignore 忽略
+ill 生病的
+illness 疾病
+image 影像
+imagine 想像
+imagination 想像力
+importance 重要性
+improve 改善
+include 包括
+income 收入
+increase 增加
+independent 獨立的
+indicate 指出
+influence 影響
+information 資訊
+ink 墨水
+insist 堅持
+instance 例子
+instant 立即的
+instrument 儀器
+intelligent 聰明的
+international 國際的
+interrupt 打斷
+introduce 介紹
+invention 發明
+invite 邀請
+iron 鐵；熨斗
+jam 果醬；塞車
+jazz 爵士樂
+jealous 嫉妒的
+jeep 吉普車
+joke 笑話
+journalist 新聞記者
+judge 法官；判斷
+jungle 叢林
+junk 垃圾
+kangaroo 袋鼠
+kidney 腎
+kind 種類；仁慈的
+kindergarten 幼稚園
+kingdom 王國
+kiss 親吻
+kitchen 廚房
+knee 膝蓋
+knife 刀
+knock 敲
+knowledge 知識
+lack 缺乏
+lady 女士
+land 陸地；降落
+lane 巷
+latest 最新的
+law 法律
+leaf 葉子
+level 水平；程度
+lid 蓋子
+lightning 閃電
+limit 限制
+link 連結
+liquid 液體
+literature 文學
+lively 活潑的
+living room 客廳
+local 當地的
+locate 位於
+lock 鎖
+log 原木
+lonely 寂寞的
+lose 失去
+lottery 彩券
+lover 情人
+lower 較低的；放下
+loyal 忠實的
+luck 運氣
+magazine 雜誌
+magic 魔法
+main 主要的
+major 主要的；主修
+male 男性的
+manage 管理
+manager 經理
+mankind 人類
+manner 方式；禮貌
+mark 標記
+marriage 婚姻
+master 主人；精通
+match 比賽；相配
+material 材料
+matter 事情；有關係
+mayor 市長
+meaning 意義
+means 方法
+measure 測量
+mechanic 技工
+medical 醫療的
+memory 記憶
+mention 提到
+message 訊息
+metal 金屬
+method 方法
+midnight 午夜
+military 軍事的
+million 百萬
+mind 介意；心智
+minor 次要的
+minus 減
+mirror 鏡子
+miss 想念；錯過
+mistake 錯誤
+mix 混合
+model 模型；模特兒
+modern 現代的
+moment 片刻
+monster 怪物
+mood 心情
+mosquito 蚊子
+motor 馬達
+mountain 山
+movement 移動
+mud 泥巴
+murder 謀殺
+muscle 肌肉
+museum 博物館
+musician 音樂家
+nail 指甲；釘子
+narrow 狹窄的
+nation 國家
+natural 自然的
+naughty 頑皮的
+neat 整潔的
+necessary 必要的
+necklace 項鍊
+negative 否定的
+neighbor 鄰居
+neither 兩者都不
+nephew 姪子；外甥
+nervous 緊張的
+net 網子
+niece 姪女；外甥女
+nod 點頭
+none 沒有人
+normal 正常的
+novel 小說
+nut 核果
+obey 遵守
+object 物體；反對
+ocean 海洋
+offer 提供
+official 官方的
+operate 操作；動手術
+opinion 意見
+ordinary 平凡的
+organ 器官
+organization 組織
+origin 起源
+ought to 應該
+oven 烤箱
+owner 物主
+pack 包
+package 包裹
+pain 痛苦
+painful 痛苦的
+painter 畫家
+pair 一對
+pajamas 睡衣
+pale 蒼白的
+pan 平底鍋
+panda 熊貓
+pants 褲子
+pardon 原諒
+particular 特別的
+partner 夥伴
+passenger 乘客
+patient 病人；有耐心的
+pattern 圖案
+peace 和平
+peaceful 和平的
+perfect 完美的
+period 時期；句點
+personal 個人的
+persuade 說服
+photograph 照片
+photographer 攝影師
+physics 物理
+pigeon 鴿子
+pile 一堆
+pill 藥丸
+pilot 飛行員
+pine 松樹
+ping-pong 乒乓球
+pink 粉紅色
+pipe 管子
+plain 明白的；草原
+plant 植物；工廠
+plastic 塑膠的
+platform 月台
+player 選手
+pleasant 愉快的
+plus 加
+poem 詩
+poet 詩人
+poison 毒藥
+pollution 污染
+pop music 流行音樂
+population 人口
+port 港口
+pose 姿勢
+position 位置
+positive 正面的
+possibility 可能性
+post 郵件；張貼
+poster 海報
+pound 磅
+pour 倒
+powder 粉末
+power 力量
+praise 讚美
+pray 祈禱
+precious 珍貴的
+prefer 比較喜歡
+president 總統；總裁
+press 按；壓
+pride 驕傲
+primary 主要的
+print 印刷；印
+private 私人的
+produce 生產
+product 產品
+professor 教授
+progress 進步
+project 計畫
+promise 承諾
+pronounce 發音
+protect 保護
+provide 提供
+pump 幫浦
+punish 處罰
+purpose 目的
+puzzle 謎
+quality 品質
+quantity 數量
+quarter 四分之一
+quiet 安靜的
+quit 放棄
+race 種族；比賽
+raise 舉起；撫養
+range 範圍
+rapid 快速的
+rat 老鼠
+rather 寧願
+reality 現實
+realize 了解
+recent 最近的
+record 記錄
+recover 恢復
+rectangle 長方形
+recycle 回收
+refuse 拒絕
+regret 後悔
+regular 規律的
+relation 關係
+relative 親戚
+relax 放鬆
+remain 保持
+remind 提醒
+rent 租
+repair 修理
+reply 回答
+report 報告
+require 需要
+respect 尊敬
+responsible 負責任的
+result 結果
+return 返回
+review 複習
+right
+ring 戒指；鈴聲
+rise 上升
+risk 風險
+road 道路
+rob 搶劫
+robot 機器人
+role 角色
+roll 滾
+root 根
+rope 繩子
+rose 玫瑰
+round 圓的
+row 一排；划船
+royal 皇家的
+rub 摩擦
+rubber 橡膠
+rude 無禮的
+ruin 毀壞
+rush 衝
+safety 安全
+sail 航行
+sailor 水手
+saint 聖人
+salary 薪水
+sample 樣品
+sand 沙
+satisfy 使滿意
+sauce 醬料
+save 拯救；儲存
+scale 規模；磅秤
+scarf 圍巾
+scene 場景
+scenery 風景
+school學校
+scientist 科學家
+score 分數
+scream 尖叫
+seat 座位
+secondary 次要的
+secret 秘密
+section 部分
+seed 種子
+seek 尋找
+seem 似乎
+seldom 很少
+sense 感官；感覺
+separate 分開的
+servant 僕人
+serve 服務
+service 服務
+settle 解決；安頓
+several 好幾個
+shake 搖動
+shame 羞恥
+shape 形狀
+sheet 床單；一張
+shoot 射擊
+shore 岸邊
+shot 射擊；球
+should
+shrimp 蝦
+shut 關上
+sight 視力；景象
+silence 寂靜
+silent 寂靜的
+silly 愚蠢的
+silver 銀
+similar 相似的
+sincere 誠摯的
+single 單一的；單身的
+sink 水槽；下沉
+ski 滑雪
+skill 技巧
+skin 皮膚
+sleep 睡覺
+slice 一片
+slightly 稍微
+slip 滑倒
+slowly 慢慢地
+small
+smell 聞；氣味
+smile 微笑
+smoke 抽菸；煙
+sneaky 鬼鬼祟祟的
+soap 肥皂
+social 社會的
+society 社會
+sock 襪子
+soda 蘇打
+soft 柔軟的
+soil 土壤
+soldier 士兵
+solution 解決辦法
+solve 解決
+someday 有一天
+somehow 不知何故
+someone
+sometime 某時
+sometime
+so-so 馬馬虎虎的
+soul 靈魂
+sour 酸的
+source 來源
+soybean 大豆
+spade 鏟子
+spare 多餘的
+special 特別的
+speech 演說
+speed 速度
+spirit 精神
+spot 斑點；地點
+spread 散播
+spring 春天；彈簧
+spy 間諜
+square 正方形
+stadium 體育場
+stage 舞台
+stain 污漬
+stair 樓梯
+stamp 郵票
+standard 標準
+state 州；說明
+station 車站；局
+stationery 文具
+statue 雕像
+steak 牛排
+steal 偷
+steam 蒸氣
+step 步驟；踏
+still 仍然
+stocking 長襪
+stomach 胃
+stone 石頭
+store 商店；儲存
+storm 暴風雨
+stove 爐子
+straight 直的
+strange 奇怪的
+straw 吸管；稻草
+stream 溪流
+stress 壓力
+stretch 伸展
+strict 嚴格的
+strike 打擊；罷工
+string 線
+strong 強壯的
+struggle 掙扎
+style 風格
+subject 主題；學科
+succeed 成功
+success 成功
+such
+sudden 突然的
+suggest 建議
+suit 適合；西裝
+supply 供應
+support 支持
+suppose 猜想
+surface 表面
+swallow 吞嚥；燕子
+swan 天鵝
+sweep 掃
+swing 鞦韆；搖擺
+symbol 象徵
+system 系統
+table tennis 桌球
+tail 尾巴
+talent 天份
+talk 說話
+tall 高的
+tank 坦克；槽
+target 目標
+task 任務
+taste 味道；品嚐
+team 隊伍
+tear 眼淚；撕
+technique 技巧
+technology 科技
+temperature 溫度
+tend to 傾向於
+tent 帳篷
+term 術語；學期
+terrific 極好的
+terrify 使害怕
+terror 恐怖
+therefore 因此
+thick 厚的
+thief 小偷
+thin 瘦的
+thought 思想
+through
+throw 丟
+thumb 拇指
+thunder 雷
+thus 如此
+tidy 整潔的
+tiny 微小的
+tip 尖端；小費
+title 標題
+toe 腳趾
+tofu 豆腐
+together 一起
+toilet 廁所
+tongue 舌頭
+tool 工具
+toothbrush 牙刷
+toothpaste 牙膏
+topic 主題
+total 總計
+touch 觸摸
+tough 困難的；堅韌的
+tour 旅遊
+tourist 遊客
+toward 朝向
+towel 毛巾
+tower 塔
+trace 蹤跡
+trade 貿易
+tradition 傳統
+traditional 傳統的
+trap 陷阱
+travel 旅行
+treasure 寶藏
+treat 對待；請客
+treatment 對待；治療
+trend 趨勢
+trial 審判；試驗
+triangle 三角形
+tribe 部落
+trouble 麻煩
+truly 真實地
+trust 信任
+truth 真相
+T-shirt T恤
+tube 管子
+tunnel 隧道
+ugly 醜陋的
+underline 底線；劃線
+underwear 內衣
+unique 獨特的
+universe 宇宙
+university 大學
+upon 在...之上
+upper 上方的
+upstairs 樓上
+usual 通常的
+valley 山谷
+valuable 有價值的
+value 價值
+van 廂型車
+variety 多樣性
+various 各式各樣的
+vast 廣大的
+verb 動詞
+verse 詩節
+victory 勝利
+village 村莊
+violin 小提琴
+visit 拜訪
+visitor 訪客
+vocabulary 字彙
+volleyball 排球
+vote 投票
+voter 投票人
+waist 腰
+wake 醒來
+war 戰爭
+warn 警告
+waste 浪費
+weak 虛弱的
+wealth 財富
+weapon 武器
+wedding 婚禮
+weekday 平日
+weight 重量
+western 西方的
+wet 濕的
+whatever 無論什麼
+wheel 輪子
+while 當...時候；然而
+whole 整個的
+whose 誰的
+wide 寬的
+wild 野生的
+willing 願意的
+wing 翅膀
+wipe 擦拭
+wise 有智慧的
+within 在...之內
+witness 目擊者；目擊
+wolf 狼
+wonder 驚奇；想知道
+wooden 木製的
+woodpecker 啄木鳥
+woods 樹林
+worm 蟲
+wound 傷口
+wrist 手腕
+yell 喊叫
+youth 年輕；青年
+zipper 拉鍊
+zone 區域`,
+            "大考中心3-4": `abroad (adv) 在(國)外;到(國)外
+absorb (v) 吸收
+abstract (adj) 抽象的
+accent (n) 口音;腔調
+accident (n) 意外;事故
+account (n) 敘述;帳戶 (v) 解釋;說明
+accountant (n) 會計師
+accuse (v) 指控;控告
+ache (v) 疼痛 (n) 疼痛
+achieve (v) 完成;實現
+achievement (n) 成就;達成
+acquaintance (n) 相識的人;熟人
+activity (n) 活動
+actor (n) 男演員
+actress (n) 女演員
+actual (adj) 真實的;實際的
+adapt (v) 使適應;改編
+add (v) 添加;增加
+addict (v) 使沉迷;使熱衷
+addition (n) 加;附加(物)
+additional (adj) 附加的;額外的
+address (n) 地址;稱呼;演說 (v) 寄信給(某人);稱呼(某人);向...演說
+adequate (adj) 足夠的;適當的
+adjust (v) 適應;調整
+adjustment (n) 適應;調整
+admirable (adj) 令人欽佩的;極佳的
+admire (v) 欽佩;欣賞
+admission (n) 承認;入場許可;入場費
+admit (v) 承認;允許進入
+adopt (v) 採納;收養
+advance (v) 前進;提升 (n) 前進;進展
+advanced (adj) 先進的;高級的
+advantage (n) 優點;優勢
+adventure (n) 冒險(活動)
+advertise (v) 為...做廣告;登廣告
+advertisement (n) 廣告
+advisable (adj) 明智的;可取的
+advise (v) 勸告;建議
+affect (v) 影響
+afford (v) 負擔得起;買得起
+afterward(s) (adv) 之後;後來
+agency (n) 經銷處;代辦處;(政府)部;處
+agent (n) 代理人;代理商
+aggressive (adj) 侵略的;好鬥的;積極進取的
+agreeable (adj) 令人愉快的;宜人的
+agreement (n) 同意;協議
+agriculture (n) 農業
+air-conditioner (n) 冷氣機
+aircraft (n) 航空器;飛機
+airline (n) 航空公司
+airplane (n) 飛機
+alarm (n) 警報(器);驚恐 (v) 使驚恐
+album (n) 相簿;專輯
+alcohol (n) 酒精;酒
+alcoholic (adj) 含酒精的 (n) 酗酒者
+alert (adj) 警覺的 (v) 提醒(某人)注意 (n) 警覺;警報
+alike (adj) 相似的 (adv) 同樣地;相似地
+alive (adj) 活著的;有活力的
+allege (v) (無證據地)宣稱;指控
+alley (n) 小巷;弄
+allowance (n) 零用錢;津貼
+alongside (adv) 在旁邊;沿著 (prep) 在...的旁邊;沿著
+aloud (adv) 大聲地
+alphabet (n) 字母系統;字母表
+although (conj) 雖然;儘管
+altogether (adv) 完全地;總共
+ambulance (n) 救護車
+amend (v) 修訂;修改
+amendment (n) 修正;修正案
+amid(st) (prep) 在...之中
+amuse (v) 使開心;逗樂
+amusement (n) 娛樂;消遣
+analogy (n) 類似;類比
+analysis (n) 分析
+analyst (n) 分析師
+analyze (v) 分析
+ancestor (n) 祖先
+anchor (n) 錨;主播 (v) 拋錨;主持
+ancient (adj) 古代的
+angel (n) 天使
+angle (n) 角;角度
+anniversary (n) 週年紀念(日)
+announce (v) 宣布;發布
+announcement (n) 宣布;公告
+announcer (n) 播報員
+annoy (v) 使煩惱;惹惱
+annoying (adj) 惱人的;討厭的
+annual (adj) 每年的;年度的
+ant (n) 螞蟻
+anthem (n) 國歌;頌歌
+anxiety (n) 焦慮;掛念
+anxious (adj) 焦慮的;迫切渴望的
+apart (adv) 分開地
+apologize (v) 道歉
+apology (n) 道歉
+apparent (adj) 明顯的
+appeal (n) 懇求;吸引力 (v) 懇求;吸引
+appetite (n) 胃口;食慾
+appetizer (n) 開胃菜
+applaud (v) 鼓掌;喝采
+applause (n) 鼓掌;讚賞
+apple (n) 蘋果
+applicant (n) 申請人
+application (n) 申請;應用
+apply (v) 申請;應用;塗;敷
+appoint (v) 任命;指派
+appointment (n) 任命;約定;約會
+appreciate (v) 感激;欣賞
+appreciation (n) 感激;欣賞
+approach (v) 接近;著手從事 (n) 接近;方法;通路
+appropriate (adj) 適當的;恰當的
+approval (n) 贊成;同意
+approve (v) 贊成;同意
+apron (n) 圍裙
+arch (n) 拱門;拱形 (v) (使)成拱形
+architect (n) 建築師
+architecture (n) 建築學;建築風格
+argue (v) 爭論;主張;認為
+argument (n) 爭論;論點
+arise (v) 出現;發生;上升
+arithmetic (n) 算術 (adj) 算術的
+arm (v) 武裝;配備 (n) 手臂;武器
+armchair (n) 扶手椅
+army (n) 軍隊
+around (adv) 到處;在附近;大約 (prep) 在...周圍;在...附近
+arouse (v) 喚起;激起;叫醒
+arrange (v) 安排;整理
+arrangement (n) 安排;整理
+arrest (v) 逮捕 (n) 逮捕
+arrival (n) 到達;入境
+arrive (v) 到達;抵達
+arrogant (adj) 傲慢的;自大的
+arrow (n) 箭
+art (n) 藝術
+article (n) 文章;物品;冠詞
+artificial (adj) 人造的;虛偽的
+artist (n) 藝術家
+artistic (adj) 藝術的;有藝術鑑賞力的
+ash (n) 灰;骨灰
+ashamed (adj) 感到羞愧的
+aside (adv) 在一旁
+aspect (n) 方面;觀點
+aspirin (n) 阿斯匹靈
+ass (n) 驢;傻瓜
+assemble (v) 集合;組裝
+assembly (n) 集會;與會者;組裝
+assign (v) 分派;指定
+assignment (n) (分派的)任務;功課
+assist (v) 協助;幫助
+assistance (n) 協助;幫助
+assistant (n) 助理;助手 (adj) 輔助的
+associate (v) 聯想;交往 (n) 同事;夥伴
+association (n) 協會;社團;關係
+assume (v) 假定;認為;承擔
+assurance (n) 保證;自信
+assure (v) 向...保證;確保
+astonish (v) 使驚訝
+astonishment (n) 驚訝;訝異
+astronaut (n) 太空人
+athlete (n) 運動員
+athletic (adj) 運動的;體育的
+atmosphere (n) 大氣(層);氣氛
+atom (n) 原子
+atomic (adj) 原子的
+attach (v) 附加;繫上;連接
+attachment (n) 附件;依戀
+attack (v) 攻擊 (n) 攻擊
+attain (v) 達到;獲得
+attempt (v) 試圖;嘗試 (n) 試圖;嘗試
+attend (v) 出席;參加;上(學);照顧
+attention (n) 注意(力)
+attitude (n) 態度
+attract (v) 吸引
+attraction (n) 吸引(力);吸引人的事物
+attractive (adj) 有吸引力的
+audience (n) 觀眾;聽眾
+author (n) 作者;作家
+authority (n) 權威;權威人士;當局
+autobiography (n) 自傳
+automatic (adj) 自動的
+automobile (n) 汽車
+autumn (n) 秋季
+available (adj) 可獲得的;有空的
+avenue (n) 大道
+average (adj) 平均的;普通的 (n) 平均;平均數 (v) 平均為;平均達到
+avoid (v) 避免
+await (v) 等待;等候
+awake (adj) 醒著的 (v) 醒來;喚醒
+awaken (v) 醒來;喚醒
+award (v) 授予;頒發 (n) 獎;獎品
+awful (adj) 可怕的;極糟的
+awkward (adj) 笨拙的;尷尬的
+ax (n) 斧頭
+baby-sitter (n) 褓姆
+bachelor (n) 單身漢;學士
+back (adv) 向後地 (adj) 後面的 (n) 背部;後面 (v) 支持;向後退
+background (n) 背景
+bacon (n) 培根
+bacterium (n) 細菌
+badminton (n) 羽毛球
+baggage (n) 行李
+bait (n) 餌 (v) 裝誘餌於
+balance (n) 平衡;餘額 (v) (使)保持平衡
+balcony (n) 陽臺
+bald (adj) 禿頭的
+ball (n) 球;舞會
+ballet (n) 芭蕾舞
+balloon (n) 氣球
+bamboo (n) 竹子
+ban (v) 禁止 (n) 禁止;禁令
+band (n) 樂團;帶子 (v) 用帶子綑綁
+bandage (n) 繃帶 (v) 用繃帶包紮
+bank (n) 銀行;堤岸
+banker (n) 銀行家
+bankrupt (adj) 破產的
+banquet (n) 宴會
+bar (n) 棒;條;酒吧 (v) 閂住;阻攔
+barber (n) 理髮師
+bare (adj) 赤裸的;裸的
+barefoot (adj) 赤腳的 (adv) 赤腳地
+barely (adv) 僅僅;幾乎不
+bargain (n) 交易;便宜貨 (v) 討價還價
+bark (v) (狗)吠 (n) 吠聲;樹皮
+barn (n) 穀倉
+barrel (n) (酒或油)桶
+barrier (n) 障礙(物);柵欄
+base (n) 基礎;壘包 (v) 以...為基礎
+baseball (n) 棒球
+basement (n) 地下室
+basic (adj) 基本的;基礎的
+basin (n) 盆;盆地
+basis (n) 基礎;根據
+basket (n) 籃子
+basketball (n) 籃球
+bat (n) 球棒;蝙蝠 (v) (用球棒)打擊
+bath (n) 澡
+bathe (v) 浸;洗澡
+bathroom (n) 浴室;廁所
+bathtub (n) 浴缸
+battery (n) 電池
+battle (n) 戰役 (v) 與...作戰
+bay (n) 海灣
+be (v) 是;成為
+beach (n) 海灘
+bead (n) 珠子
+beak (n) (鳥)嘴
+beam (n) 光線;橫梁 (v) 發光;微笑
+bean (n) 豆
+bear (v) 承受;忍受;生(小孩) (n) 熊
+beard (n) (下巴上的)鬍鬚
+beast (n) 野獸
+beat (v) 打;擊敗 (n) 敲打(聲);心跳(聲);節拍
+beautiful (adj) 美麗的
+beautify (v) 美化
+beauty (n) 美;美人
+because (conj) 因為
+become (v) 變成
+bed (n) 床
+bedroom (n) 臥室
+bee (n) 蜜蜂
+beef (n) 牛肉
+beer (n) 啤酒
+beetle (n) 甲蟲
+before (prep) 在...之前 (adv) 以前 (conj) 在...之前
+beg (v) 乞求;請求
+beggar (n) 乞丐
+begin (v) 開始
+beginner (n) 初學者
+behalf (n) 代表
+behave (v) 表現;行為舉止
+behavior (n) 行為;舉止
+behind (prep) 在...後面 (adv) 在後面
+being (n) 存在;生物
+belief (n) 相信;信念
+believable (adj) 可信的
+believe (v) 相信;認為
+bell (n) 鐘(聲);鈴(聲)
+belly (n) 肚子;腹部
+belong (v) 屬於
+beloved (adj) 摯愛的 (n) 摯愛的人
+below (prep) 在...下方 (adv) 在下面
+belt (n) 腰帶;皮帶
+bench (n) 長凳
+bend (v) (使)彎曲;屈服 (n) 彎曲(處)
+beneath (prep) 在...正下方
+beneficial (adj) 有益的
+benefit (n) 利益;好處 (v) 有益於;受惠
+berry (n) 莓果;漿果
+beside (prep) 在...旁邊
+besides (prep) 除了...之外(還) (adv) 此外;而且
+best (adj) 最好的 (adv) 最;最好地 (n) 最好的事物 (v) 擊敗
+bet (v) 打賭 (n) 賭注
+betray (v) 背叛;出賣
+better (adj) 較好的 (adv) 較好地;更 (v) 改善;勝過 (n) 較佳者
+between (prep) 在(...兩者)之間
+beyond (prep) 在...那一邊;超出 (adv) 在更遠處
+Bible (n) 聖經
+bicycle (n) 腳踏車
+bid (v) 出價;投標;命令 (n) 出價;投標
+big (adj) 大的
+bill (n) 帳單;鈔票;法案
+billion (n) 十億
+bind (v) 綑綁;裝訂
+bingo (n) 賓果遊戲
+biography (n) 傳記
+biology (n) 生物學
+bird (n) 鳥
+birth (n) 出生;起源
+biscuit (n) 餅乾;小麵包
+bite (v) 咬 (n) 咬;一口的量
+bitter (adj) 苦的;痛苦的
+black (adj) 黑色的 (n) 黑色
+blackboard (n) 黑板
+blame (v) 責備;歸咎於 (n) 責備;責任
+blank (adj) 空白的 (n) 空白(處)
+blanket (n) 毯子
+blast (n) 一陣強風;爆炸 (v) 炸開;爆破
+blaze (n) 火焰;火災 (v) 燃燒
+bleach (n) 漂白劑 (v) 漂白
+bleed (v) 流血
+blend (v) (使)混合 (n) 混合(物)
+bless (v) 祝福;保佑
+blessing (n) 祝福;恩賜
+blind (adj) 瞎的;盲目的 (v) 使看不見;使失明
+blink (v) 眨眼 (n) 眨眼
+block (n) 街區;塊;障礙物 (v) 阻擋;堵塞
+blond(e) (adj) 金黃色的 (n) 金髮女子(常用blonde)
+blood (n) 血
+bloody (adj) 流血的;血腥的
+bloom (n) 開花;花 (v) 開花
+blossom (n) (果樹的)花 (v) 開花;發展
+blouse (n) (女用)罩衫;短衫
+blow (v) 吹;吹動 (n) 吹;一擊
+blue (adj) 藍色的;憂鬱的 (n) 藍色
+blush (v) 臉紅 (n) 臉紅
+board (n) 木板;布告牌 (v) 登上(船、飛機等)
+boast (v) 吹牛;誇耀
+boat (n) 船
+body (n) 身體
+bodyguard (n) 保鑣;護衛
+boil (v) (使)沸騰
+bold (adj) 大膽的
+bolt (n) 螺栓;閃電;門閂 (v) 閂上
+bomb (n) 炸彈 (v) 轟炸
+bond (n) 鐐銬;束縛;關係 (v) 結合
+bone (n) 骨頭
+bony (adj) 骨瘦如柴的
+book (n) 書 (v) 預訂
+bookcase (n) 書櫃
+boom (n) 轟隆聲;暴增;繁榮 (v) 發出轟隆聲;暴增;繁榮
+boost (v) 促進;提升 (n) 促進;提升
+boot (n) 靴子
+booth (n) (有篷的)貨攤;(餐廳)靠壁的隔間座位;電話亭
+border (n) 邊界 (v) 與...接壤
+bore (v) 使厭煩 (n) 令人討厭的人或事物
+boring (adj) 令人厭煩的
+born (adj) 出生的;天生的
+borrow (v) 借(入)
+boss (n) 老闆 (v) 對...發號施令
+botany (n) 植物學
+both (adj) 兩...(都) (pron) 兩者(都) (adv) 兩者都
+bother (v) 打擾;煩擾 (n) 麻煩;煩惱
+bottle (n) 瓶子
+bottom (n) 底部
+bounce (v) (使)彈起 (n) 彈跳
+bound (v) 跳躍;彈回 (n) 跳躍;界限
+boundary (n) 邊界;分界線
+bow (v) 鞠躬;彎腰 (n) 鞠躬;弓
+bowl (n) 碗
+bowling (n) 保齡球
+box (n) 箱;盒 (v) 把...裝箱
+boy (n) 男孩
+boycott (v) 聯合抵制 (n) 聯合抵制
+boyfriend (n) 男朋友
+bra (n) 胸罩
+brace (n) 支柱;(牙齒)矯正器 (v) 使牢固;支撐
+bracelet (n) 手鐲;手鍊
+brain (n) 腦
+brake (v) 煞車 (n) 煞車
+branch (n) 樹枝;分店;分公司
+brand (n) 品牌
+brass (n) 黃銅
+brave (adj) 勇敢的
+bravery (n) 勇敢;勇氣
+bread (n) 麵包
+break (v) 打破;折斷;違反 (n) 暫停;休息
+breakdown (n) 故障;崩潰
+breakfast (n) 早餐
+breakthrough (n) 突破
+breast (n) 乳房;胸部
+breath (n) 氣息;呼吸
+breathe (v) 呼吸
+breed (v) 飼養;繁殖 (n) 品種
+breeze (n) 微風
+bribe (v) 賄賂 (n) 賄賂
+brick (n) 磚塊
+bride (n) 新娘
+bridegroom (n) 新郎
+bridge (n) 橋
+brief (adj) 簡短的 (v) 做簡報
+briefcase (n) 公事包
+bright (adj) 明亮的;聰明的
+brilliant (adj) 光輝的;燦爛的;傑出的
+bring (v) 帶來;拿來
+broad (adj) 寬闊的
+broadcast (v) 廣播;播送 (n) 廣播;廣播節目
+broaden (v) 變寬;擴大
+brochure (n) 小冊子
+broke (adj) 破產的;一文不名的
+bronze (n) 青銅 (adj) 青銅製的
+brood (n) 一窩(小雞、小鳥) (v) 孵蛋;沉思
+brook (n) 小河;溪
+broom (n) 掃帚
+brother (n) 兄弟
+brotherhood (n) 兄弟情誼;公會
+brow (n) 眉毛;額頭
+brown (n) 棕色 (adj) 棕色的
+browse (v) 瀏覽
+bruise (n) 瘀傷;碰傷 (v) (使)成瘀傷
+brush (n) 刷子 (v) 刷
+brutal (adj) 殘忍的;野蠻的
+bubble (n) 泡泡 (v) 起泡;沸騰
+bucket (n) 水桶
+buckle (n) 扣環 (v) 扣住
+bud (n) 芽;花蕾 (v) 發芽
+budget (n) 預算 (v) 編列預算
+buffalo (n) 水牛;野牛
+bug (n) 小蟲;臭蟲
+build (v) 建造
+building (n) 建築物
+bulb (n) 燈泡;(植物的)球莖
+bulk (n) 體積;容積;大量
+bulky (adj) 體積大的;笨重的
+bull (n) 公牛
+bullet (n) 子彈
+bulletin (n) 公告;公報
+bully (n) 惡霸 (v) 霸凌;欺負
+bump (v) 碰撞 (n) 碰撞(聲)
+bun (n) 小圓麵包
+bunch (n) 束;串
+bundle (n) 捆;束
+burden (n) 負擔 (v) 加負擔於
+bureau (n) (政府機構的)局;處
+bureaucracy (n) 官僚制度;官僚
+burger (n) 漢堡
+burglar (n) 竊賊
+burial (n) 埋葬;葬禮
+burn (v) 燃燒;燒傷 (n) 燒傷
+burst (v) 爆炸;破裂 (n) 爆炸;破裂
+bury (v) 埋葬
+bus (n) 公車
+bush (n) 灌木;矮樹叢
+business (n) 商業;生意
+busy (adj) 忙碌的
+but (conj) 但是 (prep) 除了...之外
+butcher (n) 屠夫 (v) 屠宰
+butter (n) 奶油 (v) 塗奶油於
+butterfly (n) 蝴蝶
+button (n) 鈕扣;按鈕 (v) 扣上鈕扣
+buy (v) 買
+buzz (v) (蜂)嗡嗡叫 (n) 嗡嗡聲
+by (prep) 藉由;在...旁邊 (adv) 經過;過去
+cab (n) 計程車
+cabbage (n) 甘藍菜;高麗菜
+cabin (n) 小木屋;船艙;機艙
+cabinet (n) 櫥;櫃
+cable (n) 電纜
+cactus (n) 仙人掌
+café (n) 咖啡館;小餐館
+cafeteria (n) 自助餐廳
+cage (n) 籠子
+cake (n) 蛋糕
+calculate (v) 計算
+calculation (n) 計算
+calculator (n) 計算機
+calendar (n) 日曆
+calf (n) 小牛;小腿
+call (v) 稱呼;打電話;召喚 (n) 呼叫;電話
+calm (adj) 平靜的;鎮靜的 (v) (使)平靜;(使)鎮靜 (n) 平靜
+calorie (n) 卡路里
+camel (n) 駱駝
+camera (n) 照相機
+camp (n) 營地 (v) 露營
+campaign (n) (社會、政治)運動 (v) 從事運動
+campus (n) 校園
+can (aux) 能;會 (n) 罐頭
+canal (n) 運河
+cancel (v) 取消
+cancer (n) 癌症
+candidate (n) 候選人
+candle (n) 蠟燭
+candy (n) 糖果
+cane (n) 藤條;手杖
+canoe (n) 獨木舟 (v) 划(或乘坐)獨木舟
+canvas (n) 帆布
+canyon (n) 峽谷
+cap (n) (無邊的)帽子;蓋子
+capability (n) 能力;才能
+capable (adj) 有能力的
+capacity (n) 容量;能力
+cape (n) 岬;披風
+capital (adj) 主要的;資本的;大寫的 (n) 首都;資金;大寫字母
+capitalism (n) 資本主義
+capitalist (n) 資本家
+captain (n) 船長;機長;隊長
+caption (n) (圖片的)說明文字
+capture (v) 捕獲;俘虜 (n) 捕獲;俘虜
+car (n) 汽車
+caravan (n) (穿越沙漠的)商隊;旅行隊
+carbohydrate (n) 碳水化合物;醣
+carbon (n) 碳
+card (n) 卡片
+cardinal (n) 樞機主教 (adj) 主要的;最重要的
+care (n) 小心;關懷 (v) 關心;在乎
+career (n) 職業;生涯
+careful (adj) 小心的;謹慎的
+careless (adj) 粗心的;草率的
+caress (v) 撫摸;愛撫 (n) 撫摸;愛撫
+cargo (n) (船、飛機、汽車裝載的)貨物
+carnation (n) 康乃馨
+carnival (n) 嘉年華會
+carp (n) 鯉魚
+carpenter (n) 木匠
+carpet (n) 地毯
+carriage (n) 馬車
+carrier (n) 運送者;航空公司;航空母艦
+carrot (n) 胡蘿蔔
+carry (v) 提;攜帶;運送
+cart (n) 手推車;運貨馬車
+cartoon (n) 卡通
+carve (v) 刻;雕刻
+case (n) 情況;案例;盒子;箱子
+cash (n) 現金 (v) 兌現
+cashier (n) 收銀員
+cassette (n) 卡式磁帶
+cast (v) 投;擲;扔 (n) 演員陣容;石膏
+castle (n) 城堡
+casual (adj) 隨便的;非正式的;偶然的
+casualty (n) 死傷人數
+cat (n) 貓
+catalog(ue) (n) 目錄
+catch (v) 接住;抓住;趕上
+catcher (n) (棒球)捕手
+category (n) 種類;範疇
+caterpillar (n) 毛毛蟲
+cathedral (n) 大教堂
+cattle (n) 牛(群)
+cause (n) 原因;理由 (v) 造成;引起
+caution (n) 小心;謹慎
+cautious (adj) 小心的;謹慎的
+cave (n) 洞穴
+cease (v) 停止;終止
+ceiling (n) 天花板
+celebrate (v) 慶祝
+celebration (n) 慶祝(活動)
+celebrity (n) 名人
+cell (n) 細胞;單人牢房;電池
+cellar (n) 地下室;地窖
+cellphone (n) 手機
+Celsius (n) 攝氏
+cement (n) 水泥
+cemetery (n) 墓地;公墓
+cent (n) 分(錢幣)
+center (n) 中心;中央 (v) 集中
+centimeter (n) 公分
+central (adj) 中央的;中心的
+century (n) 世紀
+ceramic (adj) 陶器的
+ceramics (n) 陶瓷(藝)
+cereal (n) 穀類(食品)
+ceremony (n) 典禮;儀式
+certain (adj) 確定的;某一
+certainty (n) 確定(性);確定的事
+certificate (n) 證書;證明
+chain (n) 鍊子;連鎖店 (v) 用鍊子拴住
+chair (n) 椅子 (v) 主持
+chairman/chairwoman (n) 主席
+chalk (n) 粉筆
+challenge (n) 挑戰 (v) 向...挑戰
+challenger (n) 挑戰者
+chamber (n) 室;房間
+champagne (n) 香檳
+champion (n) 冠軍;優勝者
+championship (n) 冠軍頭銜;錦標賽
+chance (n) 機會;可能性
+change (v) 改變;更換 (n) 改變;零錢
+changeable (adj) 易變的
+channel (n) 管道;頻道;海峽
+chant (n) 聖歌;單調的歌 (v) 反覆地唱(或說)
+chaos (n) 混亂;失序
+chapter (n) 章;節
+character (n) 性格;特色;角色;(中文)字
+characteristic (adj) 特有的;典型的 (n) 特性;特徵
+charge (v) 索價;控告;充電 (n) 費用;責任;指控
+charity (n) 慈善;慈善機構
+charm (n) 魅力;符咒 (v) 吸引;迷住
+charming (adj) 迷人的
+chart (n) 圖表 (v) 繪製...的圖表
+chase (v) 追逐 (n) 追逐
+chat (v) 聊天 (n) 聊天
+chatter (v) 喋喋不休;吱吱作響 (n) 喋喋不休;吱吱聲
+cheap (adj) 便宜的;卑劣的
+cheat (v) 欺騙;作弊 (n) 欺騙;作弊
+check (v) 檢查;核對 (n) 檢查;支票
+check-in (n) (旅館)辦理住房手續;(機場)辦理登機手-續
+check-out (n) (旅館)結帳退房(時間)
+checkup (n) 健康檢查
+cheek (n) 臉頰
+cheer (v) 歡呼;喝采 (n) 歡呼;喝采
+cheerful (adj) 快樂的;愉快的
+cheese (n) 起司;乳酪
+cheetah (n) 印度豹
+chef (n) (餐廳、飯館的)主廚
+chemical (adj) 化學的 (n) 化學製品;化學藥品
+chemist (n) 化學家
+chemistry (n) 化學
+cherry (n) 櫻桃
+chess (n) 西洋棋
+chest (n) 胸膛;箱子
+chew (v) 咀嚼
+chick (n) 小雞
+chicken (n) 雞;雞肉
+chief (adj) 主要的 (n) 首領;長官
+child (n) 小孩
+childbirth (n) 分娩
+childhood (n) 童年
+childish (adj) 幼稚的
+childlike (adj) 天真爛漫的
+chili (n) 辣椒
+chill (n) 寒冷;寒意 (v) (使)變冷
+chilly (adj) 寒冷的
+chimney (n) 煙囪
+chimpanzee (n) 黑猩猩
+chin (n) 下巴
+chip (n) 碎片;屑片;晶片
+chocolate (n) 巧克力
+choice (n) 選擇 (adj) 上等的;精選的
+choir (n) (教堂的)唱詩班;合唱團
+choke (v) (使)窒息;噎住
+choose (v) 選擇
+chop (v) 砍;剁 (n) 排骨
+chopstick(s) (n) 筷子
+chord (n) 和弦;和音
+chorus (n) 合唱(團);副歌
+Christ (n) 基督;耶穌
+Christian (adj) 基督(教)的 (n) 基督徒
+Christianity (n) 基督教
+Christmas (n) 聖誕節
+chubby (adj) 圓胖的;豐滿的
+church (n) 教堂
+cigar (n) 雪茄
+cigarette (n) 香菸
+circle (n) 圓圈 (v) 畫圓圈;盤旋
+circuit (n) 繞行一周;電路
+circulate (v) (使)循環;流傳
+circulation (n) 循環;流傳;發行量
+circumstance (n) 情況;情勢
+circus (n) 馬戲團
+citizen (n) 公民;市民
+city (n) 城市
+civic (adj) 市民的;公民的
+civil (adj) 市民的;民間的;國內的
+civilian (n) 平民;百姓 (adj) 平民的;百姓的
+civilization (n) 文明
+civilize (v) 使文明;教化
+claim (v) 聲稱;要求 (n) 聲稱;要求
+clam (n) 蛤;蚌
+clap (v) 拍(手);鼓(掌) (n) 拍手;鼓掌
+clarify (v) 澄清;闡明
+clash (n) 衝突;撞擊聲 (v) 衝突;(使)發出撞擊聲
+clasp (n) 扣環;緊握 (v) 扣住;鉤住;緊握
+class (n) 階級;班級;課程
+classic (adj) 古典的;經典的 (n) 經典作品
+classical (adj) 古典的
+classification (n) 分類
+classify (v) 將...分類
+classmate (n) 同班同學
+classroom (n) 教室
+clause (n) 條款;子句
+claw (n) 爪子 (v) 用爪子抓
+clay (n) 黏土
+clean (adj) 乾淨的 (v) 打掃;弄乾淨
+cleaner (n) 清潔工;清潔劑;乾洗店
+clear (adj) 清楚的;清澈的 (v) 清除;變清澈
+clench (v) 緊握(拳頭);咬緊(牙關)
+clerk (n) 職員;店員
+clever (adj) 聰明的;靈巧的
+click (v) (使)發出喀嚓聲;點擊 (n) 喀嚓聲;點擊
+client (n) 客戶;委託人
+cliff (n) 懸崖;峭壁
+climate (n) 氣候
+climax (n) 高潮;頂點
+climb (v) 爬;攀登
+cling (v) 黏住;抓住
+clinic (n) 診所
+clip (n) 夾子;迴紋針 (v) 夾住;修剪
+clock (n) 時鐘
+clockwise (adj) 順時針的 (adv) 順時針地
+clone (n) 複製(的生物) (v) 基因複製
+close (adj) 親近的;靠近的 (adv) 靠近地 (v) 關上;結束
+closet (n) 壁櫥;衣櫥
+cloth (n) 布料
+clothe (v) 給...穿衣
+clothes (n) 衣服
+clothing (n) (總稱)衣服;服裝
+cloud (n) 雲
+cloudy (adj) 多雲的;陰天的
+clown (n) 小丑
+club (n) 俱樂部;社團;棍棒
+clue (n) 線索;提示
+clumsy (adj) 笨拙的
+cluster (n) (一)叢;(一)群 (v) 聚集
+clutch (v) 緊握 (n) 緊握;離合器
+coach (n) 教練;四輪馬車 (v) 訓練;指導
+coal (n) 煤
+coarse (adj) 粗糙的;粗劣的;粗魯的
+coast (n) 海岸
+coastguard (n) 海岸巡邏隊
+coat (n) 外套 (v) 塗上;覆蓋
+cock (n) 公雞
+cockroach (n) 蟑螂
+cocktail (n) 雞尾酒
+cocoa (n) 可可粉
+coconut (n) 椰子
+code (n) 密碼;法規
+coffee (n) 咖啡
+coffin (n) 棺材
+coil (n) (一)捲;(一)圈 (v) 捲;盤繞
+coin (n) 硬幣
+coincidence (n) 巧合
+cola (n) 可樂
+cold (adj) 冷的 (n) 感冒;寒冷
+collapse (v) 倒塌;崩潰 (n) 倒塌;崩潰
+collar (n) 衣領
+colleague (n) 同事;同僚
+collect (v) 收集;收藏
+collection (n) 收集;收藏(品)
+collector (n) 收集者;收藏家
+college (n) 學院;大學
+collide (v) 碰撞;衝突
+collision (n) 碰撞;衝突
+colonel (n) (陸、空軍)上校
+colonial (adj) 殖民(地)的
+colony (n) 殖民地;一群
+color (n) 顏色 (v) 著色
+colorful (adj) 色彩繽紛的
+column (n) 圓柱;專欄
+columnist (n) 專欄作家
+comb (n) 梳子 (v) 梳理
+combat (n) 戰鬥 (v) 與...戰鬥;對抗
+combination (n) 結合;組合
+combine (v) (使)結合
+come (v) 來
+comedian (n) 喜劇演員
+comedy (n) 喜劇
+comet (n) 彗星
+comfort (n) 舒適;安慰 (v) 安慰;慰藉
+comfortable (adj) 舒適的;舒服的
+comic (adj) 喜劇的;滑稽的 (n) 漫畫
+command (v) 命令;指揮 (n) 命令;指揮;掌握
+commander (n) 指揮官
+comment (n) 評論;意見 (v) 評論
+commentator (n) (電視、廣播的)評論員;實況播報員
+commerce (n) 商業;貿易
+commercial (adj) 商業的 (n) (電視、廣播中的)商業廣告
+commission (n) 委員會;佣金 (v) 委任
+commit (v) 犯(罪);承諾
+commitment (n) 承諾;獻身;投入
+committee (n) 委員會
+common (adj) 常見的;普通的;共同的
+communicate (v) 溝通;傳達
+communication (n) 溝通;通訊;訊息
+communism (n) 共產主義
+communist (n) 共產主義者 (adj) 共產主義的
+community (n) 社區;...界
+commute (v) 通勤
+commuter (n) 通勤者
+companion (n) 同伴;夥伴
+company (n) 公司;同伴;陪伴
+comparable (adj) 可比較的;比得上的
+comparative (adj) 比較的;相對的
+compare (v) 比較
+comparison (n) 比較
+compass (n) 羅盤;圓規
+compassion (n) 同情;憐憫
+compassionate (adj) 有同情心的
+compatible (adj) 相容的;合得來的
+compel (v) 強迫;迫使
+compensate (v) 彌補;補償
+compensation (n) 彌補;補償(金)
+compete (v) 競爭
+competence (n) 能力;勝任
+competent (adj) 有能力的;勝任的
+competition (n) 競爭;競賽
+competitive (adj) 競爭的;有競爭力的
+competitor (n) 競爭者;對手
+compile (v) 彙編;編纂
+complain (v) 抱怨
+complaint (n) 抱怨
+complement (n) 補充物;補足 (v) 補充;與...相輔相成
+complete (adj) 完整的;完全的 (v) 完成
+complex (adj) 複雜的 (n) 複合體;情結
+complexion (n) 膚色;氣色
+complexity (n) 複雜(性)
+complicate (v) 使複雜化
+complicated (adj) 複雜的
+compliment (n) 恭維;稱讚 (v) 恭維;稱讚
+component (n) 構成要素;零件
+compose (v) 組成;構成;作(詩、曲)
+composer (n) 作曲家
+composition (n) 組成;作文;作曲
+compound (n) 化合物;複合物 (adj) 複合的
+comprehend (v) 理解;領悟
+comprehensible (adj) 可理解的
+comprehension (n) 理解(力)
+comprehensive (adj) 全面的;綜合的
+comprise (v) 包含;由...組成
+compromise (n) 妥協;讓步 (v) 妥協;讓步
+compute (v) 計算
+computer (n) 電腦
+comrade (n) 戰友;同志
+conceal (v) 隱藏;隱瞞
+concede (v) (不情願地)承認;讓步
+conceit (n) 自負;自大
+conceited (adj) 自負的;自大的
+conceive (v) 懷孕;想像
+concentrate (v) 專心;集中
+concentration (n) 專心;集中
+concept (n) 概念;觀念
+concern (n) 關心;掛念 (v) 關於;使關心
+concerning (prep) 關於
+concert (n) 音樂會
+concession (n) 讓步
+conclude (v) 結束;斷定
+conclusion (n) 結束;結論
+concrete (adj) 具體的 (n) 混凝土
+condemn (v) 譴責;責備
+condition (n) 狀況;條件
+conduct (n) 行為;處理 (v) 指揮;處理;傳導
+conductor (n) 指揮家;導體
+cone (n) 圓錐體;甜筒
+confer (v) 商討;授予
+conference (n) 會議
+confess (v) 坦承;承認
+confession (n) 坦承;承認
+confidence (n) 信心;信任
+confident (adj) 有信心的
+confidential (adj) 機密的;祕密的
+confine (v) 限制;監禁
+confirm (v) 證實;確認
+conflict (n) 衝突 (v) 衝突
+conform (v) 遵守;符合
+confront (v) 面臨;對抗
+confrontation (n) 對抗;衝突
+confuse (v) 使困惑;混淆
+confusion (n) 困惑;混淆
+congratulate (v) 恭喜;祝賀
+congratulation(s) (n) 恭喜;祝賀
+congress (n) 國會;議會
+congressman/congresswoman (n) 國會議員
+conjunction (n) 連接詞;結合
+connect (v) 連接;聯絡
+connection (n) 連接;關係
+conquer (v) 征服;克服
+conquest (n) 征服;克服
+conscience (n) 良心
+conscientious (adj) 憑良心的;誠實的
+conscious (adj) 有意識的;意識到的
+consciousness (n) 意識;知覺
+consecutive (adj) 連續的
+consent (v) 同意 (n) 同意
+consequence (n) 結果;後果
+consequent (adj) 隨之發生的
+consequently (adv) 因此;所以
+conservation (n) 保護;保存
+conservative (adj) 保守的 (n) 保守者
+consider (v) 認為;考慮
+considerable (adj) 相當大的
+considerate (adj) 體貼的
+consideration (n) 考慮;體貼
+consist (v) 組成;在於
+consistent (adj) 一致的;一貫的
+conspiracy (n) 陰謀;共謀
+constant (adj) 持續的;不變的
+constitute (v) 構成;組成
+constitution (n) 憲法;結構
+construct (v) 建造;構成
+construction (n) 建造;營造
+constructive (adj) 建設性的
+consul (n) 領事
+consult (v) 請教;諮詢
+consultant (n) 顧問
+consume (v) 消耗;消費
+consumer (n) 消費者
+consumption (n) 消耗;消費
+contact (n) 接觸;聯絡 (v) 接觸;聯絡
+contagious (adj) 接觸傳染的
+contain (v) 包含;容納
+container (n) 容器
+contaminate (v) 汙染
+contemplate (v) 思量;沉思
+contemporary (adj) 當代的;同時代的 (n) 同時代的人
+contempt (n) 輕視;鄙視
+contend (v) 競爭;爭奪;聲稱
+content (adj) 滿足的;滿意的 (v) 使滿足 (n) 滿足;內容;目錄
+contentment (n) 滿足;滿意
+contest (n) 比賽;競賽 (v) 爭奪;角逐
+contestant (n) 參賽者;競爭者
+context (n) 上下文;背景
+continent (n) 大陸;洲
+continental (adj) 大陸的;洲的
+continual (adj) 連續的;頻頻的
+continue (v) 繼續;持續
+continuous (adj) 連續的;不斷的
+contract (n) 合約;契約 (v) 訂契約;收縮
+contradict (v) 反駁;與...矛盾
+contradiction (n) 矛盾
+contrary (adj) 相反的 (n) 相反
+contrast (n) 對比;對照 (v) (使)成對比;(使)成對照
+contribute (v) 捐獻;貢獻;投稿
+contribution (n) 捐獻;貢獻;稿件
+control (n) 控制;支配 (v) 控制;支配
+controller (n) 控制者;主管;控制器
+controversial (adj) 有爭議的
+controversy (n) 爭議;爭論
+convenience (n) 方便;便利的設施
+convenient (adj) 方便的
+convention (n) 會議;大會;慣例;習俗
+conventional (adj) 傳統的;慣例的
+conversation (n) 談話;會話
+converse (v) 交談 (adj) 相反的 (n) 相反的事物
+convert (v) (使)轉變;(使)轉換
+convey (v) 傳達;輸送
+convict (v) (經審訊)證明...有罪;宣判...有罪 (n) 囚犯
+conviction (n) 定罪;判罪;信念
+convince (v) 使相信;說服
+convinced (adj) 確信的
+cook (v) 烹煮 (n) 廚師
+cookie (n) 餅乾
+cool (adj) 涼爽的;冷靜的;酷的 (v) (使)涼快;(使)冷靜
+cooperate (v) 合作
+cooperation (n) 合作
+cooperative (adj) 合作的
+coordinate (v) 協調;整合
+coordination (n) 協調;整合
+cop (n) 警察
+cope (v) 應付;處理
+copper (n) 銅
+copy (v) 複製;抄襲 (n) 複製品;一份
+copyright (n) 版權;著作權
+coral (n) 珊瑚 (adj) 珊瑚色的
+cord (n) (細)繩;索
+core (n) 果核;核心
+cork (n) 軟木塞 (v) 用軟木塞塞住
+corn (n) 玉米
+corner (n) 角落
+corporate (adj) 公司的;法人的
+corporation (n) 股份有限公司
+correct (adj) 正確的 (v) 改正;糾正
+correspond (v) 一致;符合;通信
+correspondence (n) 一致;符合;通信;信件
+correspondent (n) 特派員;記者
+corridor (n) 走廊
+corrupt (adj) 腐敗的;貪汙的 (v) (使)腐敗;(使)墮落
+corruption (n) 腐敗;貪汙
+cost (n) 成本;費用 (v) 花費;價錢為
+costly (adj) 昂貴的;代價大的
+costume (n) 服裝;戲服
+cottage (n) (鄉間)小屋
+cotton (n) 棉花
+couch (n) 長沙發
+cough (v) 咳嗽 (n) 咳嗽
+could (aux) (can的過去式)能夠;可以
+council (n) 會議;議會
+counsel (n) 忠告;建議 (v) 勸告;建議
+counseling (n) 諮商;輔導
+counselor (n) 顧問;輔導老師
+count (v) 計算;數 (n) 計數;數
+counter (n) 櫃檯
+counterclockwise (adj) 逆時針的 (adv) 逆時針地
+country (n) 國家;鄉村
+countryside (n) 鄉村;鄉間
+county (n) 郡;縣
+couple (n) 一對;夫婦 (v) 連接
+courage (n) 勇氣
+courageous (adj) 勇敢的
+course (n) 課程;路線;一道菜
+court (n) 法院;法庭;球場
+courteous (adj) 有禮貌的
+courtesy (n) 禮貌
+courtyard (n) 庭院;天井
+cousin (n) 堂(或表)兄弟姊妹
+cover (v) 覆蓋;包含;報導 (n) 蓋子;封面
+coverage (n) 報導;保險項目
+cow (n) 母牛
+coward (n) 懦夫;膽小鬼
+cowardly (adj) 膽小的
+crab (n) 螃蟹
+crack (v) (使)破裂;(使)發出爆裂聲 (n) 裂縫;爆裂聲
+cracker (n) (鹹的)薄脆餅乾
+cradle (n) 搖籃 (v) 輕抱
+craft (n) 手工藝;技術;船;飛機
+cram (v) 把...塞滿;死記硬背
+crane (n) 起重機;鶴 (v) 伸(頸)
+crash (v) 碰撞;墜毀 (n) 碰撞;墜毀
+crawl (v) 爬行
+crayon (n) 蠟筆
+crazy (adj) 瘋狂的;著迷的
+cream (n) 奶油
+create (v) 創造
+creation (n) 創造;創作(品)
+creative (adj) 有創造力的
+creativity (n) 創造力
+creator (n) 創造者
+creature (n) 生物
+credit (n) 信用;讚揚 (v) 把...歸功於
+creep (v) 爬行;悄悄地移動
+crew (n) 全體船員;全體工作人員
+cricket (n) 蟋蟀;板球
+crime (n) 罪;犯罪
+criminal (n) 罪犯 (adj) 犯罪的
+cripple (n) 跛子;殘障者 (v) 使跛;使殘障
+crisis (n) 危機
+crisp/crispy (adj) 脆的;酥的
+critic (n) 評論家;愛挑剔的人
+critical (adj) 批評的;挑剔的;關鍵的
+criticism (n) 批評;評論
+criticize (v) 批評
+crocodile (n) 鱷魚
+crook (v) (使)彎曲 (n) 彎曲的部分;騙子
+crooked (adj) 彎曲的;不誠實的
+crop (n) 農作物
+cross (n) 十字形(物);交叉 (v) 越過;交叉
+crossing (n) 交叉口;渡口
+crossroad(s) (n) 十字路口
+crow (n) 烏鴉 (v) (雞)啼
+crowd (n) 群眾 (v) 擠滿;聚集
+crown (n) 皇冠 (v) 為...加冕
+crucial (adj) 至關重要的
+crude (adj) 未經加工的;粗糙的;簡陋的
+cruel (adj) 殘酷的
+cruelty (n) 殘酷;殘忍
+cruise (n) (乘船)旅行 (v) (乘船)旅行
+cruiser (n) 遊艇;巡洋艦
+crumb (n) 麵包屑;碎屑
+crush (v) 壓碎;鎮壓 (n) 迷戀
+crust (n) 麵包皮;外殼
+crutch (n) 拐杖
+cry (v) 哭;喊叫 (n) 哭聲;叫喊
+crystal (n) 水晶 (adj) 水晶的
+cub (n) (熊、獅、虎等的)幼獸
+cucumber (n) 黃瓜
+cue (n) 暗示;提示
+cuisine (n) 菜餚;烹飪
+cultivate (v) 耕種;栽培;培養
+cultural (adj) 文化的
+culture (n) 文化
+cunning (adj) 狡猾的
+cup (n) 杯子
+cupboard (n) 櫥櫃
+curb (n) (人行道旁的)鑲邊石;抑制 (v) 抑制
+cure (v) 治癒 (n) 治療法
+curfew (n) 宵禁
+curiosity (n) 好奇心
+curious (adj) 好奇的
+curl (v) (使)捲曲 (n) 捲髮;捲曲物
+currency (n) 貨幣
+current (adj) 當前的;現行的 (n) 水流;氣流;電流
+curriculum (n) 課程
+curry (n) 咖哩
+curse (n) 詛咒;咒罵 (v) 詛咒;咒罵
+curtain (n) 窗簾;布幕
+curve (n) 曲線 (v) (使)彎曲
+cushion (n) 坐墊;靠墊
+custody (n) 監護(權);拘留
+custom (n) 習俗;慣例
+customary (adj) 習慣的;慣常的
+customer (n) 顧客
+cut (v) 切;割 (n) 傷口
+cute (adj) 可愛的
+cycle (n) 循環;週期 (v) 騎腳踏車
+cyclist (n) 騎腳踏車的人
+cylinder (n) 圓柱體;圓筒
+dad(dy) (n) 爸爸
+daffodil (n) 水仙花
+daily (adj) 每日的 (n) 日報 (adv) 每日
+dairy (n) 乳品廠;乳製品 (adj) 牛奶的;乳品的
+dam (n) 水壩
+damage (n) 損害;毀壞 (v) 損害;毀壞
+damn (v) 譴責;指責 (adj) 該死的 (int) 該死;可惡
+damp (adj) 潮濕的 (n) 濕氣 (v) 使潮濕;抑制
+dance (v) 跳舞 (n) 舞蹈;舞會
+dancer (n) 舞者
+dandruff (n) 頭皮屑
+danger (n) 危險
+dangerous (adj) 危險的
+dare (v) 敢 (aux) 敢
+dark (adj) 黑暗的 (n) 黑暗
+darling (n) 親愛的人 (adj) 親愛的
+dart (v) 投擲;飛奔 (n) 標槍;飛鏢
+dash (v) 猛衝;猛撞 (n) 猛衝;破折號
+data (n) 資料
+date (n) 日期;約會 (v) 約會;註明日期
+daughter (n) 女兒
+dawn (n) 黎明;拂曉 (v) 破曉;領悟
+day (n) 白天;日子
+daydream (n) 白日夢 (v) 做白日夢
+daze (v) 使迷糊;使昏眩 (n) 迷糊;昏眩
+dazzle (v) 使目眩;使眼花
+dead (adj) 死的
+deadline (n) 最後期限
+deadly (adj) 致命的 (adv) 極度地
+deaf (adj) 聾的
+deafen (v) 使聾
+deal (v) 處理;交易;分配 (n) 交易;數量
+dealer (n) 商人
+dear (adj) 親愛的;昂貴的 (int) 天啊
+death (n) 死亡
+debate (n) 辯論;討論 (v) 辯論;討論
+debt (n) 債務
+decade (n) 十年
+decay (v) 腐朽;衰敗 (n) 腐朽;衰敗
+deceit (n) 欺騙;謊言
+deceive (v) 欺騙
+December (n) 十二月
+decency (n) 合宜;得體
+decent (adj) 正派的;體面的
+decide (v) 決定
+decision (n) 決定
+decisive (adj) 決定性的
+deck (n) 甲板
+declaration (n) 宣告;聲明
+declare (v) 宣布;聲稱
+decline (v) 下降;衰退;拒絕 (n) 下降;衰退
+decorate (v) 裝飾
+decoration (n) 裝飾(品)
+decrease (v) 減少 (n) 減少
+dedicate (v) 奉獻
+dedication (n) 奉獻
+deed (n) 行為;功績
+deem (v) 認為;視作
+deep (adj) 深的 (adv) 深深地
+deepen (v) 加深;變深
+deer (n) 鹿
+defeat (v) 擊敗 (n) 失敗;挫敗
+defect (n) 缺點;缺陷 (v) 脫離;叛逃
+defend (v) 防禦;保衛;辯護
+defense (n) 防禦;保衛;辯護
+defensible (adj) 可防禦的;可辯護的
+defensive (adj) 防禦性的
+deficiency (n) 缺乏;不足
+define (v) 定義;界定
+definite (adj) 明確的;肯定的
+definition (n) 定義
+degree (n) 程度;度數;學位
+delay (v) 延遲;耽擱 (n) 延遲;耽擱
+delegate (n) 代表(團團員) (v) 委任
+delegation (n) 代表團
+deliberate (adj) 故意的;審慎的
+delicate (adj) 纖細的;易碎的;精美的
+delicious (adj) 美味的
+delight (n) 欣喜;快樂 (v) (使)高興
+delightful (adj) 令人愉快的
+delinquent (adj) 犯法的;拖欠的 (n) 青少年罪犯
+deliver (v) 遞送;發表;分娩
+delivery (n) 遞送;發表;分娩
+demand (n) 要求;需要 (v) 要求
+democracy (n) 民主(國家)
+democrat (n) 民主主義者;(大寫)美國民主黨員
+democratic (adj) 民主的
+demonstrate (v) 證明;示範;示威
+demonstration (n) 證明;示範;示威遊行
+denial (n) 否認;拒絕
+denounce (v) 公開譴責;告發
+dense (adj) 濃密的;密集的
+dental (adj) 牙齒的
+dentist (n) 牙醫
+deny (v) 否認;拒絕
+depart (v) 離開;出發
+department (n) (政府、公司、大學的)部;門;系
+departure (n) 離開;出發
+depend (v) 依賴;依靠;視...而定
+dependable (adj) 可靠的;可信賴的
+dependent (adj) 依賴的;依靠的
+depict (v) 描繪;描寫
+deposit (n) 存款;押金 (v) 存入;存放
+depress (v) 使沮喪
+depression (n) 沮喪;憂鬱;蕭條
+deprive (v) 剝奪
+depth (n) 深度
+deputy (n) 副手;代理人
+derive (v) 取得;源自
+descend (v) 下降;為...的後裔
+descendant (n) 子孫;後裔
+descent (n) 下降;血統
+describe (v) 描述;形容
+description (n) 描述;形容
+descriptive (adj) 描述的;描寫的
+desert (n) 沙漠 (v) 拋棄;遺棄
+deserve (v) 應得
+design (v) 設計 (n) 設計;圖案
+designate (v) 指派;標出
+designer (n) 設計師
+desirable (adj) 值得嚮往的;令人滿意的
+desire (n) 慾望;渴望 (v) 渴望;想要
+desk (n) 書桌
+despair (n) 絕望 (v) 絕望
+desperate (adj) 絕望的;拼命的
+despise (v) 鄙視;輕視
+despite (prep) 儘管
+dessert (n) 甜點
+destination (n) 目的地
+destined (adj) 命中注定的
+destiny (n) 命運
+destroy (v) 破壞;摧毀
+destruction (n) 破壞;毀滅
+destructive (adj) 破壞性的
+detach (v) 分開;拆卸
+detail (n) 細節 (v) 詳細說明
+detain (v) 拘留;耽擱
+detect (v) 察覺;偵測到
+detective (n) 偵探;警探
+deter (v) 阻止;威懾
+detergent (n) 清潔劑;洗滌劑
+deteriorate (v) (使)惡化
+determination (n) 決心
+determine (v) 決定;下定決心
+devalue (v) (使)貶值
+develop (v) 發展;開發;沖洗(照片)
+development (n) 發展;開發
+device (n) 裝置;設備
+devil (n) 魔鬼
+devise (v) 設計;想出
+devote (v) 奉獻;致力於
+devotion (n) 奉獻;摯愛
+devour (v) 狼吞虎嚥;吞噬
+dew (n) 露水
+diabetes (n) 糖尿病
+diagnose (v) 診斷
+diagram (n) 圖表;圖解
+dial (v) 撥(電話號碼) (n) 刻度盤;轉盤
+dialect (n) 方言
+dialogue (n) 對話
+diameter (n) 直徑
+diamond (n) 鑽石
+diaper (n) 尿布
+diarrhea (n) 腹瀉
+diary (n) 日記
+dictate (v) 口述;命令
+dictation (n) 口述;聽寫
+dictator (n) 獨裁者
+dictionary (n) 字典
+die (v) 死
+diet (n) 飲食 (v) 節食
+differ (v) 不同;相異
+difference (n) 不同;差異
+different (adj) 不同的
+differentiate (v) 區分;區別
+difficult (adj) 困難的
+difficulty (n) 困難
+dig (v) 挖
+digest (v) 消化;領悟 (n) 摘要
+digestion (n) 消化(作用);消化能力
+digit (n) (0到9的)數字
+digital (adj) 數位的
+dignity (n) 尊嚴
+dilemma (n) 進退兩難的窘境
+diligence (n) 勤勉;勤奮
+diligent (adj) 勤勉的;勤奮的
+dim (adj) 微暗的;模糊的 (v) (使)變暗
+dime (n) (美國、加拿大的)一角硬幣
+dimension (n) (長、寬、高、厚)度;次元
+diminish (v) (使)減少;(使)減弱
+dine (v) 用餐
+diner (n) 用餐者;(餐車式的)小飯館
+ding-dong (n) 叮咚聲
+dining room (n) 飯廳
+dinner (n) 晚餐
+dinosaur (n) 恐龍
+dip (v) 浸;泡 (n) 沾醬
+diploma (n) 文憑;畢業證書
+diplomacy (n) 外交(手腕)
+diplomat (n) 外交官
+diplomatic (adj) 外交的;有手腕的
+direct (adj) 直接的 (v) 指引;指導;導演
+direction (n) 方向;指示
+director (n) 董事;主任;導演
+directory (n) 姓名地址錄
+dirt (n) 泥土;汙物
+dirty (adj) 骯髒的
+disability (n) 殘疾;無能
+disable (v) 使傷殘;使無能力
+disadvantage (n) 不利(之點);劣勢
+disagree (v) 不同意
+disagreement (n) 意見不合;爭論
+disappear (v) 消失
+disappoint (v) 使失望
+disappointment (n) 失望
+disapproval (n) 不贊成
+disapprove (v) 不贊成
+disaster (n) 災難;大禍
+disastrous (adj) 災難性的
+disbelief (n) 不相信;懷疑
+discard (v) 拋棄;丟棄
+discharge (v) 排出;解雇;允許...離開 (n) 排出;解雇;退伍
+disciple (n) 弟子;門徒
+disciplinary (adj) 紀律的;懲戒的
+discipline (n) 紀律;訓練 (v) 訓練;懲戒
+disclose (v) 透露;揭發
+disco (n) 迪斯可舞廳
+discount (n) 折扣 (v) 打折扣
+discourage (v) 使沮喪;勸阻
+discouragement (n) 沮喪;勸阻
+discover (v) 發現
+discovery (n) 發現
+discreet (adj) 謹慎的;小心的
+discriminate (v) 歧視;分辨
+discrimination (n) 歧視;辨別力
+discuss (v) 討論
+discussion (n) 討論
+disease (n) 疾病
+disgrace (n) 恥辱;不名譽 (v) 使蒙羞
+disgraceful (adj) 可恥的;不名譽的
+disguise (v) 偽裝;假扮 (n) 偽裝;假扮
+disgust (n) 厭惡 (v) 使厭惡
+disgusting (adj) 令人作嘔的;討厭的
+dish (n) 盤子;一道菜
+dishonest (adj) 不誠實的
+disk (n) 磁碟;光碟
+dislike (v) 不喜歡 (n) 不喜歡;嫌惡
+dismantle (v) 拆卸;拆掉
+dismay (n) 沮喪;驚慌 (v) 使沮喪;使驚慌
+dismiss (v) 解散;解雇
+disorder (n) 混亂;失調
+dispatch (v) 派遣;發送 (n) 派遣;發送
+dispensable (adj) 非必要的;可有可無的
+dispense (v) 分發;配(藥)
+disperse (v) (使)驅散;(使)散開
+displace (v) 取代;使...流離失所
+display (v) 展示;陳列 (n) 展示;陳列
+displease (v) 使不悅
+disposable (adj) 用完即丟的;可任意處理的
+disposal (n) 處理;處置
+dispose (v) 處理;處置
+dispute (n) 爭論;糾紛 (v) 爭論;辯駁
+disregard (v) 不理會;忽視 (n) 不理會;忽視
+disrupt (v) 使混亂;使中斷
+dissident (n) 異議者 (adj) 意見不同的
+dissolve (v) (使)溶解
+dissuade (v) 勸阻
+distance (n) 距離
+distant (adj) 遙遠的
+distill (v) 蒸餾
+distinct (adj) 清楚的;截然不同的
+distinction (n) 區別;卓越
+distinctive (adj) 獨特的
+distinguish (v) 區別;分辨
+distinguished (adj) 卓越的;傑出的
+distort (v) 扭曲;曲解
+distract (v) 使分心
+distraction (n) 分心;讓人分心的事
+distress (n) 痛苦;危難 (v) 使痛苦
+distribute (v) 分配;分發
+distribution (n) 分配;分發
+district (n) 地區;區域
+distrust (n) 不信任 (v) 不信任
+disturb (v) 打擾;妨礙
+disturbance (n) 妨礙;騷動
+ditch (n) 溝;渠
+dive (v) 跳水;潛水 (n) 跳水;潛水
+diverse (adj) 不同的;多樣的
+diversify (v) (使)多樣化
+diversity (n) 多樣性;差異
+divide (v) 分開;劃分;除
+divine (adj) 神的;神聖的
+division (n) 分開;部門;除法
+divorce (n) 離婚 (v) 與...離婚
+dizzy (adj) 暈眩的
+do (v) 做 (aux) (構成否定句、疑問句等)
+dock (n) 碼頭 (v) (船)靠岸
+doctor (n) 醫生;博士
+document (n) 文件;公文 (v) 記錄
+documentary (adj) 文件的;紀錄的 (n) 紀錄片
+dodge (v) 閃躲;躲避
+dog (n) 狗
+doll (n) 洋娃娃
+dollar (n) 元
+dolphin (n) 海豚
+domestic (adj) 家庭的;國內的
+dominant (adj) 支配的;主要的
+dominate (v) 支配;控制
+donate (v) 捐贈
+donation (n) 捐贈(物)
+donkey (n) 驢子
+donor (n) 捐贈者
+doom (n) 厄運;毀滅 (v) 注定(失敗等)
+door (n) 門
+doorbell (n) 門鈴
+doorknob (n) 門把
+dormitory (n) 宿舍
+dose (n) 一劑
+dot (n) 點 (v) 點綴
+double (adj) 雙倍的;雙人的 (v) (使)加倍 (n) 兩倍
+doubt (n) 懷疑 (v) 懷疑
+dough (n) 麵團
+doughnut (n) 甜甜圈
+dove (n) 鴿子
+down (adv) 向下 (prep) 向下;沿著
+downstairs (adv) 在樓下;往樓下 (adj) 樓下的 (n) 樓下
+downtown (adv) 在市區 (adj) 市區的 (n) 市區
+downward (adj) 向下的
+downwards (adv) 向下地
+doze (v) 打瞌睡 (n) 瞌睡
+dozen (n) 一打
+draft (n) 草稿 (v) 起草;徵召入伍
+drag (v) 拖;拉
+dragon (n) 龍
+drain (v) 排出(液體);消耗 (n) 排水管;消耗
+drama (n) 戲劇
+dramatic (adj) 戲劇性的
+drape (v) (用布)覆蓋 (n) 窗簾
+drastic (adj) 激烈的;猛烈的
+draw (v) 畫;拉;吸引
+drawback (n) 缺點;不利條件
+drawer (n) 抽屜
+drawing (n) 描繪;素描
+dread (v) 懼怕;擔心 (n) 懼怕;擔心
+dreadful (adj) 可怕的;糟糕的
+dream (n) 夢;夢想 (v) 做夢;夢想
+dreary (adj) 沉悶的;枯燥的
+dress (n) 洋裝 (v) 穿衣服
+dresser (n) 梳妝台;衣櫃
+dressing (n) (沙拉)調味醬;繃帶
+drift (v) 漂流;漂泊 (n) 漂流;漂泊
+drill (v) 鑽(孔);訓練 (n) 鑽(孔);訓練;演習
+drink (v) 喝 (n) 飲料
+drip (v) 滴下 (n) 滴水聲
+drive (v) 開車;駕駛 (n) 駕車;磁碟機
+driver (n) 司機;駕駛
+driveway (n) 私人車道
+drizzle (v) 下毛毛雨 (n) 毛毛雨
+drop (v) (使)滴下;掉落 (n) (一)滴;掉落
+drought (n) 乾旱
+drown (v) 淹死;淹沒
+drowsy (adj) 昏昏欲睡的
+drug (n) 藥;毒品 (v) 用藥麻醉
+drugstore (n) 藥房;雜貨店
+drum (n) 鼓 (v) 敲鼓
+drunk (adj) 喝醉的 (n) 酒鬼
+dry (adj) 乾的 (v) (使)乾
+dryer (n) 烘乾機
+dual (adj) 雙重的
+dub (v) 配音;授予稱號
+duck (n) 鴨子 (v) 突然低下頭
+duckling (n) 小鴨
+due (adj) 到期的;應付的
+dull (adj) 鈍的;遲鈍的;單調乏味的
+dumb (adj) 啞的;愚笨的
+dump (v) 傾倒 (n) 垃圾場
+dumpling (n) 餃子
+durable (adj) 耐用的;持久的
+duration (n) 持續期間
+during (prep) 在...期間
+dusk (n) 黃昏
+dust (n) 灰塵 (v) 拂去灰塵
+dusty (adj) 滿是灰塵的
+duty (n) 義務;責任;稅
+DVD (n) 數位影音光碟
+dwarf (n) 矮子;侏儒
+dwell (v) 居住
+dwelling (n) 住處;寓所
+dye (v) 染色 (n) 染料
+dynamic (adj) 有活力的;動態的
+dynamite (n) 炸藥
+dynasty (n) 朝代;王朝
+each (adj) 每個 (pron) 各個 (adv) 各
+eager (adj) 渴望的;熱切的
+eagle (n) 老鷹
+ear (n) 耳朵
+early (adj) 早的;初期的 (adv) 早地
+earn (v) 賺得;贏得
+earnest (adj) 認真的;誠摯的
+earnings (n) 收入;工資
+earphone (n) 耳機
+earring (n) 耳環
+earth (n) 地球;土地
+earthquake (n) 地震
+ease (n) 容易;舒適 (v) 減輕;緩和
+east (n) 東方 (adj) 東方的 (adv) 向東方
+Easter (n) 復活節
+easy (adj) 容易的;自在的
+eat (v) 吃
+eccentric (adj) 古怪的 (n) 古怪的人
+echo (v) 發出回音;附和 (n) 回音;附和
+eclipse (n) (日、月)蝕
+ecology (n) 生態(學)
+economic (adj) 經濟(上)的
+economical (adj) 節儉的;經濟的
+economics (n) 經濟學
+economist (n) 經濟學家
+economy (n) 經濟;節儉
+ecstasy (n) 狂喜;欣喜若狂
+edge (n) 邊緣
+edible (adj) 可食用的
+edit (v) 編輯
+edition (n) 版本
+editor (n) 編輯;編者
+editorial (n) 社論 (adj) 編輯的
+educate (v) 教育
+education (n) 教育
+educator (n) 教育家
+eel (n) 鰻魚
+effect (n) 效果;影響
+effective (adj) 有效的
+efficiency (n) 效率
+efficient (adj) 有效率的
+effort (n) 努力
+egg (n) 蛋
+ego (n) 自我
+eight (n) 八 (adj) 八的
+eighteen (n) 十八 (adj) 十八的
+eighty (n) 八十 (adj) 八十的
+either (adj) (兩者之中)任一的 (pron) (兩者之中)任何一個 (adv) (用於否定句)也
+elaborate (adj) 精心製作的 (v) 詳盡闡述
+elbow (n) 手肘
+elder (adj) 年長的 (n) 長者;前輩
+elderly (adj) 年長的
+elect (v) 選舉
+election (n) 選舉
+electric (adj) 電的
+electrical (adj) 與電有關的
+electrician (n) 電工
+electricity (n) 電;電力
+electron (n) 電子
+electronic (adj) 電子的
+electronics (n) 電子學
+elegant (adj) 優雅的;雅緻的
+element (n) 元素;要素
+elementary (adj) 基本的;初步的
+elephant (n) 大象
+elevate (v) 提升;提高
+elevator (n) 電梯
+eleven (n) 十一 (adj) 十一的
+eligible (adj) 有資格的
+eliminate (v) 排除;消除
+elite (n) 菁英 (adj) 菁英的
+eloquence (n) 口才;雄辯
+eloquent (adj) 有口才的;雄辯的
+else (adv) 其他;另外
+elsewhere (adv) 在別處;到別處
+e-mail (n) 電子郵件 (v) 寄電子郵件
+embark (v) 上船(或飛機);開始從事
+embarrass (v) 使尷尬
+embarrassment (n) 尷尬;難堪
+embassy (n) 大使館
+embody (v) 體現;使具體化
+embrace (v) 擁抱;欣然接受 (n) 擁抱
+emerge (v) 出現;浮現
+emergency (n) 緊急(狀況)
+emigrate (v) 移居國外
+emigration (n) 移居國外
+emperor (n) 皇帝
+emphasis (n) 強調;重視
+emphasize (v) 強調;重視
+emphatic (adj) 強調的;顯著的
+empire (n) 帝國
+employ (v) 雇用
+employee (n) 雇員
+employer (n) 雇主
+employment (n) 雇用;工作
+empty (adj) 空的 (v) (使)成空
+enable (v) 使能夠
+enact (v) 制定(法律)
+enchant (v) 使著迷
+enclose (v) 圍住;附上
+enclosure (n) 圍住;附件
+encounter (v) 遭遇;遇到 (n) 遭遇;遇到
+encourage (v) 鼓勵
+encouragement (n) 鼓勵
+encyclopedia (n) 百科全書
+end (n) 結束;末端 (v) 結束
+endanger (v) 危及
+endeavor (n) 努力;盡力 (v) 努力;力圖
+ending (n) 結局
+endless (adj) 無盡的;不斷的
+endorse (v) 背書;為(產品)代言
+endurance (n) 忍耐;耐力
+endure (v) 忍受;忍耐
+enemy (n) 敵人
+energetic (adj) 精力充沛的
+energy (n) 精力;能源
+enforce (v) 實施;執行
+enforcement (n) 實施;執行
+engage (v) (使)訂婚;(使)從事
+engagement (n) 訂婚;約會
+engine (n) 引擎
+engineer (n) 工程師
+engineering (n) 工程(學)
+English (adj) 英國的;英語的 (n) 英國人;英語
+enhance (v) 提升;增加
+enjoy (v) 喜愛;享受
+enjoyable (adj) 令人愉快的
+enjoyment (n) 樂趣;享受
+enlarge (v) 擴大;放大
+enlighten (v) 啟發;啟迪
+enormous (adj) 巨大的;龐大的
+enough (adj) 足夠的 (adv) 足夠地 (n) 足夠
+enrich (v) 使豐富;使富裕
+enroll (v) (使)註冊;登記
+ensure (v) 確保;保證
+enter (v) 進入
+enterprise (n) 企業;事業
+entertain (v) 娛樂;款待
+entertainment (n) 娛樂;款待
+enthusiasm (n) 熱情;熱忱
+enthusiastic (adj) 熱情的;熱忱的
+entire (adj) 全部的;整個的
+entitle (v) 給...權利(或資格);給...命名
+entrance (n) 入口
+entry (n) 進入;項目
+envelope (n) 信封
+envious (adj) 羨慕的;嫉妒的
+environment (n) 環境
+environmental (adj) 環境的
+envy (v) 羨慕;嫉妒 (n) 羨慕;嫉妒
+enzyme (n) 酵素;酶
+epic (n) 史詩 (adj) 史詩的;壯麗的
+epidemic (n) 傳染病;流行
+episode (n) (連續劇等的)一集;一節;插曲
+epoch (n) 時代;紀元
+equal (adj) 相等的;平等的 (n) 相等的人(或物) (v) 等於
+equality (n) 平等;相等
+equate (v) 將...視為同等
+equation (n) 方程式;等式
+equip (v) 配備;裝備
+equipment (n) 設備;裝備
+equivalent (adj) 相等的;等值的 (n) 相等的人(或物)
+era (n) 時代;年代
+erase (v) 擦掉;清除
+eraser (n) 橡皮擦
+erect (adj) 直立的 (v) 建立;豎立
+erode (v) 侵蝕;腐蝕
+errand (n) 差事
+error (n) 錯誤
+erupt (v) 爆發;噴出
+escalate (v) (使)逐步上升;(使)逐步升級
+escalator (n) 手扶梯
+escape (v) 逃脫;逃避 (n) 逃脫;逃避
+escort (n) 護送者;護衛者 (v) 護送;護衛
+especially (adv) 特別;尤其
+essay (n) 論文;散文
+essence (n) 本質;精髓
+essential (adj) 必要的;不可或缺的 (n) 必需品;要點
+establish (v) 建立;設立
+establishment (n) 建立;機構
+estate (n) 地產;財產
+esteem (n) 尊敬;尊重 (v) 尊敬;尊重
+estimate (v) 估計 (n) 估計
+eternal (adj) 永恆的;永久的
+eternity (n) 永恆;不朽
+ethic (n) 道德規範;倫理
+ethical (adj) 道德的;倫理的
+ethnic (adj) 種族的
+evaluate (v) 評估;評價
+evaluation (n) 評估;評價
+eve (n) 前夕
+even (adv) 甚至;即使 (adj) 平的;偶數的;均等的
+evening (n) 傍晚;晚上
+event (n) 事件
+eventual (adj) 最後的;結果的
+ever (adv) 曾經;從來
+evergreen (n) 常綠樹 (adj) 常綠的
+every (adj) 每個
+evidence (n) 證據
+evident (adj) 明顯的
+evil (adj) 邪惡的 (n) 邪惡
+evolution (n) 演化;演變
+evolve (v) (使)演化;(使)演變
+exact (adj) 確切的;精確的
+exaggerate (v) 誇張;誇大
+exaggeration (n) 誇張;誇大
+exam (n) 考試
+examination (n) 考試;檢查
+examine (v) 檢查;測驗
+example (n) 例子;榜樣
+exceed (v) 超過;超出
+excel (v) 勝過;擅長
+excellence (n) 優秀;卓越
+excellent (adj) 優秀的;傑出的
+except (prep) 除了...之外
+exception (n) 例外
+exceptional (adj) 例外的;格外的;卓越的
+excess (n) 過度;過量 (adj) 過度的;過量的
+excessive (adj) 過度的;過分的
+exchange (v) 交換 (n) 交換
+excite (v) 使興奮;使激動
+excited (adj) 感到興奮的
+excitement (n) 興奮;刺激
+exciting (adj) 令人興奮的
+exclaim (v) 驚叫;呼喊
+exclude (v) 排除;不包括
+exclusive (adj) 獨家的;專有的
+exclusively (adv) 專門地;僅僅
+excursion (n) 遠足;短途旅行
+excuse (v) 原諒;寬恕 (n) 藉口;理由
+execute (v) 執行;處死
+execution (n) 執行;處決
+executive (n) 主管;高階管理人 (adj) 執行的;行政的
+exemplify (v) 是...的例證
+exempt (adj) 被豁免的 (v) 豁免
+exercise (n) 運動;練習 (v) 運動;練習
+exert (v) 運用;施加
+exhaust (v) 使筋疲力盡;用完 (n) 廢氣
+exhausted (adj) 筋疲力盡的
+exhaustion (n) 筋疲力盡;枯竭
+exhibit (v) 展示;陳列 (n) 展示品;陳列品
+exhibition (n) 展覽(會)
+exile (n) 流放;流亡 (v) 流放
+exist (v) 存在;生存
+existence (n) 存在;生存
+exit (n) 出口 (v) 離開
+exotic (adj) 異國風味的;奇特的
+expand (v) 擴大;擴展
+expansion (n) 擴大;擴展
+expect (v) 期望;預期
+expectation (n) 期望;預期
+expedition (n) 遠征(隊);探險(隊)
+expel (v) 驅逐;開除
+expend (v) 花費;消耗
+expense (n) 花費;費用
+expensive (adj) 昂貴的
+experience (n) 經驗 (v) 體驗;經歷
+experiment (n) 實驗 (v) 做實驗
+experimental (adj) 實驗性的
+expert (n) 專家 (adj) 專家的;熟練的
+expertise (n) 專業知識;專門技術
+explain (v) 解釋;說明
+explanation (n) 解釋;說明
+explicit (adj) 清楚的;明確的
+explode (v) (使)爆炸
+exploit (v) 利用;剝削 (n) 功績;壯舉
+exploration (n) 探險;探勘
+explore (v) 探險;探勘
+explorer (n) 探險家
+explosion (n) 爆炸
+explosive (adj) 爆炸(性)的 (n) 炸藥
+export (v) 出口 (n) 出口(品)
+expose (v) 使暴露;揭露
+exposure (n) 暴露;揭露
+express (v) 表達 (n) 快車;快遞 (adj) 快速的;快遞的
+expression (n) 表達;表情
+expressive (adj) 表情豐富的;意味深長的
+exquisite (adj) 精緻的;細膩的
+extend (v) 延伸;延長
+extension (n) 延伸;分機
+extensive (adj) 廣泛的;大規模的
+extent (n) 程度;範圍
+exterior (adj) 外部的 (n) 外部
+external (adj) 外部的
+extinct (adj) 絕種的
+extinguish (v) 熄滅
+extra (adj) 額外的 (adv) 額外地 (n) 額外之物
+extract (v) 取出;提煉 (n) 萃取物;精華
+extraordinary (adj) 非凡的;特別的
+extravagant (adj) 奢侈的;浪費的
+extreme (adj) 極端的;極度的 (n) 極端
+eye (n) 眼睛
+eyebrow (n) 眉毛
+eyelid (n) 眼皮;眼瞼
+eyesight (n) 視力
+fable (n) 寓言
+fabric (n) 布料;織品
+face (n) 臉;面子 (v) 面對
+facial (adj) 臉部的 (n) 臉部美容
+facility (n) 設施;設備
+fact (n) 事實
+factor (n) 因素;要素
+factory (n) 工廠
+faculty (n) (大學的)全體教職員;才能
+fade (v) 褪色;變暗;凋謝
+Fahrenheit (n) 華氏
+fail (v) 失敗;不及格
+failure (n) 失敗;不及格
+faint (adj) 微弱的;模糊的;虛弱的 (v) 暈倒 (n) 暈倒
+fair (adj) 公平的;白皙的;晴朗的 (n) 博覽會
+fairy (n) 小精靈
+faith (n) 信心;信任;信仰
+faithful (adj) 忠實的;忠誠的
+fake (adj) 假的 (n) 贗品 (v) 偽造
+fall (v) 掉落;跌倒;變成 (n) 秋天;瀑布
+fame (n) 名聲
+familiar (adj) 熟悉的
+family (n) 家庭
+famine (n) 饑荒
+famous (adj) 有名的;著名的
+fan (n) 風扇;扇子;迷 (v) 搧
+fancy (adj) 別緻的;昂貴的 (n) 喜好;幻想 (v) 想像;愛慕
+fantastic (adj) 極好的;幻想的
+fantasy (n) 幻想;夢想
+far (adj) 遠的 (adv) 遠;...得多
+fare (n) (交通工具的)票價
+farewell (n) 告別;再會
+farm (n) 農場
+farmer (n) 農夫
+farther (adv) 更遠地 (adj) 更遠的
+fascinate (v) 使著迷
+fascinating (adj) 迷人的
+fascism (n) 法西斯主義
+fashion (n) 時尚;方式
+fashionable (adj) 時尚的;流行的
+fast (adj) 快的 (adv) 快地
+fasten (v) 繫牢;扣緊
+fat (adj) 胖的 (n) 脂肪
+fatal (adj) 致命的
+fate (n) 命運
+father (n) 父親
+fatigue (n) 疲勞 (v) 使疲勞
+faucet (n) 水龍頭
+fault (n) 錯誤;缺點
+favor (n) 贊成;偏愛 (v) 偏愛;有利於
+favorable (adj) 有利的;贊同的
+favorite (adj) 最喜愛的 (n) 最喜愛的人(或事物)
+fax (n) 傳真 (v) 傳真
+fear (n) 害怕;恐懼 (v) 害怕;恐懼
+fearful (adj) 可怕的;害怕的
+feasible (adj) 可行的
+feast (n) 盛宴 (v) 盡情地吃;款待
+feather (n) 羽毛
+feature (n) 特徵;特色 (v) 以...為特色
+February (n) 二月
+federal (adj) 聯邦的
+fee (n) 費用
+feeble (adj) 虛弱的;微弱的
+feed (v) 餵食;進食
+feedback (n) 回饋;反應
+feel (v) 感覺;摸起來
+feeling (n) 感覺;知覺
+fellow (n) 傢伙;同事 (adj) 同伴的
+female (n) 女性 (adj) 女性的
+feminine (adj) 女性的;嬌柔的
+fence (n) 柵欄;籬笆
+ferry (n) 渡輪 (v) (乘渡輪)渡過
+fertile (adj) 肥沃的;富饒的
+fertility (n) 肥沃;繁殖力
+fertilizer (n) 肥料
+festival (n) 節日
+fetch (v) (去)拿來
+fever (n) 發燒
+few (adj) 少數的 (pron) 少數
+fiancé (n) 未婚夫
+fiancée (n) 未婚妻
+fiber (n) 纖維
+fiction (n) 小說;虛構的事
+fictional (adj) 小說的;虛構的
+fiddle (n) 小提琴 (v) 拉小提琴
+fidelity (n) 忠實;忠誠
+field (n) 田野;領域;運動場
+fierce (adj) 兇猛的;激烈的
+fifteen (n) 十五 (adj) 十五的
+fifty (n) 五十 (adj) 五十的
+fight (v) 打架;對抗 (n) 打架;戰鬥
+fighter (n) 鬥士;戰士
+figure (n) 身材;人物;數字;圖形 (v) 認為;計算
+file (n) 檔案;卷宗;銼刀 (v) 歸檔;提出
+fill (v) 裝滿
+film (n) 軟片;電影 (v) 拍電影
+filter (n) 過濾器 (v) 過濾
+fin (n) 鰭
+final (adj) 最後的 (n) 決賽;期末考
+finale (n) 終曲;終場
+finance (n) 財政;金融 (v) 提供資金給
+financial (adj) 財政的;金融的
+find (v) 找到;發現
+finding(s) (n) 發現;調查結果
+fine (adj) 好的;晴朗的;纖細的 (n) 罰金 (v) 處以罰金
+finger (n) 手指
+finish (v) 完成;結束 (n) 結束
+finite (adj) 有限的
+fire (n) 火;火災 (v) 開火;解雇
+firecracker (n) 鞭炮
+firefighter (n) 消防隊員
+fireplace (n) 壁爐
+fireproof (adj) 防火的
+fireworks (n) 煙火
+firm (adj) 穩固的;堅定的 (n) 公司
+first (adj) 第一的 (adv) 首先 (n) 第一
+fish (n) 魚 (v) 釣魚
+fisherman (n) 漁夫
+fist (n) 拳頭
+fit (v) 合身;適合 (adj) 適合的;健康的 (n) (一)陣;發作
+five (n) 五 (adj) 五的
+fix (v) 修理;固定;準備(食物)
+flag (n) 旗幟
+flake (n) 薄片 (v) (成薄片)剝落
+flame (n) 火焰 (v) 燃燒
+flank (n) 脇腹;側面 (v) 位於...的側面
+flap (v) 拍動;飄動 (n) 拍動;蓋口
+flash (v) 閃光;閃現 (n) 閃光
+flashlight (n) 手電筒
+flask (n) 燒瓶;細頸瓶
+flat (adj) 平的;洩了氣的 (n) 公寓
+flatter (v) 諂媚;奉承
+flavor (n) 味道;風味 (v) 給...調味
+flaw (n) 瑕疵;缺點
+flea (n) 跳蚤
+flee (v) 逃跑;逃走
+fleet (n) 艦隊
+flesh (n) 肉;果肉
+flexible (adj) 有彈性的;可變通的
+flicker (v) 閃爍;忽隱忽現 (n) 閃爍
+flight (n) 飛行;班機
+fling (v) (用力地)扔;擲
+flip (v) 輕彈;(使)翻轉 (n) 輕彈;空翻
+float (v) 漂浮 (n) 漂浮物;花車
+flock (n) (一)群 (v) 聚集
+flood (n) 洪水 (v) 淹沒;湧入
+floor (n) 地板;樓層
+flour (n) 麵粉
+flourish (v) 繁榮;茂盛 (n) 誇張的動作
+flow (v) 流動 (n) 流動
+flower (n) 花 (v) 開花
+flu (n) 流行性感冒
+fluent (adj) 流利的;流暢的
+fluffy (adj) 毛茸茸的;蓬鬆的
+fluid (n) 流體;液體 (adj) 流體的;不固定的
+flunk (v) (使)不及格;(使)當掉
+flush (v) 臉紅;沖水 (n) 臉紅;沖洗
+flute (n) 長笛
+flutter (v) 拍動;飄動 (n) 拍動;飄動
+fly (v) 飛 (n) 蒼蠅
+foam (n) 泡沫 (v) 起泡沫
+focus (n) 焦點 (v) 集中(於)
+foe (n) 敵人
+fog (n) 霧
+foggy (adj) 有霧的
+foil (n) 箔
+fold (v) 摺疊 (n) 摺疊;摺痕
+folk (n) 人們;家人 (adj) 民俗的
+folklore (n) 民間傳說
+follow (v) 跟隨;遵守
+follower (n) 追隨者;信徒
+following (adj) 接著的;下列的 (n) 一批追隨者(或支持者) (prep) 在...之後
+fond (adj) 喜愛的
+food (n) 食物
+fool (n) 傻瓜 (v) 愚弄
+foolish (adj) 愚蠢的
+foot (n) 腳;足;英尺
+football (n) 足球
+footstep (n) 腳步(聲)
+for (prep) 為了;因為 (conj) 因為
+forbid (v) 禁止
+force (n) 力量;武力 (v) 強迫;迫使
+fore (adj) 在前的 (n) 前部
+forecast (v) 預測;預報 (n) 預測;預報
+forehead (n) 額頭
+foreign (adj) 外國的
+foreigner (n) 外國人
+foresee (v) 預見;預知
+forest (n) 森林
+foretell (v) 預言
+forever (adv) 永遠
+forget (v) 忘記
+forgetful (adj) 健忘的
+forgive (v) 原諒
+fork (n) 叉子
+form (n) 形狀;種類;表格 (v) 形成
+formal (adj) 正式的
+formation (n) 形成;隊形
+former (adj) 前者的;以前的
+formerly (adv) 以前;從前
+formidable (adj) 令人敬畏的;艱鉅的
+formula (n) 公式;配方
+formulate (v) 規劃;明確地表達
+forsake (v) 拋棄;遺棄
+fort (n) 堡壘
+forth (adv) 向前
+forthcoming (adj) 即將到來的
+fortnight (n) 兩星期
+fortunate (adj) 幸運的
+fortune (n) 財富;運氣
+forty (n) 四十 (adj) 四十的
+forum (n) 論壇
+forward (adj) 向前的 (adv) 向前地 (v) 轉寄
+fossil (n) 化石
+foster (v) 養育;培養 (adj) 收養的
+foul (adj) 汙穢的;犯規的 (n) 犯規
+found (v) 建立;創辦
+foundation (n) 建立;基礎;基金會
+founder (n) 創立者;奠基者
+fountain (n) 噴泉;源頭
+four (n) 四 (adj) 四的
+fourteen (n) 十四 (adj) 十四的
+fowl (n) 家禽
+fox (n) 狐狸
+fraction (n) 些微;部分;分數
+fracture (n) 骨折;斷裂 (v) (使)骨折;(使)斷裂
+fragile (adj) 易碎的;脆弱的
+fragment (n) 碎片;片段
+fragrance (n) 芬芳;香味
+fragrant (adj) 芬芳的;香的
+frame (n) 骨架;結構;框架 (v) 給...裝框;陷害
+framework (n) 結構;骨架
+frank (adj) 坦白的;坦率的
+frantic (adj) 瘋狂的;狂亂的
+fraud (n) 詐欺;騙局
+freak (n) 怪物;怪人 (adj) 古怪的
+freckle (n) 雀斑;斑點
+free (adj) 自由的;免費的 (v) 釋放
+freedom (n) 自由
+freeway (n) 高速公路
+freeze (v) (使)結冰;(使)冷凍
+freezer (n) 冷凍庫;冰箱
+freight (n) 貨物;運費
+frequency (n) 頻率;頻繁
+frequent (adj) 頻繁的
+fresh (adj) 新鮮的
+freshman (n) 一年級生;新生
+friction (n) 摩擦(力)
+Friday (n) 星期五
+friend (n) 朋友
+friendly (adj) 友善的
+friendship (n) 友誼
+fright (n) 驚嚇
+frighten (v) 使驚嚇
+fringe (n) 邊緣;流蘇 (adj) 邊緣的;附加的
+Frisbee (n) 飛盤
+frog (n) 青蛙
+from (prep) 從;來自
+front (n) 前面 (adj) 前面的
+frontier (n) 邊境;未開發的領域
+frost (n) 霜 (v) 結霜於
+frown (v) 皺眉 (n) 皺眉
+fruit (n) 水果
+fruitful (adj) 富有成效的
+frustrate (v) 使挫折;使灰心
+frustration (n) 挫折;沮喪
+fry (v) 油炸;油煎
+fuel (n) 燃料 (v) 加燃料;激起
+fulfill (v) 實現;履行
+fulfillment (n) 實現;滿足(感)
+full (adj) 滿的;完全的
+fun (n) 樂趣 (adj) 有趣的
+function (n) 功能;函數 (v) 起作用
+functional (adj) 功能上的;實用的
+fund (n) 資金;基金 (v) 提供資金
+fundamental (adj) 基本的;重要的 (n) 基本原則
+funeral (n) 葬禮
+funny (adj) 有趣的;好笑的
+fur (n) 毛皮
+furious (adj) 憤怒的;狂暴的
+furnish (v) 佈置;裝潢;供應
+furniture (n) 傢俱
+further (adv) 更遠地;進一步地 (adj) 更遠的;進一步的 (v) 促進
+furthermore (adv) 此外;而且
+fury (n) 憤怒;狂暴
+fuse (n) 保險絲;引信 (v) (使)熔化;(使)融合
+fuss (n) 大驚小怪 (v) 大驚小怪;忙亂
+future (n) 未來 (adj) 未來的
+gain (v) 獲得;增加 (n) 獲得;利益
+galaxy (n) 銀河;星系
+gallery (n) 畫廊;美術館
+gallon (n) 加侖
+gallop (v) (馬)奔馳 (n) 奔馳
+gamble (v) 賭博;投機 (n) 賭博;投機
+game (n) 遊戲;比賽
+gang (n) 一幫;一群
+gangster (n) 歹徒;匪徒
+gap (n) 裂縫;缺口;差距
+garage (n) 車庫;修車廠
+garbage (n) 垃圾
+garden (n) 花園 (v) 從事園藝
+gardener (n) 園丁
+garlic (n) 大蒜
+garment (n) 衣服;服裝
+gas (n) 氣體;瓦斯;汽油
+gasoline (n) 汽油
+gasp (v) 喘氣;倒抽一口氣 (n) 喘氣;倒抽一口氣
+gate (n) 大門
+gather (v) 聚集;收集
+gauge (n) 標準尺寸;測量儀器 (v) 測量;判斷
+gay (adj) 同性戀的;快樂的 (n) 同性戀者
+gaze (v) 凝視;注視 (n) 凝視;注視
+gear (n) 齒輪;排檔;裝備 (v) 使適應
+gem (n) 寶石
+gender (n) 性別
+gene (n) 基因
+general (adj) 一般的;普遍的;將軍的 (n) 將軍
+generalize (v) 歸納;概括
+generate (v) 產生;造成
+generation (n) 世代;產生
+generosity (n) 慷慨
+generous (adj) 慷慨的
+genetic (adj) 基因的;遺傳的
+genetics (n) 遺傳學
+genius (n) 天才;天賦
+gentle (adj) 溫和的;輕柔的
+gentleman (n) 紳士
+genuine (adj) 真的;真誠的
+geography (n) 地理(學)
+geometry (n) 幾何(學)
+germ (n) 細菌;病菌
+gesture (n) 手勢;姿勢 (v) 打手勢
+get (v) 得到;變成
+ghost (n) 鬼
+giant (n) 巨人 (adj) 巨大的
+gift (n) 禮物;天賦
+gifted (adj) 有天賦的
+gigantic (adj) 巨大的;龐大的
+giggle (v) 咯咯地笑 (n) 咯咯的笑
+gin (n) 琴酒;杜松子酒
+ginger (n) 薑
+giraffe (n) 長頸鹿
+girl (n) 女孩
+give (v) 給
+glad (adj) 高興的
+glamour (n) 魅力;魔力
+glance (v) 瞥見;一瞥 (n) 瞥見;一瞥
+glare (v) 怒視;發出強光 (n) 怒視;刺眼的強光
+glass (n) 玻璃;玻璃杯;眼鏡
+glasses (n) 眼鏡
+glassy (adj) 玻璃似的;呆滯的
+gleam (n) 微光;閃光 (v) 閃爍;發微光
+glee (n) 歡喜;高興
+glide (v) 滑行 (n) 滑行
+glimpse (v) 瞥見 (n) 瞥見;一瞥
+glisten (v) 閃耀;發光 (n) 閃耀;光輝
+glitter (v) 閃閃發光 (n) 閃光
+global (adj) 全球的;全世界的
+globe (n) 地球;球狀物
+gloom (n) 憂鬱;昏暗
+gloomy (adj) 憂鬱的;陰暗的
+glorious (adj) 光榮的;輝煌的
+glory (n) 光榮;榮耀
+glove(s) (n) 手套
+glow (v) 發光;發熱;(臉)紅 (n) 光輝;紅潤
+glue (n) 膠水 (v) 用膠水黏
+go (v) 去;走
+goal (n) 目標;球門
+goalkeeper (n) 守門員
+goat (n) 山羊
+gobble (v) 狼吞虎嚥
+god (n) 上帝;神
+goddess (n) 女神
+gold (n) 黃金 (adj) 金製的
+golden (adj) 金色的;貴重的
+goldfish (n) 金魚
+golf (n) 高爾夫球
+good (adj) 好的
+good-bye (int) 再見 (n) 告別
+goodness (n) 善良;美德 (int) 天啊
+goods (n) 商品;貨物
+goose (n) 鵝
+gorgeous (adj) 華麗的;燦爛的
+gorilla (n) 大猩猩
+gospel (n) 福音;信條
+gossip (n) 閒聊;流言蜚語 (v) 說閒話
+govern (v) 統治;管理
+government (n) 政府
+governor (n) 州長;省長
+gown (n) (女用)禮服;長袍
+grab (v) 抓住 (n) 抓住
+grace (n) 優雅;恩典
+graceful (adj) 優雅的
+gracious (adj) 親切的;仁慈的
+grade (n) 等級;年級;分數 (v) 分級;評分
+gradual (adj) 逐漸的
+graduate (v) 畢業 (n) 畢業生 (adj) 研究所的
+graduation (n) 畢業(典禮)
+grain (n) 穀物;顆粒
+gram (n) 公克
+grammar (n) 文法
+grammatical (adj) (合)文法的
+grand (adj) 雄偉的;盛大的
+grandchild (n) 孫子(女);外孫子(女)
+granddaughter (n) 孫女;外孫女
+grandfather (n) 祖父;外祖父
+grandmother (n) 祖母;外祖母
+grandson (n) 孫子;外孫子
+grape (n) 葡萄
+grapefruit (n) 葡萄柚
+graph (n) 圖表
+grasp (v) 抓住;理解 (n) 抓住;理解
+grass (n) 草
+grasshopper (n) 蚱蜢
+grassy (adj) 長滿草的
+grateful (adj) 感激的
+gratitude (n) 感激之情
+grave (adj) 嚴肅的;嚴重的 (n) 墳墓
+graveyard (n) 墓地
+gravity (n) 地心引力;嚴重性
+graze (v) 吃草;放牧
+grease (n) 油脂 (v) 塗油脂於
+greasy (adj) 油膩的
+great (adj) 偉大的;很棒的
+greatly (adv) 大大地;非常
+greed (n) 貪婪
+greedy (adj) 貪婪的
+green (adj) 綠色的;未成熟的 (n) 綠色
+greenhouse (n) 溫室
+greet (v) 問候;迎接
+greeting(s) (n) 問候;祝賀
+grief (n) 悲傷;不幸
+grieve (v) (使)悲傷
+grim (adj) 嚴肅的;嚴酷的
+grin (v) 露齒而笑 (n) 露齒的笑
+grind (v) 磨;碾
+grip (v) 緊握 (n) 緊握
+groan (v) 呻吟;抱怨 (n) 呻吟(聲);抱怨(聲)
+grocer (n) 食品雜貨商
+grocery (n) 食品雜貨(店)
+groom (n) 馬夫;新郎 (v) 照料(馬等);使整潔
+ground (n) 地面;理由 (v) 以...為基礎
+group (n) 團體;群 (v) 將...分組
+grow (v) 成長;種植
+growth (n) 成長;發展
+grumble (v) 抱怨 (n) 抱怨
+guarantee (n) 保證(書) (v) 保證;擔保
+guard (v) 看守;守衛 (n) 警衛;守衛
+guardian (n) 保護人;監護人
+guava (n) 番石榴
+guess (v) 猜測 (n) 猜測
+guest (n) 客人
+guidance (n) 指導
+guide (v) 引導;指導 (n) 嚮導;指導
+guideline (n) 指導方針
+guilt (n) 罪(行);內疚
+guilty (adj) 有罪的;內疚的
+guitar (n) 吉他
+gulf (n) 海灣;深淵
+gum (n) 樹脂;口香糖;牙齦
+gun (n) 槍
+guy (n) 傢伙;人
+gym(nasium) (n) 體育館;健身房
+gypsy (n) 吉普賽人`
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM 元素
+            const wordListsContainer = document.getElementById('word-lists-container');
+            const quizModeContainer = document.getElementById('quiz-mode-container');
+            const card = document.getElementById('card');
+            const wordText = document.getElementById('word-text');
+            const answerText = document.getElementById('answer-text');
+            const showAnswerBtn = document.getElementById('show-answer-btn');
+            const nextWordBtn = document.getElementById('next-word-btn');
+            const messageArea = document.getElementById('message-area');
+            const speakBtnFront = document.getElementById('speak-btn-front');
+            const speakBtnBack = document.getElementById('speak-btn-back');
+
+            // 應用程式狀態
+            let allWords = {};
+            let activeWords = [];
+            let currentWord = null;
+            let isFlipped = false;
+            let quizMode = 'en-to-zh';
+            let timerId = null;
+            let countdownInterval = null;
+            let audioCtx = null;
+            let isTimerActive = false;
+            let isQuizStarted = false;
+
+            // 初始化函式
+            function init() {
+                for (const fileName in fileContents) {
+                    allWords[fileName] = parseWordList(fileContents[fileName]);
+                }
+                createWordListCheckboxes();
+                createQuizModeRadios();
+                updateActiveWords();
+                showAnswerBtn.addEventListener('click', handleShowAnswer);
+                nextWordBtn.addEventListener('click', handleNextWord);
+                wordListsContainer.addEventListener('change', updateActiveWords);
+                quizModeContainer.addEventListener('change', handleModeChange);
+                speakBtnFront.addEventListener('click', handleSpeak);
+                speakBtnBack.addEventListener('click', handleSpeak);
+                updateButtonStates();
+            }
+
+            // [修正] 更新解析函式以正確處理所有單字庫格式
+            function parseWordList(text) {
+                const words = [];
+                const lines = text.trim().replace(/\r\n/g, '\n').split('\n');
+                
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    const firstSpaceIndex = line.indexOf(' ');
+                    if (firstSpaceIndex > 0) {
+                        const english = line.substring(0, firstSpaceIndex).trim();
+                        const chinese = line.substring(firstSpaceIndex + 1).trim();
+                        if (english && chinese) {
+                            words.push({ english, chinese });
+                        }
+                    }
+                }
+                return words;
+            }
+
+            function createCustomCheckbox(id, name, value, text, checked = true) {
+                return `
+                    <label for="${id}" class="custom-choice block cursor-pointer">
+                        <input type="checkbox" id="${id}" data-list-name="${value}" class="sr-only" ${checked ? 'checked' : ''}>
+                        <div class="flex items-center justify-between p-3 bg-white/80 rounded-xl border-2 border-white hover:border-emerald-200 hover:bg-white transition-all duration-200 shadow-sm">
+                            <span class="text-slate-700 font-bold transition-colors">${text}</span>
+                            <div class="icon-container w-7 h-7 flex items-center justify-center rounded-lg bg-emerald-100 transition-colors">
+                                <i class="fas fa-check selection-icon text-emerald-500"></i>
+                            </div>
+                        </div>
+                    </label>
+                `;
+            }
+            
+            function createCustomRadio(id, name, value, text, checked = false) {
+                 return `
+                    <label for="${id}" class="custom-choice block cursor-pointer">
+                        <input type="radio" id="${id}" name="${name}" value="${value}" class="sr-only" ${checked ? 'checked' : ''}>
+                        <div class="flex items-center justify-between p-3 bg-white/80 rounded-xl border-2 border-white hover:border-emerald-200 hover:bg-white transition-all duration-200 shadow-sm">
+                            <span class="text-slate-700 font-bold transition-colors">${text}</span>
+                            <div class="icon-container w-7 h-7 flex items-center justify-center rounded-lg bg-emerald-100 transition-colors">
+                                <i class="fas fa-check selection-icon text-emerald-500"></i>
+                            </div>
+                        </div>
+                    </label>
+                `;
+            }
+
+
+            function createWordListCheckboxes() {
+                let html = '';
+                Object.keys(fileContents).forEach((fileName, index) => {
+                    html += createCustomCheckbox(`list-${index}`, 'wordlist', fileName, `${fileName} (${allWords[fileName].length})`, true);
+                });
+                wordListsContainer.innerHTML = html;
+            }
+            
+            function createQuizModeRadios() {
+                const modes = [
+                    { value: 'en-to-zh', text: '英翻中' },
+                    { value: 'zh-to-en', text: '中翻英' },
+                    { value: 'fill-in-the-blank', text: '單字填空' }
+                ];
+                let html = '';
+                modes.forEach((mode, index) => {
+                    html += createCustomRadio(`mode-${index}`, 'quizMode', mode.value, mode.text, index === 0);
+                });
+                quizModeContainer.innerHTML = html;
+            }
+
+
+            function updateActiveWords() {
+                activeWords = [];
+                const checkboxes = wordListsContainer.querySelectorAll('input[type="checkbox"]:checked');
+                checkboxes.forEach(cb => {
+                    const listName = cb.dataset.listName;
+                    if (allWords[listName]) {
+                        activeWords.push(...allWords[listName]);
+                    }
+                });
+                
+                const uniqueWords = new Map();
+                activeWords.forEach(word => {
+                    if (!uniqueWords.has(word.english.toLowerCase())) {
+                        uniqueWords.set(word.english.toLowerCase(), word);
+                    }
+                });
+                activeWords = Array.from(uniqueWords.values());
+                
+                resetQuiz();
+            }
+            
+            function updateButtonStates() {
+                const hasActiveWords = activeWords.length > 0;
+                nextWordBtn.disabled = !hasActiveWords;
+                showAnswerBtn.disabled = !currentWord || !hasActiveWords;
+            }
+            
+            function displayMessage() {
+                 if (activeWords.length === 0) {
+                    messageArea.textContent = '請至少選擇一個單字庫！';
+                    wordText.textContent = '...';
+                    answerText.textContent = '';
+                    currentWord = null;
+                } else {
+                    messageArea.textContent = '';
+                }
+            }
+            
+            function resetQuiz() {
+                if (isFlipped) {
+                    card.classList.remove('is-flipped');
+                    isFlipped = false;
+                }
+                if (timerId) {
+                    clearTimeout(timerId);
+                    timerId = null;
+                }
+                 if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+                document.getElementById('timer-display').classList.add('hidden');
+                isTimerActive = false;
+                isQuizStarted = false;
+                nextWordBtn.textContent = '開始';
+                currentWord = null;
+                wordText.textContent = '?';
+                wordText.classList.remove('tracking-widest');
+                answerText.textContent = '';
+                speakBtnFront.classList.add('hidden');
+                speakBtnBack.classList.add('hidden');
+                updateButtonStates();
+                displayMessage();
+            }
+
+            function createBlankWord(word) {
+                const wordArr = word.split('');
+                const len = wordArr.length;
+                // Ensure at least one blank for all words.
+                const numBlanks = Math.max(1, Math.floor(len * 0.4));
+                const availableIndices = Array.from(Array(len).keys());
+                
+                for (let i = 0; i < numBlanks; i++) {
+                    if (availableIndices.length === 0) break;
+                    const randomIndex = Math.floor(Math.random() * availableIndices.length);
+                    const selectedIndex = availableIndices.splice(randomIndex, 1)[0];
+                    wordArr[selectedIndex] = '_';
+                }
+                return wordArr.join('');
+            }
+
+            function handleShowAnswer() {
+                if (!currentWord || isFlipped) return;
+                card.classList.add('is-flipped');
+                isFlipped = true;
+            }
+
+            function handleNextWord() {
+                if (activeWords.length === 0) {
+                    displayMessage();
+                    return;
+                }
+                
+                if (!isQuizStarted) {
+                    isQuizStarted = true;
+                    nextWordBtn.textContent = '下一題';
+                }
+
+                resetQuizTimer();
+
+                if (isFlipped) {
+                    card.classList.remove('is-flipped');
+                    isFlipped = false;
+                }
+                
+                const randomIndex = Math.floor(Math.random() * activeWords.length);
+                currentWord = activeWords[randomIndex];
+
+                setTimeout(() => {
+                    wordText.classList.remove('tracking-widest');
+                    speakBtnFront.classList.add('hidden');
+                    speakBtnBack.classList.add('hidden');
+
+                    if (quizMode === 'en-to-zh') {
+                        wordText.textContent = currentWord.english;
+                        answerText.textContent = currentWord.chinese;
+                        speakBtnFront.classList.remove('hidden');
+                    } else if (quizMode === 'zh-to-en') {
+                        wordText.textContent = currentWord.chinese;
+                        answerText.textContent = currentWord.english;
+                        speakBtnBack.classList.remove('hidden');
+                    } else { // fill-in-the-blank
+                        wordText.textContent = createBlankWord(currentWord.english);
+                        answerText.textContent = currentWord.english;
+                        wordText.classList.add('tracking-widest');
+                        speakBtnFront.classList.remove('hidden'); 
+                        speakBtnBack.classList.remove('hidden'); 
+                    }
+                }, isFlipped ? 300 : 0);
+                
+                updateButtonStates();
+            }
+
+            function handleModeChange(e) {
+                quizMode = e.target.value;
+                resetQuiz();
+            }
+            
+            function resetQuizTimer() {
+                 if (timerId) {
+                    clearTimeout(timerId);
+                    timerId = null;
+                }
+                 if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+                document.getElementById('timer-display').classList.add('hidden');
+                isTimerActive = false;
+            }
+
+
+            function playTimeoutSound() {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(440, audioCtx.currentTime); 
+                gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 1); 
+            }
+
+            // 發音功能
+            function handleSpeak(event) {
+                event.stopPropagation(); // 防止點擊喇叭時翻牌
+                if (!currentWord || !window.speechSynthesis) {
+                    return;
+                }
+
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                const utterance = new SpeechSynthesisUtterance(currentWord.english);
+                utterance.lang = 'en-US';
+                speechSynthesis.speak(utterance);
+
+                if (!isTimerActive) {
+                    isTimerActive = true;
+                    if (timerId) clearTimeout(timerId);
+                    if (countdownInterval) clearInterval(countdownInterval);
+
+                    const timerDisplay = document.getElementById('timer-display');
+                    let timeLeft = 10;
+                    timerDisplay.textContent = timeLeft;
+                    timerDisplay.classList.remove('hidden');
+
+                    countdownInterval = setInterval(() => {
+                        timeLeft--;
+                        timerDisplay.textContent = timeLeft;
+                        if (timeLeft <= 0) {
+                            clearInterval(countdownInterval);
+                            timerDisplay.classList.add('hidden');
+                        }
+                    }, 1000);
+
+                    timerId = setTimeout(() => {
+                        playTimeoutSound();
+                    }, 10000);
+                }
+            }
+
+            // 啟動應用程式
+            init();
+        });
+    </script>
+</body>
+</html>
