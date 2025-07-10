@@ -1,0 +1,3370 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>隨機單字測驗</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Baloo 2', cursive;
+            background-color: #a7e6ff; /* Light sky blue */
+            overflow: hidden;
+            position: relative;
+        }
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.9;
+            filter: blur(2px);
+            animation: moveClouds 25s linear infinite;
+        }
+        .cloud:before, .cloud:after {
+            content: '';
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+        }
+        .cloud1 { width: 100px; height: 100px; top: 10%; left: -150px; }
+        .cloud1:before { width: 60px; height: 60px; top: -30px; left: 20px; }
+        .cloud1:after { width: 80px; height: 80px; top: -10px; right: 10px; }
+        
+        .cloud2 { width: 150px; height: 150px; top: 30%; left: -200px; animation-duration: 35s; }
+        .cloud2:before { width: 90px; height: 90px; top: -50px; left: 30px; }
+        .cloud2:after { width: 120px; height: 120px; top: -20px; right: 20px; }
+
+        .cloud3 { width: 80px; height: 80px; top: 70%; left: -120px; animation-duration: 20s; }
+        .cloud3:before { width: 50px; height: 50px; top: -25px; left: 15px; }
+        .cloud3:after { width: 60px; height: 60px; top: -10px; right: 10px; }
+
+        @keyframes moveClouds {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(calc(100vw + 200px)); }
+        }
+
+        .card {
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .card.is-flipped {
+            transform: rotateY(180deg);
+        }
+        .card-face {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border: 5px solid white;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15), inset 0 0 10px rgba(255,255,255,0.5);
+        }
+        .card-face-back {
+            transform: rotateY(180deg);
+        }
+        .perspective-1000 {
+            perspective: 1500px;
+        }
+        
+        .custom-choice input:checked + div {
+            background-color: #34d399; /* emerald-400 */
+            border-color: white;
+            transform: scale(1.05);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .custom-choice input:checked + div span {
+            color: white;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.1);
+        }
+        .custom-choice input:checked + div .icon-container {
+            background-color: white;
+        }
+        .custom-choice input:checked + div .selection-icon {
+            transform: scale(1);
+            opacity: 1;
+            color: #10b981; /* emerald-500 */
+        }
+        .custom-choice .selection-icon {
+            transform: scale(0);
+            opacity: 0;
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .btn-bouncy {
+            transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+        }
+        .btn-bouncy:hover {
+            transform: translateY(-4px) scale(1.02);
+        }
+        .btn-bouncy:active {
+            transform: translateY(2px) scale(0.98);
+        }
+    </style>
+</head>
+<body class="bg-sky-200">
+    <div class="cloud cloud1"></div>
+    <div class="cloud cloud2"></div>
+    <div class="cloud cloud3"></div>
+    
+    <div class="relative container mx-auto p-4 md:p-6 max-w-2xl w-full flex items-center justify-center min-h-screen">
+        <div class="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl p-6 md:p-8 border-4 border-white w-full">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-center text-sky-600 mb-8" style="text-shadow: 2px 2px 0 white;">隨機單字測驗</h1>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-700 mb-4 text-center md:text-left">選擇單字庫</h2>
+                    <div id="word-lists-container" class="grid grid-cols-1 gap-3 max-h-48 overflow-y-auto pr-3"></div>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-700 mb-4 text-center md:text-left">選擇模式</h2>
+                    <div id="quiz-mode-container" class="flex flex-col space-y-3"></div>
+                </div>
+            </div>
+
+            <div id="quiz-area" class="mb-8">
+                <div class="perspective-1000 relative">
+                     <div id="timer-display" class="absolute top-4 left-1/2 -translate-x-1/2 bg-black/40 text-white text-3xl font-bold rounded-full w-16 h-16 flex items-center justify-center z-10 hidden transition-opacity duration-300"></div>
+                    <div id="card" class="card relative w-full h-52 md:h-60">
+                        <div id="word-display" class="card-face card-face-front absolute w-full h-full flex items-center justify-center bg-gradient-to-br from-yellow-400 to-orange-500 text-white rounded-2xl p-4">
+                            <span id="word-text" class="text-4xl md:text-5xl font-bold text-center tracking-wide" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">?</span>
+                            <button id="speak-btn-front" class="absolute bottom-4 right-4 p-3 bg-white/20 rounded-full hover:bg-white/40 transition-transform duration-200 hover:scale-125 hover:rotate-12 hidden">
+                                <i class="fas fa-volume-high text-white text-2xl"></i>
+                            </button>
+                        </div>
+                        <div id="answer-display" class="card-face card-face-back absolute w-full h-full flex items-center justify-center bg-gradient-to-br from-teal-400 to-cyan-500 text-white rounded-2xl p-4">
+                            <span id="answer-text" class="text-3xl md:text-4xl font-semibold text-center" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.2);"></span>
+                             <button id="speak-btn-back" class="absolute bottom-4 right-4 p-3 bg-white/20 rounded-full hover:bg-white/40 transition-transform duration-200 hover:scale-125 hover:rotate-12 hidden">
+                                <i class="fas fa-volume-high text-white text-2xl"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="controls" class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <button id="show-answer-btn" class="btn-bouncy w-full bg-pink-500 hover:bg-pink-400 text-white font-bold py-3 px-4 rounded-full text-xl shadow-lg border-2 border-white/50 disabled:bg-gray-300 disabled:shadow-none disabled:transform-none">看答案</button>
+                <button id="next-word-btn" class="btn-bouncy w-full bg-lime-500 hover:bg-lime-400 text-white font-bold py-3 px-4 rounded-full text-xl shadow-lg border-2 border-white/50 disabled:bg-gray-300 disabled:shadow-none disabled:transform-none">下一個</button>
+            </div>
+            
+            <div id="message-area" class="text-center text-red-500 font-bold text-lg mt-6 h-6"></div>
+        </div>
+    </div>
+
+    <script>
+        // 嵌入的 CSV 檔案內容
+        const fileContents = {
+            "國小課綱300字": `and,和
+angry,生氣的
+animal,動物
+apple,蘋果
+arm,手臂
+at,在
+bag,袋子
+banana,香蕉
+baseball,棒球
+basketball,籃球
+bathroom,浴室
+bear,熊
+beautiful,漂亮的
+bed,床
+bedroom,臥室
+big,大的
+bike,單車
+bird,鳥
+black,黑色
+blue,藍色
+bookstore,書店
+boy,男孩
+breakfast,早餐
+brother,兄弟
+brown,棕色
+bus,公車（巴士）
+by,旁邊
+can,能
+car,汽車
+cat,貓
+chair,椅子
+chicken,小雞
+Chinese,中文
+classmate,同學
+classroom,教室
+close,關上
+cloudy,多雲的
+cold,冷的
+color,顏色
+come,來
+comic,漫畫書
+computer,電腦
+cool,涼爽的
+dad,爸
+dance,跳舞
+desk,桌
+dinner,晚餐
+do,做
+doctor,醫生
+does,做
+dog,狗
+dollar,元
+dress,洋裝
+drink,喝
+ear,耳朵
+eat,吃
+egg,蛋
+eight,八
+elephant,大象
+eleven,十一
+English,英文
+eraser,橡皮擦
+eye,眼睛
+father,爸
+five,五（5）
+fly,飛
+foot,腳
+four,四（4）
+friend,朋友
+get,起床
+girl,女孩
+go,去
+goodbye,再見
+grandma,祖母（奶奶；外婆）
+grandpa,祖父（爺爺；外公）
+great,很棒
+green,綠色
+hair,頭髮
+hamburger,漢堡
+hand,手
+handsome,英俊的
+happy,快樂的
+he,他
+he,他是
+he,他有
+head,頭
+hello,哈囉
+help,幫助
+her,她的
+here,這裡
+his,他的
+hot,熱的
+hot,熱狗
+how,如何
+hungry,飢餓的
+I,我
+in,在…裡面
+it,它；牠
+jacket,夾克
+juice,果汁
+key,鑰匙
+kitchen,廚房
+leg,腿
+library,圖書館
+lion,獅子
+listen,聽
+living room,客廳
+lunch,午餐
+marker,馬克筆
+me,我
+meet,遇見
+milk,牛奶
+mom,媽
+monkey,猴子
+mother,媽
+mouth,嘴巴
+Mr.,先生
+my,我的
+name,名字
+new,新的
+nine,九（9）
+no,不
+no,不是
+nose,鼻子
+notebook,筆記本
+old,舊的（老）
+on,在…上面
+one,一（1）
+open,打開
+orange,橘色
+out,向外
+outside,外面
+park,公園
+pencil,鉛筆
+pig,豬
+pink,粉紅
+pizza,披薩
+purple,紫
+rabbit,兔子
+rainy,下雨的
+red,紅色
+run,跑
+sandwich,三明治
+seven,七
+she,她
+short,矮的
+shorts,短褲
+sick,生病的
+sister,姊妹
+six,六
+small,小的
+smart,聰明的
+some,一些
+soup,湯
+store,商店
+student,學生
+study,學習
+sunny,大太陽的
+supermarket,超商
+table,桌子
+take,拿
+talk,說話
+tall,高的
+taxi,計程車
+tea,茶
+teacher,老師
+telephone,電話
+ten,十（10
+thank,謝
+that,那
+the,這；那
+there,那裡
+these,這些
+they,他們
+thirsty,口渴的
+this,這
+those,那些
+three,三
+tiger,老虎
+tired,疲倦的
+too,太
+train,火車
+T-shirt,運動衫
+twelve,十二
+two,二（2）
+under,在下面
+very,非常
+walk,走路
+want,想要
+warm,溫暖的
+wash,洗
+watch,看
+water,水
+we,我們
+weather,天氣
+what,什麼
+when,什麼時候
+where,在哪裡
+white,白色
+who,誰
+window,窗戶
+windy,有風的
+write,寫
+yellow,黃色
+yes,是的；對
+you,你（們）
+you,你是
+your,你的
+zero,零
+a,一個
+an,一個
+OK,好的
+I am,我是
+fat,胖的
+hat,帽子
+pen,筆
+sad,悲傷的
+see,看
+book,書
+cake,蛋糕
+cook,煮；廚師
+fish,魚
+good,好
+home,家
+like,喜歡
+play,玩
+read,閱讀
+sing,唱歌
+I have,我有
+ruler,尺
+shoe,鞋子
+sleep,睡
+school,學校
+book,書包
+morning,早上
+pencil box,鉛筆盒
+grandfather,祖父（外公）
+grandmother,祖母（外婆）
+afternoon,下午
+evening,傍晚
+fine,美好的
+night,晚上
+feet,腳（複數）
+bread,麵包
+ice,冰淇淋
+snake,蛇
+zoo,動物園
+shirt,襯衫
+bad,壞的
+clean,乾淨的
+cute,可愛的
+long,長的
+nice,不錯的
+thin,瘦的
+cook,煮；廚師
+cut,切
+draw,畫
+look,看
+swim,游泳
+art,美術
+math,數學
+P.E.,體育
+dodgeballd,躲避球
+fall,秋天
+spring,春天
+summer,夏天
+winter,冬天
+January,一月
+February,二月
+March,三月
+April,四月
+May,五月
+June,六月
+July,七月
+August,八月
+September,九月
+October,十月
+November,十一月
+December,十二月
+Monday,星期一
+Tuesday,星期二
+Wednesday,星期三
+Thursday,星期四
+Friday,星期五
+Saturday,星期六
+Sunday,星期日
+sorry,抱歉的
+ball,球
+birthday,生日
+box,盒子
+CD,CD
+day,天
+flower,花
+kite,風箏
+may,可以
+today,今天
+toy,玩具
+tree,樹
+TV,電視
+way,道路`,
+            "GEPT Kid 600字": `a,一個
+an,一個
+at,"在(某處)、在(時刻)"
+be,"是 (is, am, are)"
+by,在...旁邊
+do,助動詞
+do,做
+go,去、走
+he,他
+hi,嗨
+in,"在...裡面、在某短時間裡"
+it,它、牠
+me,我(受詞)
+my,我的
+no,不
+of,...的
+OK,好的;沒事
+on,"在...上面；在(某一天)"
+PE,體育（課）
+so,所以
+to,向、朝、對著
+TV,電視 (= television)
+UK,英國
+up,向上
+us,我們(受詞)
+we,我們
+all,全部的
+and,和
+arm,手臂
+art,美術、藝術
+ask,問
+bad,不好的、壞的
+bag,袋子
+bed,床
+bee,蜜蜂
+big,大的
+box,箱子
+boy,男孩
+bus,公車
+but,但是
+buy,買
+bye,再見 (= goodbye)
+can,罐子
+can,可以
+cap,棒球帽
+car,車子
+cat,貓
+cow,乳牛
+cry,哭、哭泣
+cup,杯子
+dad,爸爸 (= father; daddy)
+day,天
+dog,狗
+ear,耳朵
+eat,吃
+egg,蛋
+eye,眼睛
+fan,電扇
+fly,飛、飛行
+for,"給、為了(某人、物)"
+fun,有趣的
+fun,樂趣
+get,得到、收到
+hat,帽子
+her,她的
+her,她
+him,他(受詞)
+his,他的
+hit,打、碰撞
+hot,燙的
+hot,熱的
+how,如何...
+its,它的、牠的
+job,工作、職業
+key,鑰匙
+kid,小孩
+leg,腿
+mad,生氣的、氣憤的
+man,男人
+May,五月
+men,男人 (複數)
+mom,媽媽 (= mother; mommy)
+mop,用拖把拖地
+Mr.,先生
+MRT,捷運
+new,新的
+not,不、沒有
+now,現在
+off,離開、從...去掉
+old,"1. 年紀、年齡；2. 老的"
+one,一
+our,我們的
+out,向外地
+pen,筆、鋼筆
+pet,寵物
+pie,派
+pig,豬
+put,放
+red,紅色的
+run,跑、跑步
+sad,傷心的、難過的
+say,說
+sea,大海
+see,看見
+she,她
+sit,坐下
+six,六
+sky,天空
+son,兒子
+sun,太陽
+T 恤,名詞
+tea,茶
+ten,十
+the,這
+too,"1. 也；2. 太..."
+toy,玩具
+try,嘗試
+two,二
+USA,美國
+way,路、方向
+wet,潮濕的
+wet,濕的
+who,誰...
+why,為什麼...
+win,贏
+yes,是
+you,你；你們
+zoo,動物園
+aunt,阿姨、姑姑、伯母、舅媽
+away,離開
+baby,嬰兒
+back,向後、回原處
+back,背
+ball,球
+bank,銀行
+bear,熊
+beef,牛肉
+bike,腳踏車 (= bicycle)
+bird,鳥
+bite,咬
+blue,藍色的
+boat,船
+book,書、書本
+both,兩個都
+busy,忙碌的
+cake,蛋糕
+call,打電話給...
+card,卡片
+coat,外套
+coke,可樂
+cold,感冒
+cold,寒冷的
+come,來
+cook,廚師
+cook,做飯
+cool,清涼的
+cool,涼爽的
+cute,可愛的
+desk,桌子
+dish,碟子、盤子
+doll,玩偶
+door,門
+draw,畫、描畫
+drum,鼓
+duck,鴨子
+duck,鴨肉
+easy,簡單的
+face,臉
+fall,掉落
+fall,秋天
+fast,快速的（地）
+feel,感受、感覺
+feet,腳 (複數)
+find,找
+fine,很好的、很不錯的
+fish,釣魚
+fish,魚肉
+fish,魚
+five,五
+food,食物
+foot,腳
+fork,叉子
+four,四
+free,免費的
+frog,青蛙
+from,"從(某處)/(某時刻)/(某人)"
+full,飽的
+game,遊戲、比賽
+gift,禮物
+girl,女孩
+give,給
+glue,膠水
+good,好的
+gray,灰色的
+grow,成長、長大
+hair,頭髮
+hand,手
+hard,困難的
+have,有
+have,助動詞
+head,頭
+help,幫助
+here,這裡
+high,高的
+hike,健行
+home,家庭
+hope,希望
+hurt,受傷
+July,七月
+jump,跳
+June,六月
+kite,風箏
+know,知道、認識
+lake,湖
+lamp,燈
+last,最後的
+late,晚到（的）
+lazy,懶惰的
+left,左邊(的)
+like,喜歡
+lion,獅子
+live,住
+long,長的
+look,看、看起來
+love,愛、喜愛
+mail,信
+make,做、製造
+many,許多(例如many flowers)
+math,數學
+meal,餐
+meet,遇見、會面
+mice,老鼠 (複數)
+milk,牛奶
+miss,想念
+Miss,小姐
+moon,月亮
+more,更多、較多
+Mrs.,太太
+much,許多(例如much water)
+name,名字
+near,靠近、接近
+need,需要
+nice,令人愉快的、宜人的
+nine,九
+nose,鼻子
+only,僅有的
+only,唯一地
+open,開
+over,在...上方
+pair,一雙、一對
+park,公園
+pink,粉紅色的
+play,玩
+pork,豬肉
+rain,下雨
+rain,雨水
+read,閱讀
+rice,米飯
+ride,騎（機車、腳踏車等）
+sale,拍賣、特價
+ship,（大）船
+shop,商店 (UK; 英式英語)
+show,給...看、展示
+sick,生病的
+sing,唱歌
+slow,慢的
+snow,雪
+snow,下雪
+sofa,沙發
+some,一些
+song,歌曲
+soup,湯
+star,星星
+stop,停下來
+sure,確定的
+sure,當然
+swim,游泳
+take,攜帶、拿取
+talk,說話、談話
+tall,高的
+taxi,計程車
+tell,告訴、告知
+test,考試
+than,比
+that,那個
+them,他們(受詞)
+then,然後、接著
+they,他們
+thin,瘦的
+this,這個
+time,時間
+tree,樹
+trip,（短程的）旅行
+turn,轉彎
+very,非常
+wait,等、等待
+wake,醒來、喚醒
+walk,走路
+wall,牆壁
+want,想要
+warm,溫暖的
+wash,洗
+wear,穿、戴
+week,星期
+well,"好的, 健康地"
+what,什麼...
+when,何時...
+will,將會
+wind,風
+with,和...一起
+word,字
+work,工作
+year,年
+your,你的、你們的
+zero,零
+about,"1. 大約；2. 關於..."
+actor,男演員
+after,在...之後
+again,再一次、又一次
+angry,生氣的
+apple,蘋果
+April,四月
+beach,海灘
+black,黑色的
+bored,覺得無聊的
+bread,麵包
+brown,咖啡色的
+brush,用刷子刷
+candy,糖果
+chair,椅子
+class,課；班級
+clean,清理
+clean,乾淨的
+climb,爬、攀爬
+clock,時鐘
+close,關
+color,顏色
+daddy,爸爸 (= father; dad)
+dance,跳舞
+dirty,髒的
+dream,夢
+dress,洋裝
+drink,喝
+drive,開車
+early,早到（的）
+eight,八
+email,電子郵件
+enjoy,享受、喜歡
+every,每一個
+fifty,五十
+first,第一
+floor,地板
+forty,四十
+fruit,水果
+glass,玻璃杯
+grape,葡萄
+great,很棒的
+green,綠色的
+happy,開心的、高興的
+heavy,重的 (人)
+heavy,重的 (物品)
+hello,哈囉
+hippo,河馬
+horse,馬
+house,房子
+hurry,趕快、急忙
+Japan,日本
+juice,果汁
+knife,刀子
+koala,無尾熊
+laugh,笑
+lemon,檸檬
+let's,讓我們...
+light,輕的
+lunch,午餐
+March,三月
+maybe,也許
+mommy,媽媽 (= mother; mom)
+money,錢
+month,月
+mouse,老鼠
+mouth,嘴巴
+movie,電影
+music,音樂
+never,不曾
+night,晚上
+nurse,護士
+other,其他的
+paint,用顏料畫、刷油漆
+panda,大貓熊
+pants,長褲
+paper,紙張
+party,派對
+peach,桃子
+photo,照片
+piano,鋼琴
+pizza,披薩
+plane,飛機 (= airplane)
+quiet,安靜的
+rainy,下雨的/多雨的
+ready,準備好的
+right,右邊
+right,對的
+river,河流
+robot,機器人
+ruler,尺
+salad,沙拉
+seven,七
+sheep,綿羊
+shelf,架子
+shirt,襯衫
+shoes,鞋子
+short,短的
+short,矮的
+sixty,六十
+skirt,裙子
+sleep,睡覺
+small,小的
+smart,聰明的
+smell,聞起來
+snake,蛇
+socks,襪子
+sorry,感到抱歉的、對不起
+speak,說
+spell,拼寫、用字母拼
+spoon,湯匙
+sport,運動
+stand,站、站立
+start,開始
+still,仍然
+store,商店 (US; 美式英語)
+story,故事
+study,學習
+sunny,晴朗的、出太陽的
+sweep,掃
+sweet,甜的
+table,桌子
+taste,嚐起來
+teeth,牙齒 (複數)
+thank,感謝（某人）
+their,他們的
+there,那裡
+these,這些
+thing,東西、物
+third,第三
+those,那些
+three,三
+tiger,老虎
+tired,疲累的
+today,今天
+tooth,牙齒
+touch,觸碰
+towel,毛巾
+train,火車
+trash,垃圾
+truck,卡車
+uncle,叔叔、舅舅、姑丈、姨丈
+under,在...下方
+watch,看
+watch,手錶
+water,水
+whale,鯨魚
+where,在哪裡...
+which,哪一個...
+white,白色的
+whose,誰的...
+windy,風大的
+woman,女人
+women,女人 (複數)
+worry,擔心
+write,寫
+young,年輕的
+yo-yo,溜溜球
+yummy,好吃的、美味的
+zebra,斑馬
+always,總是、永遠
+animal,動物
+answer,回答
+August,八月
+banana,香蕉
+before,在...之前
+behind,在...後面
+boring,令人無聊的
+bottle,瓶子
+cloudy,多雲的
+coffee,咖啡
+cousin,堂兄（弟、姊、妹）
+dinner,晚餐
+doctor,醫生
+dollar,元
+driver,司機、駕駛員
+Easter,復活節
+eighty,八十
+eleven,十一
+eraser,橡皮擦
+family,家庭、家人
+farmer,農夫
+father,爸爸 (= dad; daddy)
+flower,花
+Friday,星期五
+fridge,電冰箱 (= refrigerator)
+friend,朋友
+garden,院子、花園
+hungry,餓的
+inside,在...裡面、向...裡面
+jacket,夾克、外套
+listen,聽
+marker,麥克筆
+market,市場
+Monday,星期一
+monkey,猴子
+mother,媽媽 (= mom; mommy)
+museum,博物館
+ninety,九十
+number,數字
+office,辦公室
+orange,橘子
+orange,橘色的
+parent,父母親
+pencil,鉛筆
+people,人 (複數)
+person,人
+please,請
+pocket,口袋
+pretty,漂亮的
+purple,紫色的
+rabbit,兔子
+really,真正地
+school,學校
+season,季節
+second,第二
+shorts,短褲
+shower,淋浴
+singer,歌手
+sister,姐姐、妹妹
+soccer,足球 (US; 美式英語)
+spider,蜘蛛
+spring,春天
+street,街道
+strong,強壯的
+summer,夏天
+Sunday,星期日
+Taiwan,臺灣
+thirty,三十
+ticket,票
+turtle,烏龜
+twelve,十二
+twenty,二十
+waiter,男服務生
+window,窗戶
+winter,冬天
+worker,工作者
+yellow,黃色的
+actress,女演員
+airport,機場
+because,因為
+bedroom,臥房
+bicycle,腳踏車 (= bike)
+brother,哥哥、弟弟
+chicken,雞
+chicken,雞肉
+Chinese,中文
+clothes,衣服
+cookies,餅乾
+English,英文
+evening,傍晚
+excited,覺得興奮的
+fifteen,十五
+glasses,眼鏡
+goodbye,再見 (= bye)
+grandma,外婆、奶奶 (= grandmother)
+grandpa,外公、爺爺 (= grandfather)
+hundred,一百
+January,一月
+kitchen,廚房
+library,圖書館
+mailman,郵差
+morning,早上
+next to,在...旁邊
+noodles,麵
+nothing,什麼都沒有
+o'clock,...點鐘
+October,十月
+outside,在...外面、向...外面
+pick up,撿起、接（人）、接（電話）
+picture,圖片、照片
+pumpkin,南瓜
+rainbow,彩虹
+science,科學
+scooter,輕型機車
+seventy,七十
+sixteen,十六
+soldier,軍人
+station,車站
+student,學生
+sweater,毛衣
+teacher,老師
+thirsty,口渴的
+T-shirt,T 恤
+Tuesday,星期二
+typhoon,颱風
+usually,通常
+weather,天氣
+welcome,歡迎
+airplane,飛機 (= plane)
+baseball,棒球
+bathroom,浴室
+birthday,生日
+bus stop,公車站
+computer,電腦
+daughter,女兒
+December,十二月
+dumpling,水餃
+eighteen,十八
+elephant,大象
+exciting,令人興奮的
+favorite,最喜歡的
+February,二月
+football,足球 (UK; 英式英語)
+fourteen,十四
+headache,頭痛
+homework,回家作業
+hospital,醫院
+mountain,山
+nineteen,十九
+November,十一月
+question,問題
+restroom,洗手間、廁所
+sandwich,三明治
+Saturday,星期六
+thirteen,十三
+Thursday,星期四
+together,一起
+tomorrow,明天
+umbrella,傘
+vacation,假期
+waitress,女服務生
+afternoon,下午
+beautiful,美麗的、漂亮的
+bookstore,書店
+breakfast,早餐
+butterfly,蝴蝶
+cellphone,手機
+chocolate,巧克力
+Christmas,聖誕節
+classroom,教室
+different,不一樣的
+excuse me,不好意思、對不起
+Halloween,萬聖節
+hamburger,漢堡
+ice cream,冰淇淋
+September,九月
+seventeen,十七
+sometimes,有時候
+telephone,電話
+toothache,牙痛
+Wednesday,星期三
+wonderful,很棒的、精彩的
+yesterday,昨天
+basketball,籃球
+blackboard,黑板
+chopsticks,筷子
+motorcycle,摩托車
+restaurant,餐廳
+strawberry,草莓
+television,電視 (= TV)
+watermelon,西瓜
+dining room,(家裡的)餐廳
+grandfather,外公、爺爺 (= grandpa)
+grandmother,外婆、奶奶 (= grandma)
+in front of,在...前面
+interesting,有趣的
+living room,客廳
+post office,郵局
+supermarket,超級市場
+fire station,消防站
+French fries,薯條
+refrigerator,電冰箱 (= fridge)
+Moon Festival,中秋節
+movie theater,電影院
+police officer,警察
+police station,警察局
+department store,百貨公司
+Dragon Boat Festival,端午節`,
+            "教育部1200字": `bad,壞的
+sad,傷心的
+bat,蝙蝠
+hat,帽子
+fat,胖的
+mad,生氣的 發瘋的
+map,地圖
+mat,草蓆
+rat,老鼠
+cat,貓
+cap,鴨舌帽
+can,罐頭 桶子
+fan,電扇 歌迷 粉絲
+ant,螞蟻
+dog,狗
+for,為了
+book,書本
+look,看
+cook,烹調
+good,好的
+poor,貧困的
+big,大的
+pig,豬
+dig,掘(土) 挖(洞)
+hit,打擊 襲擊
+kid,孩子
+sit,坐
+lip,嘴唇
+lid,蓋子
+six,六
+fix,固定 修理
+pin,大頭針 別針
+win,勝利 贏得
+wind,風
+get,得到
+let,讓
+pet,寵物
+set,設置 安裝
+wet,潮濕的
+bed,床
+red,紅色的
+leg,腿
+egg,蛋
+yes,是的
+yet,尚未 還沒有
+end,末端 結束
+pen,筆
+ten,十
+hen,母雞
+vest,背心
+best,最好的
+west,西方 西邊
+test,測試 小考
+but,但是
+bus,巴士 公車
+bug,蟲子
+cup,杯子
+cut,切 割
+tub,浴缸 澡盆
+mud,泥漿 泥巴
+bun,小圓麵包
+fun,樂趣 娛樂
+sun,太陽
+run,跑
+hot,熱的
+pot,鍋子
+dot,點
+box,箱子
+fox,狐狸
+top,頂部 頭頂 陀螺
+hop,跳過 躍過
+mop,拖(地)
+nod,點頭
+not,不是的
+jog,慢跑
+job,職業 工作
+car,汽車
+far,遙遠的
+park,公園
+mark,記號
+dark,黑暗的
+card,卡片
+hard,困難的 堅硬的
+yard,庭院 院子
+see,看見
+bee,蜜蜂
+need,需要
+week,星期
+seed,種子
+feed,餵食 飼養
+feel,感覺 覺得
+meet,見面 遇見 開會
+free,自由的 免費的
+tree,樹
+tea,茶
+sea,海
+eat,吃
+east,東方
+read,讀
+lead,領導
+each,每個
+teach,教
+zoo,動物園
+too,也(肯定句)
+tool,工具
+cool,涼快的
+pool,水池 池塘
+food,食物
+room,房間
+few,一些
+new,新的
+news,新聞 消息
+say,說 講
+pay,支付 付帳
+may,可以 可能
+way,方式 道路
+away,離開
+day,日
+stay,停留 留下
+play,玩(遊戲) 扮演
+break,弄壞
+great,重大的 不錯的
+steak,牛排
+toe,腳趾
+hope,希望
+rope,繩索
+home,家
+more,更多的
+sore,會痛的
+nose,鼻子
+rose,玫瑰花
+note,筆記 摘要
+boat,船
+coat,外套
+goat,山羊
+sir,先生 長官
+bird,鳥
+girl,女孩
+skirt,裙子 襯裙
+shirt,襯衫
+first,第一的
+dirty,骯髒的
+tie,領帶
+die,死
+lie,說謊
+pie,派
+tie,綁住
+ice,冰
+nice,好的
+rice,稻米
+price,價格
+twice,兩次 兩回
+sign,符號 標誌
+high,高的
+mind,留意 介意
+find,發現
+cow,母牛 奶牛
+bow,鞠躬
+now,現在
+how,怎麼
+our,我們的
+hour,小時
+loud,大聲的
+boy,男孩
+toy,玩具
+joy,喜悅
+oil,油
+boil,沸騰煮沸
+join,加入 連結
+gas,瓦斯氣體
+bag,袋子
+ask,要求 詢問
+act,主演 行動
+fact,事實
+pack,打包 裝箱
+back,打包 背部
+last,最後的
+past,過去的 以前的
+fast,快速地
+pass,通過
+man,男人
+ham,火腿
+bank,銀行 堤岸
+band,樂隊 樂團
+land,陸地
+hand,手
+bath,沐浴
+math,數學
+that,那個
+boss,老板
+cost,花費
+soft,柔軟的
+fork,叉子
+long,長的
+song,歌曲
+hold,舉行 抓住
+all,全部 所有
+ball,球
+call,打電話
+fall,秋天
+tall,高的
+wall,牆壁
+walk,散步
+talk,談話
+all,全部的
+fall,落下 跌倒
+also,還有 也是(會)
+its,它的
+list,清單 名冊
+kiss,親吻
+fill,充滿
+kill,殺害
+hill,小山丘
+will,意志
+gift,禮物
+sick,生病的
+pick,摘取 挑選
+kick,踢
+pink,粉紅色的
+king,國王
+sing,唱歌
+ring,戒指
+Miss,小姐
+milk,牛奶
+swim,游泳
+head,頭
+ahead,向前
+dead,死的
+bear,熊
+pear,洋梨
+wear,穿著 戴著
+bread,麵包
+heavy,重的
+ready,準備好的
+dish,碟盤
+fish,魚
+wish,希望 願望
+wash,清洗
+push,推 推動
+ship,船艦
+shop,商店
+sheep,綿羊
+copy,副本
+doll,玩偶 洋娃娃
+pond,池塘
+rock,岩石
+stop,公車站牌
+drop,一滴
+frog,青蛙
+from,從…
+meat,肉
+weak,虛弱的
+real,真正的
+deal,處理
+meal,一餐 膳食
+team,團隊
+bean,豆
+jeans,牛仔褲
+beach,海灘
+peach,桃子
+least,最小的
+leave,離開
+speak,說話 講話
+cheap,便宜的
+cheat,欺詐 作弊 欺騙
+clean,清洗
+dream,作夢
+dream,夢想
+treat,治療 對待 看待
+easy,容易的
+rule,規則 規定
+true,真的 真實的
+blue,藍色的
+glue,膠水
+use,使用
+cute,可愛的
+June,六月
+who,誰
+two,二
+move,行動 移動
+cake,蛋糕 糕餅
+lake,湖
+take,拿
+wave,揮舞 揮動
+save,節省 拯救 保存
+sale,出售
+game,遊戲
+name,名字
+same,同樣的
+tape,錄音帶 膠帶
+wave,波浪
+safe,安全的
+fail,失敗
+nail,指甲 釘子
+wait,等待
+paint,塗上顏色 油漆 作畫
+rain,雨水
+train,火車
+slow,慢慢的
+row,划(船)
+grow,成長 種植
+own,擁有
+know,知道
+show,顯示 露出
+blow,吹 隨風飄動
+snow,雪
+bowl,碗
+own,自己
+row,排 列
+slow,放慢
+burn,燃燒
+turn,轉動
+hurt,受傷
+surf,衝浪 飆網
+nurse,護士
+fly,飛行
+dry,曬乾 烘乾 變乾
+cry,哭 叫 喊
+try,嘗試
+fry,油煎 油炸 炒
+sky,天空
+shy,怕羞的
+why,為什麼
+fight,打架 奮鬥
+light,燈光 光線
+right,右邊的 正確的
+night,夜晚
+sight,視覺 視力
+light,輕輕的
+right,權利
+bright,明亮的
+out,在外 向外
+about,關於
+couch,長沙發
+count,計算
+south,南方
+sound,聲音
+pound,鎊(重量)英鎊
+round,圓形的
+house,房子
+mouse,老鼠 滑鼠
+mouth,嘴巴
+shout,大叫 呼喊
+art,藝術
+part,一部份
+arm,手臂
+farm,農場 飼養場
+hard,努力地 艱苦地
+star,星
+park,停車
+what,什麼
+want,需要
+body,身體
+stop,停止 中斷
+drop,放下 流下來
+copy,複製 抄襲
+hunt,打獵 捕捉
+jump,跳躍
+just,只是
+must,必需
+much,許多的
+club,俱樂部 社團
+drum,鼓
+duck,鴨子
+one,一
+son,兒子
+dove,鴿子
+love,愛
+come,來
+once,一旦 一次
+some,一些
+young,年輕的
+camp,露營
+lamp,電燈
+mask,口罩
+glad,高興的
+gram,公克
+clap,拍手
+plan,計劃 方案
+than,比
+half,一半
+hang,把...掛起
+taxi,計程車
+heat,熱度
+seat,座位
+mean,表示…的意思
+knee,膝蓋
+beef,牛肉
+keep,保持 保留
+eve,前夕
+key,鑰匙 關鍵
+even,甚至 連
+list,列出來
+give,送給 給
+into,到…裡面
+inch,英吋
+rich,富有的
+trip,旅程
+this,這個
+with,和...一起
+thin,瘦小的
+slim,纖細的、苗條的
+gym,體育館
+city,城市
+quiz,測驗 考查
+ear,耳朵
+hear,聽見
+dear,親愛的
+clear,清楚的
+near,近的
+year,年
+here,這裡
+zero,零
+busy,忙碌的
+moon,月亮
+noon,中午
+soon,很快地 不久
+lose,失去 喪失
+soup,湯
+cook,廚師
+foot,腳
+put,投入
+full,充滿的
+pull,拉回 拖著
+sure,有把握的
+face,臉
+race,比賽
+make,製做 泡(茶)
+bake,烘 烤
+wake,醒來
+age,年齡
+page,頁
+cage,籠子
+late,遲到的
+date,日期
+gate,大門
+hate,仇恨 憎恨
+care,關心 看護
+base,以…為基礎、根據
+case,案件
+baby,嬰孩
+lazy,懶惰的
+able,有能力的
+gray,灰色的
+pray,祈禱 祈求
+May,五月
+play,戲劇
+sail,揚帆 航行
+tail,尾巴 尾部
+mail,郵件
+raise,舉起 抬起
+waiter,服務生
+rain,下雨
+rainy,多雨的
+again,再(一次)
+send,發送 寄出
+lend,借(出)
+rent,租
+cent,一分
+tell,告訴
+sell,出售 賣出
+well,健康的 安好的
+bell,門鈴
+belt,腰帶 (安全)帶
+desk,書桌
+help,幫助
+left,左邊的
+less,較少的
+neck,脖子
+next,下一個 接著的
+west,西邊的
+rest,休息
+them,他們
+when,當…的時候
+then,然後
+very,非常地
+menu,菜單
+else,另外的
+ever,曾經
+any,任何一個
+many,許多(接可數名詞)
+air,空氣
+hair,頭髮
+pair,一對 一雙
+chair,椅子
+stair,樓梯
+more,更多 更甚
+toast,烤土司
+road,道路
+old,老的 舊的
+only,僅有的 只是
+open,打開
+over,在…之上
+only,唯一的 僅有的
+open,開放的 開著的
+over,結束的
+low,小聲的 低的
+four,四
+cola,可樂
+sofa,沙發
+both,兩方
+cold,寒冷的
+most,大部份的
+door,門
+ago,以前
+roll,滾動 打滾
+comb,梳
+pork,豬肉
+born,出生的 誕生的
+draw,繪製 描寫
+salt,鹽
+warm,溫暖的 暖和的
+off,關著的
+first,首先
+third,第三的
+thirty,三十
+hurry,急忙 倉促 忙亂
+T-shirt,T恤杉
+hers,她的東西
+word,字
+work,工作
+idea,想法、主意
+hide,把...藏起來
+ride,騎馬 乘車
+side,旁邊
+life,生活
+wife,妻子
+bike,腳踏車
+hike,遠足 健行
+like,和...一樣
+kite,風箏
+bite,咬 叮
+pipe,管子
+fire,火
+five,五
+wise,有智慧的
+rise,(太陽)升起
+size,尺寸 大小
+fine,健康的 良好的
+time,時間
+line,線
+nine,九
+mine,我的東西
+mile,英哩
+kind,親切的 友善的
+sign,簽名
+lion,獅子
+live,現場的 直播的
+tidy,整齊的
+buy,購買
+guy,傢伙 人(口語)
+type,類型
+July,七月
+eye,眼睛
+down,向下
+town,城鎮 市鎮
+south,南方的
+sound,聽起來
+proud,驕傲的
+ours,我們的東西
+ROC,中華民國
+USA,美國
+MRT,捷運
+there,那裡
+which,哪個
+their,他們的
+because,因為
+other,其他的
+people,人們
+think,認為
+these,這些
+really,真正地
+after,在...以後
+where,那裡 何處
+those,那些
+still,仍然
+between,在...之間
+something,某事
+thing,東西 事物
+before,在...以前
+little,一點點
+never,從未
+since,自從…以來
+different,不同的
+another,另一個
+around,在...附近
+during,在...期間
+number,數字
+under,在...下面
+however,然而 但是
+every,每一個
+always,總是
+though,雖然
+money,金錢
+world,世界
+family,家庭
+study,學習 研究 設置
+without,沒有 而不會
+story,故事
+course,課程 路線
+pretty,漂亮的
+pretty,非常地
+point,看法 觀點 點
+place,地方
+small,小的
+whether,是否
+better,較好的
+maybe,可能 也許
+anything,任何事情
+several,幾個的 數個的
+although,雖然
+today,今天
+until,直到...時
+group,小組
+guess,猜測
+important,重要的
+school,學校
+example,例子
+second,秒
+problem,問題
+country,國家
+program,程式 節目
+often,經常
+almost,幾乎 差不多
+large,巨大的 龐大的
+enough,充足的
+public,公共的
+someone,某人
+already,已經
+water,澆水
+everything,每件事情
+early,早的
+person,個人
+along,沿著 順著
+question,問題
+nothing,沒什麼
+later,較晚
+paper,報告 紙張(不可數)
+market,市場 市集
+quite,非常地
+power,力量
+history,歷史
+health,健康
+season,季節
+sometimes,有時候
+movie,電影
+America,美國
+order,命令 秩序
+order,點餐 命令
+either,也(不)
+across,在…的對面
+usually,通常
+everyone,人人
+anyone,任何人
+office,辦公室
+perhaps,或許 可能
+English,英語
+table,桌子
+whose,誰的
+present,現在的 出席的
+himself,他自己
+spend,花(錢) 花費
+total,全部的 完全的
+month,月
+child,小孩子
+change,改變
+black,黑色的
+mother,母親
+wrong,錯誤的
+itself,它自己
+music,音樂
+woman,女人
+above,在...的上面
+white,白色的
+class,班級
+friend,朋友
+morning,早晨
+behind,在...的後面
+common,普通的
+except,除...之外
+short,短的
+special,特別的
+finally,最後 終於
+street,街道
+themselves,他們自己
+summer,夏天
+matter,事情 問題
+watch,看(電視)
+piece,一張(片、塊)
+strong,強壯的
+heart,心臟
+action,活動 行動
+father,父親
+outside,外面的
+believe,相信
+Monday,星期一
+center,中心 中央
+husband,丈夫 老公
+party,派對
+myself,我自己
+Tuesday,星期二
+difficult,困難的
+media,媒體
+understand,理解
+space,空間
+Sunday,星期天
+happy,愉快的
+become,成為 變得
+start,開始
+inside,在…裡面
+Internet,網際網路
+please,取悅 請
+funny,滑稽的
+Friday,星期五
+moment,瞬間 片刻
+chance,運氣 機會
+phone,電話
+popular,流行的 受歡迎的
+China,中國人民共和國
+front,前面 正面
+bring,帶來
+church,教堂
+sorry,遺憾的
+foreign,外國的
+march,進行曲 行軍
+March,三月
+below,在…下面
+north,北方
+serious,嚴重的
+future,未來 將來
+police,警察
+answer,回答 答覆
+picture,照片 圖片
+agree,同意
+happen,發生
+meeting,會議 集會
+modern,現代的
+simple,簡單的
+ground,地面888
+nature,大自然 性質
+weekend,週末
+beautiful,美麗的
+wonderful,極好的
+write,寫
+letter,信件
+island,海島
+trouble,麻煩 困擾的事
+April,四月
+useful,有用的 有益的
+student,學生
+learn,學習
+attack,進攻 襲擊
+famous,著名的
+minute,分鐘
+leader,領導
+cover,覆蓋
+plant,植物
+plant,栽種
+subject,科目 主題
+floor,樓層 地板
+Chinese,中文 華人
+expensive,昂貴的
+store,貯存
+yourself,你自己
+sister,姊妹
+enjoy,喜愛 享受 欣賞
+museum,博物館
+thank,感謝
+green,綠色的
+medium,中等的 中間的
+Christmas,聖誕節
+dinner,晚餐
+baseball,棒球
+voice,聲音 嗓子
+color,顏色
+brother,兄弟
+sports,運動
+somewhere,某處
+radio,收音機
+married,已婚的
+share,分擔 分享
+weather,天氣
+visit,拜訪 參觀
+close,關起來
+fourth,第四
+build,蓋(房子)
+lawyer,律師
+science,自然科學
+herself,她自己
+tonight,今晚
+follow,遵守 跟隨
+player,球員 選手
+January,一月
+crazy,瘋狂的
+excellent,傑出的
+screen,螢幕
+writer,作者 作家
+animal,動物
+video,影像 影片
+begin,開始
+August,八月
+doctor,醫生
+glass,玻璃杯
+brown,棕色的
+clothes,衣服
+correct,正確的
+correct,改正
+check,檢查 檢驗
+appear,出現
+drive,駕駛
+station,車站
+winter,冬天
+quarter,四分之一
+machine,機器
+coffee,咖啡
+teacher,老師
+window,窗口
+library,圖書館
+evening,傍晚
+middle,中部的 中間的
+October,十月
+afternoon,下午
+hotel,旅館 飯店
+strange,奇怪的
+fresh,新鮮的
+stand,站立 站著
+package,包裹
+dance,舞蹈
+dollar,元
+carry,運載 帶著
+corner,轉角處 街角
+plane,飛機
+spring,春天
+dress,洋裝
+shape,形狀
+river,河流
+catch,抓住 趕上
+healthy,健康的
+taste,味覺
+taste,吃起來
+telephone,電話
+listen,注意聽
+lunch,午餐
+bottom,底部
+chapter,(書籍)篇 章
+quick,快速的
+choose,選擇
+traffic,交通
+decide,決定
+kitchen,廚房
+dangerous,危險的
+fifty,五十
+stupid,愚笨的
+officer,軍官
+afraid,害怕的
+forget,忘記
+throw,投擲 丟出
+achieve,完成 達成 達到(目標)
+grade,成績 年級
+birthday,生日
+terrible,可怕的 嚇人的
+comfortable,舒適的
+sweet,甜的
+camera,照相機
+smart,聰明的
+theater,電影院
+parent,父母親
+garden,花園
+actor,男演員
+surprise,驚奇 詫異 令…驚訝
+worry,擔心 發愁
+sleep,睡覺
+plate,盤子
+square,廣場 正方形
+lovely,可愛的
+ice cream,冰淇淋
+shoes,鞋子
+earth,地球
+notice,注意到 告知
+chicken,雞肉 小雞
+quiet,沈默的
+mistake,錯誤 過失
+airport,機場
+tired,疲憊的 很累的
+marker,麥克筆
+twelve,十二
+fifteen,十五
+ninety,九十
+eighty,八十
+repeat,重複 重做
+dozen,一打 十二個
+lucky,好運的
+truck,卡車
+noise,噪聲
+careful,小心的
+touch,接觸 感動
+regard,認為 視為
+driver,司機
+photo,相片
+drink,飲料
+drink,喝
+holiday,節日 假日
+pants,褲子
+forty,四十
+sugar,糖
+yellow,黃色的
+cheese,乳酪
+cross,過(河、街)
+excuse,原諒 藉口
+block,街道
+angry,生氣的
+breakfast,早餐
+hello,哈囉
+enter,進入
+prefer,較喜歡 寧願
+expert,專家 高手
+horse,馬
+honest,誠實的
+ourselves,我們自己
+exciting,令人興奮的
+bridge,橋 橋樑
+ticket,車票 入場券
+yours,你的東西
+temple,寺廟 神殿
+grass,青草
+helpful,有幫助的
+thick,厚的
+pleasure,愉快 高興
+fifth,第五的
+lesson,功課 課業
+rabbit,兔子 野兔
+circle,圓
+excited,感到興奮的
+queen,皇后 女王
+fruit,水果 果實
+friendly,親切的
+finish,結束 完成
+welcome,受歡迎的
+giant,巨人
+worker,工人
+bottle,瓶子
+koala,無尾熊
+uniform,制服
+bathroom,浴室
+smell,聞起來
+boring,令人乏味的
+factory,工廠
+smoke,煙霧
+laugh,笑 嘲笑
+tennis,網球
+smile,微笑 笑容
+finger,手指
+sharp,鋒利的 尖的
+trash,垃圾
+actress,女演員
+bedroom,臥室
+clock,時鐘
+eight,八
+nineteen,十九
+prepare,準備
+abroad,到國外
+comic,漫畫
+prince,王子
+orange,柳橙
+turkey,火雞
+magic,有魔力的
+collect,收集
+sixty,六十
+seventy,七十
+habit,習慣
+hot dog,熱狗
+singer,歌手
+o’clock,點鐘
+blind,瞎的
+knife,刀子
+butter,奶油
+cousin,堂(表)兄弟姐妹
+juice,果汁
+soccer,足球
+pocket,口袋
+scared,受到驚嚇的
+glasses,眼鏡
+planet,行星
+slide,滑梯
+tiger,老虎
+stomach,胃
+garbage,垃圾
+sixth,第六的
+eighteen,十八
+bored,感到無聊的
+trick,詭計 騙局
+apple,蘋果
+spell,拼寫
+pizza,比薩餅
+monkey,猴子
+castle,城堡
+beside,在...旁邊 除了…之外
+flower,花
+ninth,第九的
+piano,鋼琴
+ghost,幽靈 鬼魂
+candy,糖果
+jacket,夾克
+arrive,到達 到來
+salad,沙拉
+prize,獎賞 獎品
+uncle,伯父 叔叔
+fever,發燒 發熱
+swing,鞦韆
+purple,紫色的
+fourteen,十四
+thirteen,十三
+hungry,飢餓的
+invite,邀請 招待
+homework,家庭作業
+eleven,十一
+sixteen,十六
+soldier,士兵
+unhappy,不快樂的
+belong,屬於
+eighth,第八
+guava,番石榴
+lemon,檸檬
+papaya,木瓜
+guitar,吉他
+seldom,很少 難得
+classroom,教室
+throat,喉嚨
+climb,攀登 攀爬
+sunny,豔陽高照的
+Taiwan,臺灣
+hobby,嗜好
+knock,敲 擊 打
+polite,有禮貌的
+tomato,蕃茄
+honey,蜂蜜
+bench,長凳
+picnic,郊遊 野餐
+lonely,寂寞的 孤獨的
+railway,鐵路
+bicycle,腳踏車
+theirs,他們的東西
+brush,刷子
+shorts,短褲
+borrow,借(入)
+straw,吸管 稻草
+insect,昆蟲
+blanket,毯子
+seventeen,十七
+shake,握(手) 搖動
+cookie,餅乾
+puppy,小狗
+snake,蛇
+farmer,農夫
+toast,為…乾杯
+socks,襪子
+Easter,復活節
+dentist,牙科醫生
+notebook,筆記本
+basket,籃子
+banana,香蕉
+clerk,職員
+bookstore,書店
+stamp,郵票
+tenth,第十
+sweater,毛線衣
+autumn,秋天
+tooth,牙齒
+yummy,好吃的
+whale,鯨魚
+towel,毛巾
+snack,點心
+robot,機器人
+umbrella,傘
+glove,手套
+policeman,警察
+ruler,直尺
+banker,銀行家
+balcony,陽臺
+pencil,鉛筆
+goodbye,再見
+chess,棋
+dodge ball,躲避球
+popcorn,爆米花
+windy,有風的
+million,百萬
+turtle,烏龜
+drawer,抽屜
+wallet,錢包
+dragon,龍
+shark,鯊魚
+paste,漿糊
+thousand,一千
+grandma,奶奶
+spoon,湯匙
+spider,蜘蛛
+lettuce,萵苣
+housewife,主婦
+elephant,大象
+cheer,為…歡呼、鼓舞
+classmate,同學
+candle,蠟燭
+goose,鵝
+salty,鹹的
+violin,小提琴
+chalk,粉筆
+bakery,麵包店
+rainbow,彩虹
+grape,葡萄
+cloudy,多雲的
+yourselves,你們自己
+grandpa,爺爺
+cellphone,手機
+snowy,多雪的
+flute,長笛
+thirsty,口渴的
+shine,發光 (陽光)照耀
+hundred,一百
+skate,溜冰
+three,三
+typhoon,颱風
+hippo,河馬
+blackboard,黑板
+mailman,郵差
+noodle,麵條
+lantern,燈籠
+chopsticks,筷子
+vegetable,蔬菜
+zebra,斑馬
+seven,七
+twenty,二十
+scooter,機車 速克達
+Frisbee,飛盤　
+snowman,雪人
+workbook,作業簿 習作本
+seesaw,蹺蹺板
+eraser,橡皮擦
+American,美國人
+business,生意 事情
+possible,有可能的
+together,一起
+interesting,有趣的
+national,國家的
+whatever,任何的
+interest,興趣
+remember,記得 想起
+language,語言
+interview,面試 採訪
+computer,電腦
+experience,經驗 體驗
+Wednesday,星期三
+Thursday,星期四
+television,電視
+favorite,最愛的
+daughter,女兒
+yesterday,昨天
+knowledge,知識 學問
+practice,練習
+Saturday,星期六
+hospital,醫院
+interested,感到興趣的
+successful,成功的
+newspaper,報紙
+September,九月
+straight,直直的
+apartment,公寓
+tomorrow,明天
+chairman,主席 董事長
+suddenly,突然
+December,十二月
+sentence,句子
+surprised,感到驚訝的
+restaurant,餐館
+November,十一月
+protection,保護 防禦物 保護物
+vacation,假期
+exercise,鍛鍊 運動 練習
+reporter,記者
+secretary,秘書
+February,二月
+medicine,藥物
+mountain,山
+chocolate,巧克力
+badminton,羽毛球
+basketball,籃球
+dictionary,字典
+painting,油畫 繪畫 油漆
+neighbor,鄰居
+shoulder,肩膀
+festival,節日 喜慶日
+convenient,方便的 便利的
+envelope,信封
+princess,公主
+celebrate,慶祝
+handsome,英俊的
+engineer,工程師
+airplane,飛機
+delicious,美味可口的
+teenager,青少年
+sandwich,三明治
+stranger,陌生人
+barbecue,烤肉
+motorcycle,摩托車
+salesman,推銷員
+sidewalk,人行道
+headache,頭痛
+playground,操場
+recorder,記錄器 錄音機
+hamburger,漢堡
+waitress,女服務生
+foreigner,外國人
+strawberry,草莓
+fisherman,漁夫
+butterfly,蝴蝶
+kangaroo,袋鼠
+postcard,明信片
+watermelon,西瓜
+shopkeeper,店主
+post office,郵局
+mail carrier,郵差
+restroom,廁所
+kilogram,公斤
+supermarket,超級市場
+living room,客廳
+dining room,餐廳
+department store,百貨商店
+pumpkin,南瓜
+Halloween,萬聖節
+French fries,炸薯條
+roller-blades,直排輪
+hard-working,勤勉的
+roller-skate,溜直排輪
+thirtieth,第三十
+dumpling,餃子
+refrigerator,電冰箱
+businessman,商人
+mathematics,數學
+spaghetti,義大利麵條
+centimeter,公分
+Teacher's Day,教師節
+New Year's Eve,除夕
+NewYear's Day,新年
+physical education,體育
+elementary school,小學
+junior high school,國中
+senior high school,高中`,
+            "大考中心3_4": `level,n. 等級, 水平
+head,n. 頭, 首長
+control,v. 控制
+include,v. 包括
+common,adj. 共同的, 普通的
+provide,v. 提供
+natural,adj. 自然的
+value,n. 價值
+role,n. 角色
+music,n. 音樂
+design,v. 設計
+public,adj. 公眾的
+sense,n. 感覺, 意識
+artist,n. 藝術家
+effect,n. 效果, 影響
+experience,n. 經驗
+culture,n. 文化
+sound,n. 聲音
+social,adj. 社會的
+express,v. 表達
+spirit,n. 精神, 靈魂
+personal,adj. 個人的
+technology,n. 科技
+moment,n. 片刻
+attention,n. 注意
+style,n. 風格
+generally,adv. 一般地
+meaning,n. 意義
+physical,adj. 身體的, 物理的
+activity,n. 活動
+model,n. 模型, 模範
+human,adj. 人的
+deal,v. 處理
+language,n. 語言
+department,n. 部門
+skill,n. 技巧
+major,adj. 主要的
+century,n. 世紀
+emotional,adj. 情緒的
+contain,v. 包含
+serious,adj. 嚴肅的, 嚴重的
+event,n. 事件
+international,adj. 國際的
+project,n. 計畫
+ability,n. 能力
+knowledge,n. 知識
+imagine,v. 想像
+official,adj. 官方的
+private,adj. 私人的
+realize,v. 意識到
+character,n. 性格, 角色
+fan,n. 扇子, 迷
+risk,n. 風險
+career,n. 職業
+individual,n. 個人
+instead,adv. 代替
+brain,n. 腦
+memory,n. 記憶
+sign,n. 符號, 標誌
+medical,adj. 醫療的
+respond,v. 回應
+future,n. 未來
+hardly,adv. 幾乎不
+feeling,n. 感覺
+material,n. 材料
+positive,adj. 正面的
+desire,n. 慾望
+choice,n. 選擇
+similar,adj. 相似的
+pressure,n. 壓力
+death,n. 死亡
+method,n. 方法
+store,n. 商店
+certain,adj. 確定的
+discover,v. 發現
+purpose,n. 目的
+disease,n. 疾病
+attitude,n. 態度
+concern,n. 關心
+therefore,adv. 因此
+structure,n. 結構
+proper,adj. 適當的
+professional,adj. 專業的
+degree,n. 度, 等級
+equipment,n. 設備
+otherwise,adv. 否則
+creative,adj. 有創造力的
+destroy,v. 破壞
+mention,v. 提及
+dig,v. 挖
+responsible,adj. 負責的
+western,adj. 西方的
+adult,n. 成人
+respect,n. 尊敬
+classic,adj. 古典的
+chemical,n. 化學物質
+physical,adj. 物理的
+detail,n. 細節
+financial,adj. 財務的
+text,n. 正文
+message,n. 訊息
+computer,n. 電腦
+telephone,n. 電話
+mile,n. 英里
+item,n. 項目
+metal,n. 金屬
+formal,adj. 正式的
+standard,n. 標準
+traffic,n. 交通
+forward,adv. 向前
+lie,v. 躺, 說謊
+pound,n. 磅
+pain,n. 疼痛
+exist,v. 存在
+master,n. 主人, 大師
+oil,n. 油
+chair,n. 椅子
+nearly,adv. 幾乎
+photograph,n. 照片
+traditional,adj. 傳統的
+historical,adj. 歷史的
+useful,adj. 有用的
+bone,n. 骨頭
+direct,adj. 直接的
+willing,adj. 願意的
+ship,n. 船
+essential,adj. 必要的
+organization,n. 組織
+direction,n. 方向
+reader,n. 讀者
+importance,n. 重要性
+progress,n. 進步
+dream,n. 夢
+employee,n. 員工
+encourage,v. 鼓勵
+global,adj. 全球的
+effort,n. 努力
+original,adj. 最初的
+heat,n. 熱
+method,n. 方法
+determine,v. 決定
+normal,adj. 正常的
+stone,n. 石頭
+act,v. 行動
+require,v. 要求
+local,adj. 當地的
+basic,adj. 基本的
+unit,n. 單位
+central,adj. 中央的
+alive,adj. 活著的
+title,n. 標題
+examine,v. 檢查
+finger,n. 手指
+challenge,n. 挑戰
+mostly,adv. 大部分地
+further,adv. 進一步
+comment,n. 評論
+ancient,adj. 古代的
+economical,adj. 節約的
+partner,n. 夥伴
+investigation,n. 調查
+product,n. 產品
+deep,adj. 深的
+review,n. 評論
+goal,n. 目標
+discover,v. 發現
+primary,adj. 主要的
+generation,n. 世代
+design,n. 設計
+focus,n. 焦點
+commercial,adj. 商業的
+native,adj. 本地的
+spirit,n. 精神
+entire,adj. 整個的
+educational,adj. 教育的
+current,adj. 當前的
+content,n. 內容
+effective,adj. 有效的
+highly,adv. 高度地
+element,n. 元素
+audience,n. 觀眾
+author,n. 作者
+huge,adj. 巨大的
+political,adj. 政治的
+historical,adj. 歷史的
+unique,adj. 獨特的
+youth,n. 青年
+appearance,n. 外觀
+influence,n. 影響
+traditional,adj. 傳統的
+reader,n. 讀者
+affect,v. 影響
+mainly,adv. 主要地
+coffee,n. 咖啡
+screen,n. 螢幕
+various,adj. 各式各樣的
+negative,adj. 負面的
+usually,adv. 通常
+memory,n. 記憶
+familiar,adj. 熟悉的
+food,n. 食物
+drink,n. 飲料
+popular,adj. 受歡迎的
+movie,n. 電影
+novel,n. 小說
+writer,n. 作家
+advice,n. 建議
+media,n. 媒體
+fashion,n. 時尚
+computer,n. 電腦
+Internet,n. 網際網路
+website,n. 網站
+fan,n. 迷
+camera,n. 相機
+music,n. 音樂
+band,n. 樂團
+song,n. 歌曲
+singer,n. 歌手
+dance,n. 舞蹈
+actor,n. 演員
+actress,n. 女演員
+ticket,n. 票
+museum,n. 博物館
+exhibition,n. 展覽
+art,n. 藝術
+artist,n. 藝術家
+photo,n. 照片
+picture,n. 圖畫
+color,n. 顏色
+paint,v. 繪畫
+draw,v. 畫
+design,n. 設計
+style,n. 風格
+perform,v. 表演
+stage,n. 舞台
+show,n. 秀
+story,n. 故事
+character,n. 角色
+culture,n. 文化
+holiday,n. 假日
+festival,n. 節慶
+party,n. 派對
+celebrate,v. 慶祝
+game,n. 遊戲
+sport,n. 運動
+team,n. 隊伍
+player,n. 選手
+win,v. 贏
+lose,v. 輸
+score,n. 分數
+ball,n. 球
+exercise,v. 運動
+health,n. 健康
+body,n. 身體
+mind,n. 心智
+physical,adj. 身體的
+mental,adj. 心理的
+emotional,adj. 情緒的
+feeling,n. 感覺
+happy,adj. 快樂的
+sad,adj. 悲傷的
+angry,adj. 生氣的
+excited,adj. 興奮的
+surprised,adj. 驚訝的
+afraid,adj. 害怕的
+love,n. 愛
+hate,v. 恨
+friend,n. 朋友
+family,n. 家庭
+parent,n. 父母
+mother,n. 母親
+father,n. 父親
+child,n. 小孩
+baby,n. 嬰兒
+boy,n. 男孩
+girl,n. 女孩
+man,n. 男人
+woman,n. 女人
+people,n. 人們
+person,n. 個人
+human,n. 人類
+life,n. 生命
+death,n. 死亡
+age,n. 年齡
+name,n. 名字
+address,n. 地址
+telephone,n. 電話
+email,n. 電子郵件
+school,n. 學校
+student,n. 學生
+teacher,n. 老師
+class,n. 班級
+classroom,n. 教室
+lesson,n. 課程
+homework,n. 作業
+exam,n. 考試
+test,n. 測驗
+grade,n. 成績
+subject,n. 科目
+English,n. 英語
+Chinese,n. 中文
+math,n. 數學
+science,n. 科學
+history,n. 歷史
+geography,n. 地理
+book,n. 書
+pen,n. 筆
+pencil,n. 鉛筆
+desk,n. 書桌
+chair,n. 椅子
+table,n. 桌子
+computer,n. 電腦
+work,n. 工作
+job,n. 工作
+company,n. 公司
+office,n. 辦公室
+money,n. 錢
+price,n. 價格
+buy,v. 買
+sell,v. 賣
+pay,v. 付款
+cost,n. 成本
+cheap,adj. 便宜的
+expensive,adj. 昂貴的
+rich,adj. 富有的
+poor,adj. 貧窮的
+food,n. 食物
+eat,v. 吃
+drink,v. 喝
+breakfast,n. 早餐
+lunch,n. 午餐
+dinner,n. 晚餐
+meal,n. 一餐
+restaurant,n. 餐廳
+menu,n. 菜單
+water,n. 水
+tea,n. 茶
+coffee,n. 咖啡
+juice,n. 果汁
+milk,n. 牛奶
+bread,n. 麵包
+rice,n. 米飯
+noodle,n. 麵條
+meat,n. 肉
+fish,n. 魚
+chicken,n. 雞肉
+pork,n. 豬肉
+beef,n. 牛肉
+vegetable,n. 蔬菜
+fruit,n. 水果
+apple,n. 蘋果
+banana,n. 香蕉
+orange,n. 柳橙
+home,n. 家
+house,n. 房子
+room,n. 房間
+bedroom,n. 臥室
+bathroom,n. 浴室
+kitchen,n. 廚房
+living room,n. 客廳
+door,n. 門
+window,n. 窗戶
+bed,n. 床
+sofa,n. 沙發
+city,n. 城市
+town,n. 城鎮
+village,n. 村莊
+country,n. 國家
+world,n. 世界
+earth,n. 地球
+sun,n. 太陽
+moon,n. 月亮
+star,n. 星星
+sky,n. 天空
+air,n. 空氣
+weather,n. 天氣
+hot,adj. 熱的
+cold,adj. 冷的
+warm,adj. 溫暖的
+cool,adj. 涼爽的
+sunny,adj. 晴朗的
+rainy,adj. 下雨的
+windy,adj. 有風的
+cloudy,adj. 多雲的
+snowy,adj. 下雪的
+rain,n. 雨
+snow,n. 雪
+wind,n. 風
+cloud,n. 雲
+time,n. 時間
+year,n. 年
+month,n. 月
+week,n. 週
+day,n. 天
+hour,n. 小時
+minute,n. 分鐘
+second,n. 秒
+morning,n. 早上
+afternoon,n. 下午
+evening,n. 傍晚
+night,n. 晚上
+today,n. 今天
+yesterday,n. 昨天
+tomorrow,n. 明天
+now,adv. 現在
+then,adv. 那時
+always,adv. 總是
+usually,adv. 通常
+often,adv. 經常
+sometimes,adv. 有時候
+never,adv. 從不
+early,adj. 早的
+late,adj. 晚的
+fast,adj. 快的
+slow,adj. 慢的
+big,adj. 大的
+small,adj. 小的
+long,adj. 長的
+short,adj. 短的
+tall,adj. 高的
+high,adj. 高的
+low,adj. 低的
+good,adj. 好的
+bad,adj. 壞的
+beautiful,adj. 漂亮的
+ugly,adj. 醜的
+new,adj. 新的
+old,adj. 舊的
+young,adj. 年輕的
+easy,adj. 容易的
+difficult,adj. 困難的
+right,adj. 對的
+wrong,adj. 錯的
+true,adj. 真的
+false,adj. 假的
+happy,adj. 快樂的
+sad,adj. 悲傷的
+red,n. 紅色
+blue,n. 藍色
+green,n. 綠色
+yellow,n. 黃色
+black,n. 黑色
+white,n. 白色
+one,num. 一
+two,num. 二
+three,num. 三
+four,num. 四
+five,num. 五
+six,num. 六
+seven,num. 七
+eight,num. 八
+nine,num. 九
+ten,num. 十
+I,pron. 我
+you,pron. 你
+he,pron. 他
+she,pron. 她
+it,pron. 它
+we,pron. 我們
+they,pron. 他們
+me,pron. 我(受格)
+him,pron. 他(受格)
+her,pron. 她(受格)
+us,pron. 我們(受格)
+them,pron. 他們(受格)
+my,pron. 我的
+your,pron. 你的
+his,pron. 他的
+her,pron. 她的
+its,pron. 它的
+our,pron. 我們的
+their,pron. 他們的
+mine,pron. 我的(所有格代名詞)
+yours,pron. 你的(所有格代名詞)
+his,pron. 他的(所有格代名詞)
+hers,pron. 她的(所有格代名詞)
+ours,pron. 我們的(所有格代名詞)
+theirs,pron. 他們的(所有格代名詞)
+this,pron. 這個
+that,pron. 那個
+these,pron. 這些
+those,pron. 那些
+who,pron. 誰
+what,pron. 什麼
+when,pron. 何時
+where,pron. 何地
+why,pron. 為何
+how,pron. 如何
+which,pron. 哪個
+be,v. 是
+have,v. 有
+do,v. 做
+say,v. 說
+go,v. 去
+get,v. 得到
+make,v. 製造
+know,v. 知道
+think,v. 認為
+see,v. 看見
+come,v. 來
+want,v. 想要
+look,v. 看
+use,v. 使用
+find,v. 找到
+give,v. 給
+tell,v. 告訴
+work,v. 工作
+call,v. 呼叫
+try,v. 嘗試
+ask,v. 問
+need,v. 需要
+feel,v. 感覺
+become,v. 變成
+leave,v. 離開
+put,v. 放
+mean,v. 意指
+keep,v. 保持
+let,v. 讓
+begin,v. 開始
+seem,v. 似乎
+help,v. 幫助
+talk,v. 說話
+turn,v. 轉動
+start,v. 開始
+show,v. 展示
+hear,v. 聽見
+play,v. 玩
+run,v. 跑
+move,v. 移動
+like,v. 喜歡
+live,v. 居住
+believe,v. 相信
+hold,v. 握住
+bring,v. 帶來
+happen,v. 發生
+write,v. 寫
+provide,v. 提供
+sit,v. 坐
+stand,v. 站
+lose,v. 失去
+pay,v. 付款
+meet,v. 遇見
+include,v. 包括
+continue,v. 繼續
+set,v. 設置
+learn,v. 學習
+change,v. 改變
+lead,v. 領導
+understand,v. 了解
+watch,v. 觀看
+follow,v. 跟隨
+stop,v. 停止
+create,v. 創造
+speak,v. 說
+read,v. 閱讀
+allow,v. 允許
+add,v. 增加
+spend,v. 花費
+grow,v. 生長
+open,v. 打開
+walk,v. 走路
+win,v. 贏
+offer,v. 提供
+remember,v. 記得
+love,v. 愛
+consider,v. 考慮
+appear,v. 出現
+buy,v. 買
+wait,v. 等待
+serve,v. 服務
+die,v. 死
+send,v. 寄送
+expect,v. 期望
+build,v. 建造
+stay,v. 停留
+fall,v. 掉落
+cut,v. 切
+reach,v. 到達
+kill,v. 殺
+remain,v. 保持
+suggest,v. 建議
+raise,v. 舉起
+pass,v. 通過
+sell,v. 賣
+require,v. 要求
+report,v. 報告
+decide,v. 決定
+pull,v. 拉
+a,art. 一個
+an,art. 一個
+the,art. 這個,那個
+to,prep. 到
+of,prep. 的
+in,prep. 在...裡面
+for,prep. 為了
+on,prep. 在...上面
+with,prep. 和...一起
+at,prep. 在
+by,prep. 藉由
+from,prep. 從
+up,prep. 向上
+about,prep. 關於
+into,prep. 進入
+over,prep. 在...之上
+after,prep. 在...之後
+and,conj. 和
+but,conj. 但是
+or,conj. 或者
+so,conj. 所以
+if,conj. 如果
+because,conj. 因為
+when,conj. 當...時候
+that,conj. 那個
+as,conj. 如同
+while,conj. 當...時候
+though,conj. 雖然
+although,conj. 雖然
+since,conj. 自從
+until,conj. 直到
+not,adv. 不
+also,adv. 也
+very,adv. 非常
+well,adv. 好地
+just,adv. 只是
+too,adv. 太
+here,adv. 這裡
+there,adv. 那裡
+now,adv. 現在
+then,adv. 那時
+always,adv. 總是
+never,adv. 從不
+often,adv. 經常
+sometimes,adv. 有時候
+usually,adv. 通常
+hello,int. 哈囉
+oh,int. 哦
+yes,int. 是的
+no,int. 不
+please,int. 請
+thank you,int. 謝謝你
+sorry,int. 對不起
+excuse me,int. 不好意思
+goodbye,int. 再見`
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM 元素
+            const wordListsContainer = document.getElementById('word-lists-container');
+            const quizModeContainer = document.getElementById('quiz-mode-container');
+            const card = document.getElementById('card');
+            const wordText = document.getElementById('word-text');
+            const answerText = document.getElementById('answer-text');
+            const showAnswerBtn = document.getElementById('show-answer-btn');
+            const nextWordBtn = document.getElementById('next-word-btn');
+            const messageArea = document.getElementById('message-area');
+            const speakBtnFront = document.getElementById('speak-btn-front');
+            const speakBtnBack = document.getElementById('speak-btn-back');
+
+            // 應用程式狀態
+            let allWords = {};
+            let activeWords = [];
+            let currentWord = null;
+            let isFlipped = false;
+            let quizMode = 'en-to-zh';
+            let timerId = null;
+            let countdownInterval = null;
+            let audioCtx = null;
+            let isTimerActive = false;
+
+            // 初始化函式
+            function init() {
+                for (const fileName in fileContents) {
+                    allWords[fileName] = parseCSV(fileContents[fileName], fileName);
+                }
+                createWordListCheckboxes();
+                createQuizModeRadios();
+                updateActiveWords();
+                showAnswerBtn.addEventListener('click', handleShowAnswer);
+                nextWordBtn.addEventListener('click', handleNextWord);
+                wordListsContainer.addEventListener('change', updateActiveWords);
+                quizModeContainer.addEventListener('change', handleModeChange);
+                speakBtnFront.addEventListener('click', handleSpeak);
+                speakBtnBack.addEventListener('click', handleSpeak);
+                updateButtonStates();
+            }
+
+            function parseCSV(csvText, listName) {
+                const words = [];
+                const lines = csvText.trim().replace(/\r\n/g, '\n').split('\n');
+                const startLine = (listName === '進階800字' || listName === '大考中心3_4') ? 1 : 0;
+
+                for (let i = startLine; i < lines.length; i++) {
+                    const line = lines[i];
+                    if (!line) continue;
+                    let parts = line.split(',');
+                    let english = '';
+                    let chinese = '';
+
+                    if (listName === '教育部1200字') {
+                        if (parts.length >= 3) {
+                            english = parts[2].trim();
+                            chinese = parts.slice(3).join(',').trim();
+                        }
+                    } else if (listName === '進階800字' || listName === '大考中心3_4') {
+                        if (parts.length >= 2) {
+                            english = parts[0].trim();
+                            chinese = parts.slice(1).join(',').trim();
+                        }
+                    } else {
+                        const quotedParts = [];
+                        let currentPart = '';
+                        let inQuotes = false;
+                        for (let j = 0; j < line.length; j++) {
+                            const char = line[j];
+                            if (char === '"' && (j === 0 || line[j - 1] !== '\\')) {
+                                inQuotes = !inQuotes;
+                            } else if (char === ',' && !inQuotes) {
+                                quotedParts.push(currentPart);
+                                currentPart = '';
+                            } else {
+                                currentPart += char;
+                            }
+                        }
+                        quotedParts.push(currentPart);
+
+                        if (quotedParts.length >= 2) {
+                            english = quotedParts[0].trim();
+                            chinese = quotedParts.slice(1).join(',').trim().replace(/^"|"$/g, '');
+                        }
+                    }
+
+                    if (english && chinese) {
+                        words.push({ english, chinese });
+                    }
+                }
+                return words;
+            }
+
+            function createCustomCheckbox(id, name, value, text, checked = true) {
+                return `
+                    <label for="${id}" class="custom-choice block cursor-pointer">
+                        <input type="checkbox" id="${id}" data-list-name="${value}" class="sr-only" ${checked ? 'checked' : ''}>
+                        <div class="flex items-center justify-between p-3 bg-white/80 rounded-xl border-2 border-white hover:border-emerald-200 hover:bg-white transition-all duration-200 shadow-sm">
+                            <span class="text-slate-700 font-bold transition-colors">${text}</span>
+                            <div class="icon-container w-7 h-7 flex items-center justify-center rounded-lg bg-emerald-100 transition-colors">
+                                <i class="fas fa-check selection-icon text-emerald-500"></i>
+                            </div>
+                        </div>
+                    </label>
+                `;
+            }
+            
+            function createCustomRadio(id, name, value, text, checked = false) {
+                 return `
+                    <label for="${id}" class="custom-choice block cursor-pointer">
+                        <input type="radio" id="${id}" name="${name}" value="${value}" class="sr-only" ${checked ? 'checked' : ''}>
+                        <div class="flex items-center justify-between p-3 bg-white/80 rounded-xl border-2 border-white hover:border-emerald-200 hover:bg-white transition-all duration-200 shadow-sm">
+                            <span class="text-slate-700 font-bold transition-colors">${text}</span>
+                            <div class="icon-container w-7 h-7 flex items-center justify-center rounded-lg bg-emerald-100 transition-colors">
+                                <i class="fas fa-check selection-icon text-emerald-500"></i>
+                            </div>
+                        </div>
+                    </label>
+                `;
+            }
+
+
+            function createWordListCheckboxes() {
+                let html = '';
+                Object.keys(fileContents).forEach((fileName, index) => {
+                    html += createCustomCheckbox(`list-${index}`, 'wordlist', fileName, `${fileName} (${allWords[fileName].length})`, true);
+                });
+                wordListsContainer.innerHTML = html;
+            }
+            
+            function createQuizModeRadios() {
+                const modes = [
+                    { value: 'en-to-zh', text: '英翻中' },
+                    { value: 'zh-to-en', text: '中翻英' },
+                    { value: 'fill-in-the-blank', text: '單字填空' }
+                ];
+                let html = '';
+                modes.forEach((mode, index) => {
+                    html += createCustomRadio(`mode-${index}`, 'quizMode', mode.value, mode.text, index === 0);
+                });
+                quizModeContainer.innerHTML = html;
+            }
+
+
+            function updateActiveWords() {
+                activeWords = [];
+                const checkboxes = wordListsContainer.querySelectorAll('input[type="checkbox"]:checked');
+                checkboxes.forEach(cb => {
+                    const listName = cb.dataset.listName;
+                    if (allWords[listName]) {
+                        activeWords.push(...allWords[listName]);
+                    }
+                });
+                
+                const uniqueWords = new Map();
+                activeWords.forEach(word => {
+                    if (!uniqueWords.has(word.english.toLowerCase())) {
+                        uniqueWords.set(word.english.toLowerCase(), word);
+                    }
+                });
+                activeWords = Array.from(uniqueWords.values());
+                
+                resetQuiz();
+            }
+            
+            function updateButtonStates() {
+                const hasActiveWords = activeWords.length > 0;
+                nextWordBtn.disabled = !hasActiveWords;
+                showAnswerBtn.disabled = !currentWord || !hasActiveWords;
+            }
+            
+            function displayMessage() {
+                 if (activeWords.length === 0) {
+                    messageArea.textContent = '請至少選擇一個單字庫！';
+                    wordText.textContent = '...';
+                    answerText.textContent = '';
+                    currentWord = null;
+                } else {
+                    messageArea.textContent = '';
+                }
+            }
+            
+            function resetQuiz() {
+                if (isFlipped) {
+                    card.classList.remove('is-flipped');
+                    isFlipped = false;
+                }
+                if (timerId) {
+                    clearTimeout(timerId);
+                    timerId = null;
+                }
+                 if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+                document.getElementById('timer-display').classList.add('hidden');
+                isTimerActive = false;
+                currentWord = null;
+                wordText.textContent = '?';
+                wordText.classList.remove('tracking-widest');
+                answerText.textContent = '';
+                speakBtnFront.classList.add('hidden');
+                speakBtnBack.classList.add('hidden');
+                updateButtonStates();
+                displayMessage();
+            }
+
+            function createBlankWord(word) {
+                const wordArr = word.split('');
+                const len = wordArr.length;
+                // Ensure at least one blank for all words.
+                const numBlanks = Math.max(1, Math.floor(len * 0.4));
+                const availableIndices = Array.from(Array(len).keys());
+                
+                for (let i = 0; i < numBlanks; i++) {
+                    if (availableIndices.length === 0) break;
+                    const randomIndex = Math.floor(Math.random() * availableIndices.length);
+                    const selectedIndex = availableIndices.splice(randomIndex, 1)[0];
+                    wordArr[selectedIndex] = '_';
+                }
+                return wordArr.join('');
+            }
+
+            function handleShowAnswer() {
+                if (!currentWord || isFlipped) return;
+                card.classList.add('is-flipped');
+                isFlipped = true;
+            }
+
+            function handleNextWord() {
+                if (activeWords.length === 0) {
+                    displayMessage();
+                    return;
+                }
+                
+                resetQuiz();
+
+                if (isFlipped) {
+                    card.classList.remove('is-flipped');
+                    isFlipped = false;
+                }
+                
+                const randomIndex = Math.floor(Math.random() * activeWords.length);
+                currentWord = activeWords[randomIndex];
+
+                setTimeout(() => {
+                    wordText.classList.remove('tracking-widest');
+                    speakBtnFront.classList.add('hidden');
+                    speakBtnBack.classList.add('hidden');
+
+                    if (quizMode === 'en-to-zh') {
+                        wordText.textContent = currentWord.english;
+                        answerText.textContent = currentWord.chinese;
+                        speakBtnFront.classList.remove('hidden');
+                    } else if (quizMode === 'zh-to-en') {
+                        wordText.textContent = currentWord.chinese;
+                        answerText.textContent = currentWord.english;
+                        speakBtnBack.classList.remove('hidden');
+                    } else { // fill-in-the-blank
+                        wordText.textContent = createBlankWord(currentWord.english);
+                        answerText.textContent = currentWord.english;
+                        wordText.classList.add('tracking-widest');
+                        speakBtnFront.classList.remove('hidden'); 
+                        speakBtnBack.classList.remove('hidden'); 
+                    }
+                }, isFlipped ? 300 : 0);
+                
+                updateButtonStates();
+            }
+
+            function handleModeChange(e) {
+                quizMode = e.target.value;
+                resetQuiz();
+            }
+
+            function playTimeoutSound() {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(440, audioCtx.currentTime); 
+                gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 1); 
+            }
+
+            // 發音功能
+            function handleSpeak(event) {
+                event.stopPropagation(); // 防止點擊喇叭時翻牌
+                if (!currentWord || !window.speechSynthesis) {
+                    return;
+                }
+
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                const utterance = new SpeechSynthesisUtterance(currentWord.english);
+                utterance.lang = 'en-US';
+                speechSynthesis.speak(utterance);
+
+                if (!isTimerActive) {
+                    isTimerActive = true;
+                    if (timerId) clearTimeout(timerId);
+                    if (countdownInterval) clearInterval(countdownInterval);
+
+                    const timerDisplay = document.getElementById('timer-display');
+                    let timeLeft = 10;
+                    timerDisplay.textContent = timeLeft;
+                    timerDisplay.classList.remove('hidden');
+
+                    countdownInterval = setInterval(() => {
+                        timeLeft--;
+                        timerDisplay.textContent = timeLeft;
+                        if (timeLeft <= 0) {
+                            clearInterval(countdownInterval);
+                            timerDisplay.classList.add('hidden');
+                        }
+                    }, 1000);
+
+                    timerId = setTimeout(() => {
+                        playTimeoutSound();
+                    }, 10000);
+                }
+            }
+
+            // 啟動應用程式
+            init();
+        });
+    </script>
+</body>
+</html>
