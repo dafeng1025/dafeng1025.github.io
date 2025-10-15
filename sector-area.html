@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>幾何圖形堆疊建構機</title>
+    <!-- 載入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; }
+        .draggable-piece {
+            cursor: grab;
+            transition: transform 0.1s;
+        }
+        .draggable-piece:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+        }
+        #layeringCanvas { 
+            border: 4px dashed #3b82f6;
+            background-color: #ffffff;
+            cursor: default; 
+            touch-action: none; /* 禁用瀏覽器默認的觸控行為 */
+        }
+        #dropZone {
+            min-height: 450px; 
+        }
+        /* 隱藏原生顏色輸入框的邊框 */
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 4px; }
+        input[type="color"] { border: none; height: 1.5rem; width: 1.5rem; }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-xl p-6 md:p-10">
+
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-teal-700 mb-4 border-b-4 border-teal-200 pb-2">
+            組合圖形堆疊建構機 (Z-index 演示與旋轉)
+        </h1>
+        <p class="text-gray-600 mb-6 text-lg">
+            **已載入您上傳的範例圖形！** 請拖曳、旋轉或調整尺寸來分解這個組合。您現在可以使用 **工具選擇器** 來切換不同的互動模式。
+        </p>
+
+        <div class="flex flex-col lg:flex-row gap-6">
+
+            <!-- 左側：圖形組件庫 (Palette) -->
+            <div id="shapePalette" class="w-full lg:w-1/4 bg-gray-100 p-4 rounded-xl shadow-lg h-full">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">圖形組件庫 (自訂尺寸, 顏色, 透明度)</h2>
+                <div class="space-y-4">
+                    
+                    <!-- 1. Square -->
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="size-square" data-shape="square" min="10" max="200" value="100" 
+                               class="w-16 p-1 border rounded text-sm text-center font-mono">
+                        <!-- 顏色與透明度控制 -->
+                        <input type="color" id="color-square" value="#FBBF24" class="w-6 h-6 rounded shadow-inner" title="顏色">
+                        <input type="range" id="opacity-square" min="10" max="100" step="5" value="80" 
+                               oninput="document.getElementById('opacity-square-label').textContent = this.value + '%'" 
+                               class="w-12 h-2 bg-gray-300 rounded-lg cursor-pointer" title="透明度">
+                        <span id="opacity-square-label" class="text-xs w-6 text-right">80%</span>
+                        <!-- 拖曳圖形 -->
+                        <div data-shape="square" class="draggable-piece flex-1 p-2 rounded-lg bg-yellow-300 text-center font-bold text-sm border-2 border-yellow-600 shadow-md" draggable="true">
+                            正方形 (邊長)
+                        </div>
+                    </div>
+
+                    <!-- 2. Full Circle -->
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="size-circle" data-shape="circle" min="10" max="100" value="50"
+                               class="w-16 p-1 border rounded text-sm text-center font-mono">
+                        <input type="color" id="color-circle" value="#F87171" class="w-6 h-6 rounded shadow-inner" title="顏色">
+                        <input type="range" id="opacity-circle" min="10" max="100" step="5" value="80"
+                               oninput="document.getElementById('opacity-circle-label').textContent = this.value + '%'" 
+                               class="w-12 h-2 bg-gray-300 rounded-lg cursor-pointer" title="透明度">
+                        <span id="opacity-circle-label" class="text-xs w-6 text-right">80%</span>
+                        <div data-shape="circle" class="draggable-piece flex-1 p-2 rounded-full bg-red-300 text-center font-bold text-sm border-2 border-red-600 shadow-md" draggable="true">
+                            整個圓形 (半徑)
+                        </div>
+                    </div>
+
+                    <!-- 3. Semicircle -->
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="size-semicircle" data-shape="semicircle" min="10" max="100" value="50"
+                               class="w-16 p-1 border rounded text-sm text-center font-mono">
+                        <input type="color" id="color-semicircle" value="#4ADE80" class="w-6 h-6 rounded shadow-inner" title="顏色">
+                        <input type="range" id="opacity-semicircle" min="10" max="100" step="5" value="80"
+                               oninput="document.getElementById('opacity-semicircle-label').textContent = this.value + '%'" 
+                               class="w-12 h-2 bg-gray-300 rounded-lg cursor-pointer" title="透明度">
+                        <span id="opacity-semicircle-label" class="text-xs w-6 text-right">80%</span>
+                        <div data-shape="semicircle" class="draggable-piece flex-1 p-2 rounded-lg bg-green-300 text-center font-bold text-sm border-2 border-green-600 shadow-md" draggable="true">
+                            二分之一圓扇形 (半徑)
+                        </div>
+                    </div>
+
+                    <!-- 4. Quarter Circle -->
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="size-quarter_circle" data-shape="quarter_circle" min="10" max="150" value="80"
+                               class="w-16 p-1 border rounded text-sm text-center font-mono">
+                        <input type="color" id="color-quarter_circle" value="#60A5FA" class="w-6 h-6 rounded shadow-inner" title="顏色">
+                        <input type="range" id="opacity-quarter_circle" min="10" max="100" step="5" value="80"
+                               oninput="document.getElementById('opacity-quarter_circle-label').textContent = this.value + '%'" 
+                               class="w-12 h-2 bg-gray-300 rounded-lg cursor-pointer" title="透明度">
+                        <span id="opacity-quarter_circle-label" class="text-xs w-6 text-right">80%</span>
+                        <div data-shape="quarter_circle" class="draggable-piece flex-1 p-2 rounded-lg bg-blue-300 text-center font-bold text-sm border-2 border-blue-600 shadow-md" draggable="true">
+                            四分之一圓扇形 (半徑)
+                        </div>
+                    </div>
+
+                    <!-- 5. Triangle (Base and Height) -->
+                    <div class="flex flex-col gap-2 p-2 bg-purple-100 rounded-lg border border-purple-300 shadow-md">
+                        <div class="flex gap-2 justify-between">
+                            <div class="flex flex-col items-center">
+                                <label for="size-triangle-base" class="text-xs text-purple-700 font-medium">底</label>
+                                <input type="number" id="size-triangle-base" min="10" max="200" value="100"
+                                        class="w-20 p-1 border rounded text-sm text-center font-mono">
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <label for="size-triangle-height" class="text-xs text-purple-700 font-medium">高</label>
+                                <input type="number" id="size-triangle-height" min="10" max="200" value="50"
+                                        class="w-20 p-1 border rounded text-sm text-center font-mono">
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between mt-1">
+                            <input type="color" id="color-triangle" value="#C084FC" class="w-6 h-6 rounded shadow-inner" title="顏色">
+                            <input type="range" id="opacity-triangle" min="10" max="100" step="5" value="80"
+                                oninput="document.getElementById('opacity-triangle-label').textContent = this.value + '%'"
+                                class="w-24 h-2 bg-gray-300 rounded-lg cursor-pointer" title="透明度">
+                            <span id="opacity-triangle-label" class="text-xs w-8 text-right">80%</span>
+                        </div>
+                        <div data-shape="triangle" class="draggable-piece flex-1 p-2 rounded-lg bg-purple-300 text-center font-bold text-sm border-2 border-purple-600" draggable="true">
+                            直角三角形
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側：畫布與圖層控制 -->
+            <div class="w-full lg:w-3/4 flex flex-col gap-6">
+                <!-- 繪圖/畫筆工具區 (已更新為選擇器) -->
+                <div id="drawingTools" class="bg-gray-100 p-3 rounded-xl shadow-lg flex flex-wrap gap-3 items-center">
+                    <span class="font-bold text-gray-800 text-sm">工具選擇:</span>
+                    
+                    <!-- 工具選擇器 -->
+                    <select id="interactionTool" onchange="setInteractionTool(this.value)"
+                            class="px-3 py-1 rounded-lg border border-gray-300 text-gray-700 font-semibold focus:ring-teal-500 focus:border-teal-500">
+                        <option value="drag_move">移動/拖曳圖形 (預設)</option>
+                        <option value="freehand">自由繪圖 (註釋)</option>
+                        <option value="line">直線工具 (註釋)</option>
+                        <option disabled>--- 建立新圖層 (可堆疊) ---</option>
+                        <option value="layer_rect">矩形圖層 (拖曳繪製)</option>
+                        <option value="layer_circle">圓形圖層 (拖曳繪製)</option>
+                        <option value="layer_triangle">直角三角形圖層 (拖曳繪製)</option>
+                    </select>
+
+                    <!-- 顏色選擇 (適用於繪圖和新圖層) -->
+                    <label class="flex items-center text-sm text-gray-700">
+                        顏色:
+                        <input type="color" value="#000000" onchange="updateDrawingTool('color', this.value)" class="w-6 h-6 rounded-md shadow-inner ml-1 cursor-pointer">
+                    </label>
+                    
+                    <!-- 線條粗細/不透明度 -->
+                    <label class="flex items-center text-sm text-gray-700">
+                        粗細/不透明度 (1-10):
+                        <input type="number" id="lineWidthInput" min="1" max="10" value="3" onchange="updateDrawingTool('width', this.value)" 
+                            class="w-12 p-0.5 border rounded text-center text-xs font-mono ml-1">
+                    </label>
+
+                    <!-- 清除按鈕 -->
+                    <button onclick="clearAnnotations()" 
+                            class="px-3 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600 transition duration-150 text-sm font-semibold">
+                        清除所有註釋筆跡
+                    </button>
+                </div>
+                
+                <!-- 畫布/拖曳區 -->
+                <div id="dropZone" class="p-2 rounded-xl shadow-lg bg-white">
+                    <canvas id="layeringCanvas" width="600" height="450" class="w-full"></canvas>
+                </div>
+
+                <!-- 圖層控制區 -->
+                <div id="layerControls" class="bg-indigo-100 p-4 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-bold text-indigo-800 mb-3">圖層管理 (調整上下層次、尺寸、顏色與旋轉)</h2>
+                    <div id="layersList" class="space-y-2">
+                        <p class="text-gray-600 italic">請拖曳圖形到畫布上以開始建構。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 設定 Canvas 元素
+        const canvas = document.getElementById('layeringCanvas');
+        const ctx = canvas.getContext('2d');
+        const dropZone = document.getElementById('dropZone');
+        const layersList = document.getElementById('layersList');
+        const shapePalette = document.getElementById('shapePalette');
+
+        // 全域圖層陣列，決定繪製順序 (Z-index)
+        let layers = [];
+        let canvasRect; 
+
+        // --- 互動/繪圖狀態變數 ---
+        let currentTool = 'drag_move'; // 'drag_move', 'freehand', 'line', 'layer_rect', 'layer_circle', 'layer_triangle'
+        let isInteracting = false; // 是否正在移動圖形或繪製新形狀
+        let selectedLayer = null; 
+        let dragOffsetX = 0;      
+        let dragOffsetY = 0;      
+        
+        // 繪圖/形狀生成狀態變數
+        let annotations = []; // 儲存非圖層筆跡
+        let currentDrawing = null; // 當前正在繪製的筆跡物件 (用於 freehand)
+        let tempDrawData = null; // 用於儲存 shapes/lines 的起點/終點預覽
+        let drawingColor = '#000000';
+        let drawingLineWidth = 3; 
+
+        // Helper to convert HEX to RGBA string for Canvas fillStyle
+        function hexToRgba(hex, alpha) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            // 由於 alpha 來自 10-100 範圍的 opacity，我們將其除以 100 得到 0-1 的比例
+            const opacity = alpha / 100; 
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        }
+
+        // 輔助函數：初始化圖層以展示圖片結構
+        function initLayers() {
+            const size = 100;
+            const centerX = canvas.width / 2; // 300
+            const centerY = canvas.height / 2; // 225
+
+            const colorGreen = '#C6E0C4'; 
+            const colorYellow = '#F7F4AD'; 
+
+            // 1. 綠色背景正方形 (Square)
+            layers.push({
+                id: crypto.randomUUID(),
+                type: 'square',
+                name: '背景正方形 (綠)',
+                color: hexToRgba(colorGreen, 100), 
+                hex: colorGreen,
+                opacity: 100, 
+                x: centerX,
+                y: centerY,
+                size: size,
+                rotation: 0,
+            });
+
+            // 2. 構成葉片的第一個四分之一圓 (Quarter Circle A)
+            layers.push({
+                id: crypto.randomUUID(),
+                type: 'quarter_circle',
+                name: '右弧扇形 A (黃)',
+                color: hexToRgba(colorYellow, 80), 
+                hex: colorYellow,
+                opacity: 80, 
+                x: centerX + size / 2,
+                y: centerY + size / 2,
+                size: size,
+                rotation: 0, 
+            });
+
+            // 3. 構成葉片的第二個四分之一圓 (Quarter Circle B)
+            layers.push({
+                id: crypto.randomUUID(),
+                type: 'quarter_circle',
+                name: '左弧扇形 B (黃)',
+                color: hexToRgba(colorYellow, 80), 
+                hex: colorYellow,
+                opacity: 80,
+                x: centerX - size / 2,
+                y: centerY - size / 2,
+                size: size,
+                rotation: 180,
+            });
+        }
+
+        /** 繪製單一圖形 (保持不變) */
+        function drawShape(layer) {
+            ctx.fillStyle = layer.color; 
+            
+            ctx.save(); 
+            ctx.translate(layer.x, layer.y); 
+            ctx.rotate(layer.rotation * Math.PI / 180); 
+
+            if (selectedLayer && selectedLayer.id === layer.id) {
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#ef4444'; // 紅色高亮
+            } else {
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#333';
+            }
+
+            ctx.beginPath();
+
+            switch (layer.type) {
+                case 'square':
+                    ctx.fillRect(-layer.size / 2, -layer.size / 2, layer.size, layer.size);
+                    ctx.strokeRect(-layer.size / 2, -layer.size / 2, layer.size, layer.size);
+                    break;
+                case 'circle':
+                    ctx.arc(0, 0, layer.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    break;
+                case 'semicircle':
+                    ctx.arc(0, 0, layer.size, Math.PI, 0); 
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    break;
+                case 'quarter_circle':
+                    ctx.moveTo(0, 0);
+                    ctx.arc(0, 0, layer.size, Math.PI, Math.PI * 1.5);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    break;
+                case 'triangle':
+                    const base = layer.base; 
+                    const height = layer.height; 
+                    ctx.moveTo(-base / 2, height / 2); 
+                    ctx.lineTo(base / 2, height / 2); 
+                    ctx.lineTo(-base / 2, -height / 2); 
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    break;
+            }
+            ctx.restore();
+        }
+
+        /** 繪製所有筆跡註釋 */
+        function drawAnnotations() {
+            annotations.forEach(annotation => {
+                ctx.strokeStyle = annotation.color;
+                ctx.lineWidth = annotation.width;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                ctx.beginPath();
+
+                if (annotation.type === 'freehand' && annotation.points.length >= 2) {
+                    ctx.moveTo(annotation.points[0].x, annotation.points[0].y);
+                    for (let i = 1; i < annotation.points.length; i++) {
+                        ctx.lineTo(annotation.points[i].x, annotation.points[i].y);
+                    }
+                } else if (annotation.type === 'line' && annotation.points.length >= 2) {
+                    ctx.moveTo(annotation.points[0].x, annotation.points[0].y);
+                    ctx.lineTo(annotation.points[1].x, annotation.points[1].y);
+                }
+                ctx.stroke();
+            });
+        }
+        
+        /** 繪製拖曳中的臨時形狀/線條 */
+        function drawTemporaryShape(data) {
+            if (!data || data.x2 === undefined) return;
+            
+            ctx.save();
+            ctx.strokeStyle = data.color;
+            ctx.lineWidth = data.width;
+            ctx.fillStyle = hexToRgba(data.color, 30); // 輕微填充預覽 (30% alpha)
+            
+            const w = data.x2 - data.x1;
+            const h = data.y2 - data.y1;
+            
+            ctx.beginPath();
+            
+            switch(data.type) {
+                case 'line':
+                    ctx.moveTo(data.x1, data.y1);
+                    ctx.lineTo(data.x2, data.y2);
+                    ctx.stroke();
+                    break;
+                case 'layer_rect':
+                    ctx.rect(data.x1, data.y1, w, h);
+                    ctx.fill();
+                    ctx.stroke();
+                    break;
+                case 'layer_circle':
+                    const radius = Math.sqrt(w*w + h*h) / 2;
+                    const centerX = data.x1 + w / 2;
+                    const centerY = data.y1 + h / 2;
+                    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    break;
+                case 'layer_triangle':
+                    // 直角三角形 (左上角為直角)
+                    ctx.moveTo(data.x1, data.y1);
+                    ctx.lineTo(data.x2, data.y2);
+                    ctx.lineTo(data.x1, data.y2);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    break;
+            }
+            ctx.restore();
+        }
+
+
+        // --- 圖層渲染與管理 ---
+
+        /** 重新繪製整個畫布 */
+        function renderLayers() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. 依序繪製圖層 
+            layers.forEach(drawShape);
+
+            // 2. 繪製筆跡註釋 (最上層)
+            drawAnnotations();
+            
+            // 3. 繪製臨時拖曳形狀/線條預覽 (在所有圖形之上)
+            drawTemporaryShape(tempDrawData);
+
+            // 更新圖層清單
+            updateLayersList();
+        }
+        
+        /** 讓使用者可以在圖層清單中修改圖形尺寸 */
+        window.updateLayerSize = function(id, property, newValueString) { 
+            let newValue = parseFloat(newValueString);
+            if (isNaN(newValue) || newValue < 1) {
+                console.warn('Invalid size value received or value too small. Reverting to previous state.');
+                renderLayers(); 
+                return;
+            }
+            const layer = layers.find(l => l.id === id);
+            if (!layer) return;
+            layer[property] = newValue;
+            renderLayers();
+        };
+
+        /** 讓使用者可以在圖層清單中修改圖形顏色和透明度 */
+        window.updateLayerColorOpacity = function(id, hex, opacity) {
+            const layer = layers.find(l => l.id === id);
+            if (!layer) return;
+            layer.hex = hex;
+            layer.opacity = parseFloat(opacity);
+            layer.color = hexToRgba(layer.hex, layer.opacity); // 使用 opacity 0-100
+            renderLayers();
+        };
+
+        /** 旋轉圖層 */
+        window.rotateLayer = function(id, angle) {
+            const layer = layers.find(l => l.id === id);
+            if (!layer) return;
+            layer.rotation = (layer.rotation + angle) % 360;
+            if (layer.rotation < 0) layer.rotation += 360;
+            renderLayers();
+        };
+        
+        /** 移動圖層順序 (改變 Z-index) */
+        window.moveLayer = function(id, direction) {
+            const index = layers.findIndex(layer => layer.id === id);
+            if (index === -1) return;
+            if (direction === 'up' && index < layers.length - 1) {
+                [layers[index], layers[index + 1]] = [layers[index + 1], layers[index]];
+            } else if (direction === 'down' && index > 0) {
+                [layers[index], layers[index - 1]] = [layers[index - 1], layers[index]];
+            }
+            // 在移動後重新選取，確保 selectedLayer 是更新後位置的物件
+            if (selectedLayer && selectedLayer.id === id) {
+                selectedLayer = layers.find(l => l.id === id);
+            }
+            renderLayers();
+        };
+
+        /** 刪除圖層 */
+        window.deleteLayer = function(id) {
+            layers = layers.filter(layer => layer.id !== id);
+            if (selectedLayer && selectedLayer.id === id) {
+                selectedLayer = null;
+            }
+            renderLayers();
+        };
+
+        /** 讓使用者可以在圖層清單中選取圖層 */
+        window.selectLayerFromList = function(id) {
+            const layer = layers.find(l => l.id === id);
+            if (!layer) return;
+
+            // 設定選取的圖層
+            selectedLayer = layer;
+            
+            // 將工具模式切換回 'drag_move'
+            document.getElementById('interactionTool').value = 'drag_move';
+            window.setInteractionTool('drag_move'); 
+            
+            // 重新渲染以顯示畫布和清單中的高亮
+            renderLayers();
+        };
+        
+        /** 更新右側圖層清單 (內容保持不變，只為確保代碼完整性) */
+        function updateLayersList() {
+            layersList.innerHTML = '';
+            if (layers.length === 0) {
+                layersList.innerHTML = '<p class="text-gray-600 italic">請拖曳圖形到畫布上以開始建構。</p>';
+                return;
+            }
+            const reversedLayers = [...layers].reverse(); 
+            reversedLayers.forEach((layer, index) => {
+                const originalIndex = layers.findIndex(l => l.id === layer.id); 
+                
+                const isSelected = selectedLayer && selectedLayer.id === layer.id;
+                const isTopLayer = originalIndex === layers.length - 1;
+
+                let itemClass;
+                if (isSelected) {
+                    itemClass = 'border-red-500 bg-red-100 shadow-md'; // Selected style
+                } else if (isTopLayer) {
+                    itemClass = 'border-teal-500 bg-teal-50'; // Top layer style (if not selected)
+                } else {
+                    itemClass = 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100'; // Default style
+                }
+
+                const item = document.createElement('div');
+                item.className = `flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 rounded-lg border-2 cursor-pointer transition duration-100 ${itemClass}`;
+                item.onclick = () => window.selectLayerFromList(layer.id); // Add click handler to select layer
+                
+                let sizeControlHTML;
+                let maxVal = layer.type === 'square' || layer.type === 'triangle' ? 200 : (layer.type === 'quarter_circle' ? 150 : 100);
+                
+                // 檢查是否為新生成的矩形/圓形/三角形 (這些沒有預設的 maxVal，用 300)
+                if (!maxVal && layer.type !== 'triangle') maxVal = 300;
+                
+                if (layer.type === 'triangle') {
+                    sizeControlHTML = `<div class="flex items-center space-x-2 text-sm">
+                            <div class="flex items-center"><span class="text-gray-500 text-xs font-medium">底:</span>
+                                <input type="number" value="${layer.base}" min="10" max="300" onchange="updateLayerSize('${layer.id}', 'base', this.value)" class="w-12 p-0.5 border rounded text-center text-xs font-mono ml-1 focus:border-blue-500">
+                            </div>
+                            <div class="flex items-center"><span class="text-gray-500 text-xs font-medium">高:</span>
+                                <input type="number" value="${layer.height}" min="10" max="300" onchange="updateLayerSize('${layer.id}', 'height', this.value)" class="w-12 p-0.5 border rounded text-center text-xs font-mono ml-1 focus:border-blue-500">
+                            </div>
+                        </div>`;
+                } else {
+                    sizeControlHTML = `<div class="flex items-center space-x-1 text-sm">
+                            <input type="number" value="${layer.size}" min="10" max="${maxVal}" onchange="updateLayerSize('${layer.id}', 'size', this.value)" class="w-12 p-0.5 border rounded text-center text-xs font-mono focus:border-blue-500">
+                        </div>`;
+                }
+                const opacityLabelId = `opacity-label-${layer.id}`;
+                const colorOpacityControls = `<div class="flex items-center space-x-2 flex-shrink-0">
+                        <input type="color" value="${layer.hex}" onchange="updateLayerColorOpacity('${layer.id}', this.value, ${layer.opacity})" class="w-6 h-6 rounded-md shadow-inner cursor-pointer" title="調整顏色">
+                        <input type="range" min="10" max="100" step="5" value="${layer.opacity}" oninput="document.getElementById('${opacityLabelId}').textContent = this.value + '%'; updateLayerColorOpacity('${layer.id}', '${layer.hex}', this.value)" class="w-16 h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer" title="調整透明度 (10%-100%)">
+                        <span id="${opacityLabelId}" class="text-xs w-8 text-right text-gray-700 font-mono">${layer.opacity}%</span>
+                    </div>`;
+
+                item.innerHTML = `<div class="flex items-center space-x-4 mb-2 sm:mb-0">
+                        <span class="font-semibold text-gray-800 flex-shrink-0">${layers.length - originalIndex}. ${layer.name}</span>
+                        ${sizeControlHTML}
+                    </div>
+                    <div class="flex items-center space-x-1 flex-shrink-0">
+                        ${colorOpacityControls}
+                        <span class="text-sm text-gray-500 mr-2 flex-shrink-0">${Math.round(layer.rotation)}°</span>
+                        <button onclick="rotateLayer('${layer.id}', -45)" class="p-1 rounded-full bg-white hover:bg-gray-200" title="逆時針旋轉 45°">
+                            <svg class="w-4 h-4 text-green-600 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 0a8.001 8.001 0 01-15.356 2.583M20 20v-5h-.581"></path></svg>
+                        </button>
+                        <button onclick="rotateLayer('${layer.id}', 45)" class="p-1 rounded-full bg-white hover:bg-gray-200" title="順時針旋轉 45°">
+                            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 0a8.001 8.001 0 01-15.356 2.583M20 20v-5h-.581"></path></svg>
+                        </button>
+                        <button onclick="moveLayer('${layer.id}', 'up')" class="p-1 rounded-full bg-white hover:bg-gray-200 disabled:opacity-30" ${originalIndex === layers.length - 1 ? 'disabled' : ''} title="移到上層">
+                            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                        </button>
+                        <button onclick="moveLayer('${layer.id}', 'down')" class="p-1 rounded-full bg-white hover:bg-gray-200 disabled:opacity-30" ${originalIndex === 0 ? 'disabled' : ''} title="移到下層">
+                            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+                        </button>
+                        <button onclick="deleteLayer('${layer.id}')" class="p-1 rounded-full bg-red-500 hover:bg-red-600" title="刪除圖形">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>`;
+                layersList.appendChild(item);
+            });
+        }
+        
+        // --- 核心輔助函數 (明確設為全域) ---
+        
+        /** 輔助函數：取得滑鼠在 Canvas 上的座標 */
+        window.getMousePos = function(e) {
+            const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : null);
+            const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : null);
+            if (clientX === null) return { x: 0, y: 0 };
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        };
+
+        /** 輔助函數：碰撞檢測 (判斷點(x, y)是否在圖層內，考慮旋轉) */
+        window.hitTest = function(x, y, layer) {
+            const dx_center = x - layer.x; 
+            const dy_center = y - layer.y; 
+            const rotationRad = -layer.rotation * Math.PI / 180; 
+            const cos = Math.cos(rotationRad);
+            const sin = Math.sin(rotationRad);
+            const tx = dx_center * cos - dy_center * sin;
+            const ty = dx_center * sin + dy_center * cos;
+            const size = layer.size;
+            let hit = false;
+            switch (layer.type) {
+                case 'square': hit = (tx >= -size / 2 && tx <= size / 2 && ty >= -size / 2 && ty <= size / 2); break;
+                case 'circle': hit = (tx ** 2 + ty ** 2) <= size ** 2; break;
+                case 'semicircle': if (ty <= 0) { hit = (tx ** 2 + ty ** 2) <= size ** 2; } break;
+                case 'quarter_circle': if (tx <= 0 && ty <= 0) { hit = (tx ** 2 + ty ** 2) <= size ** 2; } break;
+                case 'triangle':
+                    const base = layer.base; 
+                    const height = layer.height; 
+                    hit = (tx >= -base / 2 && tx <= base / 2 && ty >= -height / 2 && ty <= height / 2);
+                    break;
+            }
+            return hit;
+        };
+        
+        // --- 拖曳事件處理 (組件庫到畫布) ---
+        
+        /** 拖曳開始時，記錄被拖曳的圖形類型、名稱和當前尺寸/顏色/透明度 */
+        shapePalette.querySelectorAll('.draggable-piece').forEach(piece => {
+            piece.addEventListener('dragstart', (e) => {
+                const shapeType = e.target.getAttribute('data-shape');
+                const shapeName = e.target.textContent.trim().split('(')[0];
+                
+                let transferData = { type: shapeType, name: shapeName };
+
+                // 獲取顏色和透明度
+                let colorInput, opacityInput;
+                if (shapeType === 'triangle') {
+                    // Find inputs within the parent container for triangle
+                    const container = e.target.closest('.flex-col');
+                    colorInput = container.querySelector(`#color-${shapeType}`);
+                    opacityInput = container.querySelector(`#opacity-${shapeType}`);
+                } else {
+                    // Find inputs adjacent to the piece for other shapes
+                    const container = e.target.closest('.flex');
+                    colorInput = container.querySelector(`#color-${shapeType}`);
+                    opacityInput = container.querySelector(`#opacity-${shapeType}`);
+                }
+                
+                transferData.hex = colorInput ? colorInput.value : '#000000';
+                transferData.opacity = opacityInput ? parseFloat(opacityInput.value) : 100;
+                
+                if (shapeType === 'triangle') {
+                    // 對於三角形，擷取底和高兩個值
+                    const baseInput = document.getElementById('size-triangle-base');
+                    const heightInput = document.getElementById('size-triangle-height');
+                    transferData.base = parseFloat(baseInput.value);
+                    transferData.height = parseFloat(heightInput.value);
+                } else {
+                    // 對於其他形狀，擷取單一尺寸值
+                    const sizeInput = document.getElementById(`size-${shapeType}`);
+                    transferData.size = parseFloat(sizeInput.value);
+                }
+
+                e.dataTransfer.setData('application/json', JSON.stringify(transferData));
+                e.dataTransfer.effectAllowed = 'copy';
+            });
+        });
+
+        /** 阻止預設行為 (必須要有) */
+        canvas.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+
+        /** 處理拖曳放下事件 */
+        canvas.addEventListener('drop', (e) => {
+            e.preventDefault();
+            try {
+                const data = JSON.parse(e.dataTransfer.getData('application/json'));
+                if (!data || !data.type) return;
+
+                // 獲取 Canvas 在視窗中的實際位置
+                if (!canvasRect) {
+                    canvasRect = canvas.getBoundingClientRect();
+                }
+
+                // 計算圖形在 Canvas 上的中心點位置 (使用客戶端座標)
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const dropX = (e.clientX - rect.left) * scaleX;
+                const dropY = (e.clientY - rect.top) * scaleY;
+                
+                // 建立新的圖層物件
+                let newLayer = {
+                    id: crypto.randomUUID(), 
+                    type: data.type,
+                    name: data.name,
+                    hex: data.hex,
+                    opacity: data.opacity,
+                    color: hexToRgba(data.hex, data.opacity), // 使用 opacity 0-100
+                    x: dropX,
+                    y: dropY,
+                    rotation: 0, 
+                };
+
+                if (data.type === 'triangle') {
+                    newLayer.base = data.base; 
+                    newLayer.height = data.height; 
+                } else {
+                    newLayer.size = data.size; 
+                }
+
+                // 將新圖層加入陣列末端 (最上層)
+                layers.push(newLayer);
+                
+                // 重新渲染畫布
+                renderLayers();
+
+            } catch (error) {
+                console.error("處理拖曳放下事件時發生錯誤:", error);
+            }
+        });
+
+
+        // --- 核心互動邏輯 ---
+        
+        /** 設定目前的互動工具 */
+        window.setInteractionTool = function(tool) {
+            currentTool = tool;
+            
+            // 根據選定的工具調整游標
+            switch(currentTool) {
+                case 'drag_move':
+                    canvas.style.cursor = 'default';
+                    break;
+                case 'freehand':
+                case 'line':
+                case 'layer_rect':
+                case 'layer_circle':
+                case 'layer_triangle':
+                    canvas.style.cursor = 'crosshair';
+                    break;
+            }
+            stopInteraction();
+        }
+
+        /** 更新繪圖工具 (顏色和粗細/不透明度) */
+        window.updateDrawingTool = function(type, value) {
+            if (type === 'color') {
+                drawingColor = value;
+            } else if (type === 'width') {
+                drawingLineWidth = parseInt(value);
+                document.getElementById('lineWidthInput').value = drawingLineWidth;
+            }
+        }
+
+        /** 清除註釋筆跡 */
+        window.clearAnnotations = function() {
+            annotations = [];
+            renderLayers();
+        }
+        
+        /** 創建新的圖層組件 (從拖曳繪製中轉換) */
+        function addNewShapeLayer(data) {
+            const w = data.x2 - data.x1;
+            const h = data.y2 - data.y1;
+            let newLayer = {
+                id: crypto.randomUUID(),
+                hex: data.color,
+                opacity: 100, // 新增圖層預設 100% 不透明
+                color: hexToRgba(data.color, 100), // 使用 100% alpha
+                x: data.x1 + w / 2, // 中心點 X
+                y: data.y1 + h / 2, // 中心點 Y
+                rotation: 0,
+            };
+
+            switch (data.type) {
+                case 'layer_rect':
+                    newLayer.type = 'square';
+                    newLayer.name = '自繪矩形';
+                    // 使用寬高最小值作為方形尺寸，或維持寬高差以建立矩形
+                    newLayer.size = Math.max(Math.abs(w), Math.abs(h)); 
+                    break;
+                case 'layer_circle':
+                    newLayer.type = 'circle';
+                    newLayer.name = '自繪圓形';
+                    newLayer.size = Math.sqrt(w*w + h*h) / 2; // 半徑
+                    break;
+                case 'layer_triangle':
+                    newLayer.type = 'triangle';
+                    newLayer.name = '自繪三角形';
+                    newLayer.base = Math.abs(w); 
+                    newLayer.height = Math.abs(h); 
+                    newLayer.x = data.x1 + w / 2; 
+                    newLayer.y = data.y1 + h / 2;
+                    break;
+                default:
+                    return; // 忽略非圖層形狀
+            }
+            
+            // 確保尺寸有效
+            if ((newLayer.size && newLayer.size < 5) || (newLayer.base && newLayer.base < 5)) {
+                console.log("Shape too small to create a layer.");
+                return;
+            }
+
+            layers.push(newLayer);
+            renderLayers();
+        }
+
+
+        // MOUSE DOWN / TOUCH START (統一互動處理)
+        canvas.addEventListener('mousedown', startInteraction);
+        canvas.addEventListener('touchstart', startInteraction, { passive: false });
+
+        function startInteraction(e) {
+            e.preventDefault();
+            const mousePos = window.getMousePos(e); // 使用 window.getMousePos
+            isInteracting = true;
+
+            // 預設點擊畫布背景時會取消選取
+            let layerClicked = false;
+            
+            if (currentTool === 'drag_move') {
+                selectedLayer = null; // 清除之前的選取狀態
+                for (let i = layers.length - 1; i >= 0; i--) {
+                    if (window.hitTest(mousePos.x, mousePos.y, layers[i])) { // 使用 window.hitTest
+                        selectedLayer = layers[i];
+                        dragOffsetX = mousePos.x - selectedLayer.x;
+                        dragOffsetY = mousePos.y - selectedLayer.y;
+                        canvas.style.cursor = 'grabbing';
+                        layerClicked = true;
+                        break; 
+                    }
+                }
+                
+                // 如果沒有點擊到圖層，則清空選取狀態
+                if (!layerClicked) {
+                    selectedLayer = null; 
+                    canvas.style.cursor = 'default';
+                }
+            } else if (currentTool === 'freehand') {
+                // 自由繪圖: 開始記錄新筆跡路徑
+                currentDrawing = {
+                    type: 'freehand',
+                    color: drawingColor,
+                    width: drawingLineWidth,
+                    points: [{ x: mousePos.x, y: mousePos.y }]
+                };
+                annotations.push(currentDrawing);
+                selectedLayer = null; // 清除選取
+            } else {
+                // 線條或圖層繪製工具: 記錄起點
+                tempDrawData = {
+                    type: currentTool, 
+                    color: drawingColor, 
+                    width: drawingLineWidth,
+                    x1: mousePos.x, 
+                    y1: mousePos.y,
+                    x2: mousePos.x,
+                    y2: mousePos.y // 預設終點等於起點
+                };
+                selectedLayer = null; // 清除選取
+            }
+            renderLayers(); 
+        }
+
+        // MOUSE MOVE / TOUCH MOVE (統一互動處理)
+        canvas.addEventListener('mousemove', moveInteraction);
+        canvas.addEventListener('touchmove', moveInteraction, { passive: false });
+
+        function moveInteraction(e) {
+            e.preventDefault();
+            const mousePos = window.getMousePos(e); // 使用 window.getMousePos
+            
+            if (!isInteracting) {
+                // 游標懸停: 僅在非互動狀態時檢查
+                let found = false;
+                if (currentTool === 'drag_move') {
+                    for (let i = layers.length - 1; i >= 0; i--) {
+                        if (window.hitTest(mousePos.x, mousePos.y, layers[i])) { // 使用 window.hitTest
+                            canvas.style.cursor = 'grab';
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found && currentTool === 'drag_move') {
+                    canvas.style.cursor = 'default';
+                } else if (!found) {
+                    canvas.style.cursor = 'crosshair'; // 繪圖模式下的預設游標
+                }
+                return;
+            }
+            
+            if (currentTool === 'drag_move' && selectedLayer) {
+                // 拖曳模式: 更新圖形位置
+                selectedLayer.x = mousePos.x - dragOffsetX;
+                selectedLayer.y = mousePos.y - dragOffsetY;
+            } else if (currentTool === 'freehand' && currentDrawing) {
+                // 自由繪圖: 增加新的點到筆跡路徑
+                currentDrawing.points.push({ x: mousePos.x, y: mousePos.y });
+            } else if (currentTool !== 'drag_move' && currentTool !== 'freehand' && tempDrawData) {
+                // 線條或圖層繪製工具: 更新臨時繪圖的終點
+                tempDrawData.x2 = mousePos.x;
+                tempDrawData.y2 = mousePos.y;
+            }
+            
+            renderLayers();
+        }
+
+        // MOUSE UP / TOUCH END (統一互動處理)
+        canvas.addEventListener('mouseup', stopInteraction);
+        canvas.addEventListener('touchend', stopInteraction);
+        canvas.addEventListener('mouseout', stopInteraction); 
+
+        function stopInteraction(e) {
+            if (!isInteracting) return;
+            
+            if (currentTool === 'line' && tempDrawData) {
+                // 直線工具: 最終確定直線作為註釋
+                annotations.push({
+                    type: 'line',
+                    color: tempDrawData.color,
+                    width: tempDrawData.width,
+                    points: [{x: tempDrawData.x1, y: tempDrawData.y1}, {x: tempDrawData.x2, y: tempDrawData.y2}]
+                });
+            } else if (currentTool.startsWith('layer_') && tempDrawData) {
+                // 圖層繪製工具: 創建新的圖層物件
+                addNewShapeLayer(tempDrawData);
+            }
+
+            isInteracting = false;
+            // selectedLayer 不在此清除，以便使用者能調整清單中的屬性
+            currentDrawing = null; 
+            tempDrawData = null; // 清除臨時預覽數據
+
+            // 根據模式設定游標樣式
+            setInteractionTool(currentTool); 
+            renderLayers(); 
+        }
+        
+        // --- 初始化 (保留檸檬葉形狀) ---
+        
+        window.onload = function() {
+            canvasRect = canvas.getBoundingClientRect();
+            window.addEventListener('resize', () => {
+                canvasRect = canvas.getBoundingClientRect();
+            });
+            
+            initLayers(); 
+            renderLayers();
+        };
+    </script>
+</body>
+</html>
