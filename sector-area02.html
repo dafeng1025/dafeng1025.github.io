@@ -88,25 +88,44 @@
                 </button>
             </div>
 
-            <!-- 文字標註區塊 (新增) -->
-            <div class="col-span-2 pt-3 border-t mt-3 border-gray-200">
-                <h3 class="text-lg font-semibold mb-2 text-yellow-600">🔠 文字標註</h3>
-                <input type="text" id="text-input" placeholder="輸入要標註的文字..." class="w-full p-2 border rounded-lg mb-2 text-sm">
-                <button id="add-text-btn" class="w-full interactive-tool p-2 rounded-lg font-bold flex items-center justify-center bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition duration-150 text-sm">
-                    新增文字標註
-                </button>
-            </div>
+            <!-- 文字標註區塊 (將被合併) -->
+            <!-- <div class="col-span-2 pt-3 border-t mt-3 border-gray-200"> ... </div> -->
             
             <!-- 畫筆工具 (註記區塊) -->
             <div class="col-span-2 pt-3 border-t mt-3 border-gray-200">
-                <h3 class="text-lg font-semibold mb-2 text-pink-600">🖍️ 畫筆工具 (註記)</h3>
+                <!-- 標題更新 -->
+                <h3 class="text-lg font-semibold mb-2 text-pink-600">🖍️ 註記工具</h3>
                 
-                <button id="toggle-interaction-mode-btn" class="w-full interactive-tool p-3 rounded-lg font-bold flex items-center justify-center bg-gray-200 text-gray-700 hover:bg-pink-200 hover:text-pink-800 transition duration-150">
-                    <!-- SVG icon for pen -->
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-8 8a1 1 0 01-.363.189l-4 1A1 1 0 014 17.293l1-4a1 1 0 01.189-.363l8-8zM15 7l-3-3 1.5-1.5 3 3L15 7z" clip-rule="evenodd" /></svg>
-                    <span id="drawing-mode-status">切換繪製/註記模式</span>
-                </button>
+                <!-- Tool Mode Buttons (整合為 3 個按鈕) -->
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                    <button id="toggle-text-mode-btn" class="interaction-mode-btn w-full interactive-tool p-3 rounded-lg font-bold flex flex-col items-center justify-center transition duration-150">
+                        <!-- SVG icon for Text -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mb-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v2h2a1 1 0 110 2h-2v2h2a1 1 0 110 2h-2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2H2a1 1 0 110-2h2V8H2a1 1 0 010-2h2V4zm2 4v2h8V8H6zm8 4H6v2h8v-2z" clip-rule="evenodd" /></svg>
+                        <span class="text-xs">新增文字</span>
+                    </button>
 
+                    <button id="toggle-drawing-mode-btn" class="interaction-mode-btn w-full interactive-tool p-3 rounded-lg font-bold flex flex-col items-center justify-center transition duration-150">
+                        <!-- SVG icon for pen -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mb-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-8 8a1 1 0 01-.363.189l-4 1A1 1 0 014 17.293l1-4a1 1 0 01.189-.363l8-8zM15 7l-3-3 1.5-1.5 3 3L15 7z" clip-rule="evenodd" /></svg>
+                        <span class="text-xs">繪製/註記</span>
+                    </button>
+
+                    <button id="toggle-eraser-mode-btn" class="interaction-mode-btn w-full interactive-tool p-3 rounded-lg font-bold flex flex-col items-center justify-center transition duration-150">
+                        <!-- SVG icon for eraser -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mb-1" viewBox="0 0 20 20" fill="currentColor"><path d="M4.707 3.293a1 1 0 010 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3z" transform="translate(3 3)" /><path fill-rule="evenodd" d="M5 4a1 1 0 011-1h10a1 1 0 011 1v2a1 1 0 01-1 1H6a1 1 0 01-1-1V4zm2 10a1 1 0 00-1 1v1a1 1 0 001 1h8a1 1 0 001-1v-1a1 1 0 00-1-1H7zm-1 3a1 1 0 011-1h8a1 1 0 011 1v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-1z" clip-rule="evenodd" opacity=".4" /><path fill-rule="evenodd" d="M4.707 7.293a1 1 0 010-1.414l3-3a1 1 0 011.414 0l10 10a1 1 0 010 1.414l-3 3a1 1 0 01-1.414 0l-10-10a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                        <span id="eraser-status" class="text-xs">橡皮擦</span>
+                    </button>
+                </div>
+
+                <!-- Text controls (原文字標註區塊) -->
+                <div id="text-controls" class="mt-3 space-y-2 hidden">
+                    <input type="text" id="text-input" placeholder="輸入要標註的文字..." class="w-full p-2 border rounded-lg mb-2 text-sm">
+                    <button id="add-text-btn" class="w-full interactive-tool p-2 rounded-lg font-bold flex items-center justify-center bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition duration-150 text-sm">
+                        確認新增
+                    </button>
+                </div>
+
+                <!-- Pen controls, now separate -->
                 <div id="pen-controls" class="mt-3 space-y-2 hidden">
                     <div class="flex space-x-2">
                         <button id="mode-freehand-btn" class="pen-mode-btn w-1/2 p-2 rounded-lg font-bold border-2 border-pink-500 bg-pink-100 text-pink-800 text-sm" data-mode="freehand">自由手繪 (可拖曳)</button>
@@ -124,9 +143,7 @@
                         </div>
                     </div>
 
-                    <button id="toggle-eraser-btn" class="w-full p-2 rounded-lg font-bold flex items-center justify-center bg-red-100 text-red-800 transition duration-150 text-sm">
-                        <span id="eraser-status">啟用橡皮擦</span>
-                    </button>
+                    <!-- 橡皮擦按鈕已移至上方工具列 -->
 
                     <button id="clear-annotations-btn" class="w-full bg-orange-400 hover:bg-orange-500 text-white font-bold py-1.5 px-4 rounded-lg transition duration-150 text-sm">
                         清除所有註記 (線條/文字)
@@ -297,6 +314,7 @@
         let interactionMode = 'geometry'; // 'geometry' or 'drawing'
         let drawingMode = 'freehand'; // 'freehand', 'straightLine'
         let isErasing = false; // 新增
+        let isAddingText = false; // 新增
         let isDrawing = false;
         let currentAnnotation = null;
         let straightLineStart = null;
@@ -694,7 +712,7 @@
             textLabels.push(t1);
             
             setupEventListeners();
-            updatePenControls();
+            updateInteractionToolsUI(); // 替換 updatePenControls()
             
             requestAnimationFrame(drawLoop);
         }
@@ -908,10 +926,62 @@
         // --- Drawing Mode Controls (unchanged) ---
 
         function handleToggleInteractionMode() {
-            isErasing = false; // 退出繪圖模式時，取消橡皮擦
+            // 此函數已過時 (被 handleToggleDrawingMode 替換)
+            isErasing = false; 
             interactionMode = (interactionMode === 'geometry') ? 'drawing' : 'geometry';
             clearSelection();
-            updatePenControls();
+            updateInteractionToolsUI(); // 替換 updatePenControls()
+        }
+
+        // --- 替換為新的工具列邏輯 ---
+        function handleToggleSelectMode() {
+            // 此函數已過時 (預設為選取模式)
+            interactionMode = 'geometry';
+            isErasing = false;
+            isAddingText = false; // 新增
+            clearSelection();
+            updateInteractionToolsUI();
+        }
+
+        function handleToggleTextMode() {
+            if (isAddingText) {
+                // 如果已在文字模式，再次點擊則取消
+                isAddingText = false;
+            } else {
+                // 進入文字模式
+                isAddingText = true;
+                interactionMode = 'geometry';
+                isErasing = false;
+            }
+            clearSelection();
+            updateInteractionToolsUI();
+        }
+        
+        function handleToggleDrawingMode() {
+            if (interactionMode === 'drawing') {
+                // 如果已在繪製模式，再次點擊則取消
+                interactionMode = 'geometry';
+            } else {
+                // 進入繪製模式
+                interactionMode = 'drawing';
+                isErasing = false;
+                isAddingText = false;
+            }
+            clearSelection();
+            updateInteractionToolsUI();
+        }
+
+        function handleToggleEraserMode() {
+            // 橡皮擦模式會自動取消其他模式
+            isErasing = !isErasing; 
+            
+            if (isErasing) {
+                interactionMode = 'geometry'; 
+                isAddingText = false;
+            }
+            
+            clearSelection();
+            updateInteractionToolsUI();
         }
 
         function handlePenModeChange(event) {
@@ -920,12 +990,10 @@
             handlePenModeButtonStyles(drawingMode);
         }
 
-        function handleToggleEraserMode() {
-            isErasing = !isErasing;
-            interactionMode = 'geometry'; // 橡皮擦在 geometry 模式下運行
-            clearSelection();
-            updatePenControls();
-        }
+        /* * 移除了重複的 handleToggleEraserMode 函數。
+         * (舊的錯誤函數會阻止 UI 更新)
+         * 現在將正確調用 updateInteractionToolsUI() 來更新按鈕狀態。
+         */
 
         function handlePenModeButtonStyles(mode) {
              document.querySelectorAll('.pen-mode-btn').forEach(btn => {
@@ -941,39 +1009,53 @@
 
 
         function updatePenControls() {
-            const btn = document.getElementById('toggle-interaction-mode-btn');
-            const status = document.getElementById('drawing-mode-status');
-            const controls = document.getElementById('pen-controls');
-            const eraserBtn = document.getElementById('toggle-eraser-btn');
-
-            handlePenModeButtonStyles(drawingMode); // 確保筆刷按鈕樣式正確
-
-            if (interactionMode === 'drawing') {
-                btn.classList.remove('bg-gray-200', 'text-gray-700');
-                btn.classList.add('bg-pink-500', 'text-white');
-                status.textContent = '退出繪製/註記模式';
-                controls.classList.remove('hidden');
-                canvas.style.cursor = 'crosshair';
-            } else {
-                btn.classList.add('bg-gray-200', 'text-gray-700');
-                btn.classList.remove('bg-pink-500', 'text-white');
-                status.textContent = '切換繪製/註記模式';
-                controls.classList.add('hidden');
-                canvas.style.cursor = 'default';
-            }
-
-            // 橡皮擦按鈕樣式
-            if (isErasing) {
-                eraserBtn.classList.remove('bg-red-100', 'text-red-800');
-                eraserBtn.classList.add('bg-red-500', 'text-white');
-                document.getElementById('eraser-status').textContent = '橡皮擦已啟用';
-                canvas.style.cursor = 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\'><path d=\'M24.7 9.3l-12-12-12 12 12 12 12-12zM21.5 12.5l-9.5 9.5-9.5-9.5 9.5-9.5 9.5 9.5z\' fill=\'#000\' stroke=\'#fff\' stroke-width=\'2\'/></svg>"), auto';
-            } else {
-                eraserBtn.classList.add('bg-red-100', 'text-red-800');
-                eraserBtn.classList.remove('bg-red-500', 'text-white');
-                document.getElementById('eraser-status').textContent = '啟用橡皮擦';
-            }
+            // *** 此函數已過時，功能合併到 updateInteractionToolsUI ***
         }
+        
+        // --- 新增：管理工具列按鈕的 UI 狀態 ---
+        function updateInteractionToolsUI() {
+            const textBtn = document.getElementById('toggle-text-mode-btn');
+            const drawBtn = document.getElementById('toggle-drawing-mode-btn');
+            const eraserBtn = document.getElementById('toggle-eraser-mode-btn');
+            
+            const textControls = document.getElementById('text-controls');
+            const penControls = document.getElementById('pen-controls');
+
+            // 1. 重設所有按鈕樣式
+            document.querySelectorAll('.interaction-mode-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-500', 'text-white', 'shadow-md');
+                btn.classList.remove('bg-red-500'); 
+                btn.classList.add('bg-gray-200', 'text-gray-700');
+            });
+            
+            // 2. 隱藏所有控制項
+            textControls.classList.add('hidden');
+            penControls.classList.add('hidden');
+            
+            let cursorStyle = 'default';
+
+            // 3. 根據模式設定作用中按鈕的樣式和控制項
+            if (isAddingText) {
+                textBtn.classList.add('bg-blue-500', 'text-white', 'shadow-md');
+                textBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                textControls.classList.remove('hidden');
+                cursorStyle = 'text';
+            } else if (interactionMode === 'drawing') {
+                drawBtn.classList.add('bg-blue-500', 'text-white', 'shadow-md');
+                drawBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                penControls.classList.remove('hidden');
+                cursorStyle = 'crosshair';
+            } else if (isErasing) {
+                eraserBtn.classList.add('bg-red-500', 'text-white', 'shadow-md'); 
+                eraserBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                cursorStyle = 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\'><path d=\'M24.7 9.3l-12-12-12 12 12 12 12-12zM21.5 12.5l-9.5 9.5-9.5-9.5 9.5-9.5 9.5 9.5z\' fill=\'#000\' stroke=\'#fff\' stroke-width=\'2\'/></svg>"), auto';
+            }
+            // (如果是預設選取模式，則不執行任何操作，保持灰色和隱藏)
+            
+            // 更新游標
+            canvas.style.cursor = cursorStyle;
+        }
+
 
         function handleClearAnnotations() {
              if (confirm('確定要清除畫布上的所有手寫註記和文字標註嗎？')) {
@@ -986,7 +1068,7 @@
         // --- Utility Handlers (unchanged) ---
 
         function handleAddShape(event) {
-            if (interactionMode === 'drawing' || isErasing) return; 
+            if (interactionMode === 'drawing' || isErasing || isAddingText) return; 
 
             const btn = event.currentTarget;
             const shapeType = btn.dataset.shape;
@@ -1015,7 +1097,7 @@
         }
 
         function handleAddText() {
-            if (interactionMode === 'drawing' || isErasing) return;
+            if (isAddingText === false) return; // 僅在文字模式下新增
 
             const textInput = document.getElementById('text-input');
             const text = textInput.value.trim();
@@ -1027,6 +1109,10 @@
             textLabels.push(newText);
             setSelectedText(newText);
             textInput.value = ''; // 清空輸入框
+            
+            // 新增：新增後自動退回選取模式
+            isAddingText = false;
+            updateInteractionToolsUI();
         }
 
 
@@ -1215,7 +1301,7 @@
 
         function handleMouseDown(event) {
             // 觸控事件不需要 mouse down, 由 touchstart 處理
-            if (event.touches) return; 
+            // if (event.touches) return; // <--- 移除此行檢查，以允許來自 handleTouchStart 的偽事件 (pseudo-event)
             
             event.preventDefault();
             const pos = getEventPos(event);
@@ -1309,7 +1395,7 @@
 
         function handleMouseMove(event) {
             // 觸控事件不需要 mouse move
-            if (event.touches) return;
+            // if (event.touches) return; // <--- 移除此行檢查
 
             const pos = getEventPos(event);
             const eraseTolerance = 30 / scale;
@@ -1379,7 +1465,7 @@
 
         function handleMouseUp(event) {
             // 觸控事件不需要 mouse up, 由 touchend 處理
-            if (event.touches) return;
+            // if (event.touches) return; // <--- 移除此行檢查
 
             // Drawing Finalization
             if (interactionMode === 'drawing' && isDrawing) {
@@ -1422,7 +1508,7 @@
             const pseudoEvent = {
                 clientX: touch.clientX,
                 clientY: touch.clientY,
-                preventDefault: event.preventDefault,
+                preventDefault: function() { event.preventDefault(); }, // 修正：正確包裝 preventDefault
                 touches: event.touches, 
                 ctrlKey: false, 
                 metaKey: false
@@ -1438,7 +1524,7 @@
             const pseudoEvent = {
                 clientX: touch.clientX,
                 clientY: touch.clientY,
-                preventDefault: event.preventDefault,
+                preventDefault: function() { event.preventDefault(); }, // 修正：正確包裝 preventDefault
                 touches: event.touches 
             };
             handleMouseMove(pseudoEvent);
@@ -1486,9 +1572,13 @@
             document.getElementById('add-text-btn').addEventListener('click', handleAddText); // 新增
             document.getElementById('delete-text-btn').addEventListener('click', handleDeleteShape); // 使用通用刪除
 
-            document.getElementById('toggle-interaction-mode-btn').addEventListener('click', handleToggleInteractionMode);
+            // --- 更新的工具列事件綁定 ---
+            document.getElementById('toggle-text-mode-btn').addEventListener('click', handleToggleTextMode); // 新增
+            document.getElementById('toggle-drawing-mode-btn').addEventListener('click', handleToggleDrawingMode);
+            document.getElementById('toggle-eraser-mode-btn').addEventListener('click', handleToggleEraserMode); 
+            // --- (舊的 'toggle-interaction-mode-btn' 已被移除) ---
+
             document.querySelectorAll('.pen-mode-btn').forEach(btn => btn.addEventListener('click', handlePenModeChange));
-            document.getElementById('toggle-eraser-btn').addEventListener('click', handleToggleEraserMode); // 新增
             document.getElementById('pen-color').addEventListener('input', (e) => { penColor = e.target.value; });
             document.getElementById('pen-width').addEventListener('input', (e) => {
                 penWidth = parseInt(e.target.value, 10);
@@ -1525,8 +1615,14 @@
         }
         
         // 啟動應用程式
-        window.onload = initCanvas;
+        window.onload = () => {
+            initCanvas();
+            // 預設啟動選取模式 (已在 initCanvas 中調用)
+            // updateInteractionToolsUI(); 
+        };
 
     </script>
 </body>
 </html>
+
+
