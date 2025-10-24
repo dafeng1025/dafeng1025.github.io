@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圓面積與扇形面積分解教具</title>
+    <!-- 載入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 設定主要字體 */
+        body { font-family: 'Inter', sans-serif; }
+        /* Canvas 容器確保畫布可以拖曳 */
+        #canvas-container {
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            background-color: #f9fafb;
+        }
+        /* 畫布本身設定 */
+        #drawing-canvas {
+            display: block;
+            cursor: default; /* 預設游標 */
+            touch-action: none; /* 禁用瀏覽器觸控平移/縮放，讓 JS 處理 */
+        }
+        /* 互動元件的基本樣式 */
+        .interactive-tool {
+            transition: all 0.15s ease-in-out;
+            transform: scale(1);
+        }
+        .interactive-tool:hover {
+            transform: scale(1.03);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        /* 響應式佈局調整 */
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            .tool-panel {
+                order: -1; /* 工具箱在手機上移到最上方 */
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 lg:p-8">
+    <!-- 標題區域 -->
+    <header class="mb-6 relative">
+        <h1 class="text-3xl font-bold text-gray-800">📐 組合圖形面積分解互動教具</h1>
+        <p class="text-gray-600">六年級上學期：圓面積與扇形面積。拖曳圖形至畫布，進行分解與疊加。</p>
+        <!-- 新增備註標籤 -->
+        <div class="absolute top-0 right-0 text-xs text-gray-500 bg-gray-200 px-3 py-1 rounded-bl-lg rounded-tr-lg shadow-sm hidden lg:block">
+            此網頁為 Gemini Canvas 協力產出
+        </div>
+    </header>
+
+    <!-- 主內容區：網格佈局 (工具箱 + 畫布 + 屬性調整) -->
+    <main class="main-grid grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+        <!-- 1. 圖形工具箱 (左側/頂部) -->
+        <div id="tool-panel" class="tool-panel lg:col-span-1 bg-white p-4 rounded-xl shadow-lg h-full">
+            <h2 class="text-xl font-semibold mb-3 text-blue-600 border-b pb-2">圖形工具箱</h2>
+            <div id="shape-palette" class="grid grid-cols-2 gap-3">
+                <!-- 圖形拖曳按鈕 -->
+                <button class="add-shape-btn interactive-tool bg-blue-100 text-blue-800 p-3 rounded-lg flex flex-col items-center" data-shape="Rectangle" data-w="120" data-h="80">
+                    <span class="font-bold">長方形</span>
+                    <span class="text-sm">120x80</span>
+                </button>
+                <button class="add-shape-btn interactive-tool bg-green-100 text-green-800 p-3 rounded-lg flex flex-col items-center" data-shape="Square" data-s="100">
+                    <span class="font-bold">正方形</span>
+                    <span class="text-sm">100x100</span>
+                </button>
+                <button class="add-shape-btn interactive-tool bg-teal-100 text-teal-800 p-3 rounded-lg flex flex-col items-center" data-shape="Triangle" data-w="100" data-h="100" data-offset="0">
+                    <span class="font-bold">三角形</span>
+                    <span class="text-sm">100x100 (底x高)</span>
+                </button>
+                <button class="add-shape-btn interactive-tool bg-yellow-100 text-yellow-800 p-3 rounded-lg flex flex-col items-center" data-shape="Circle" data-r="50">
+                    <span class="font-bold">圓形</span>
+                    <span class="text-sm">R=50</span>
+                </button>
+                <button class="add-shape-btn interactive-tool bg-pink-100 text-pink-800 p-3 rounded-lg flex flex-col items-center" data-shape="Sector" data-r="100" data-angle="90">
+                    <span class="font-bold">¼ 圓 (90°)</span>
+                    <span class="text-sm">R=100</span>
+                </button>
+                <button class="add-shape-btn interactive-tool bg-purple-100 text-purple-800 p-3 rounded-lg flex flex-col items-center" data-shape="Sector" data-r="100" data-angle="180">
+                    <span class="font-bold">半圓 (180°)</span>
+                    <span class="text-sm">R=100</span>
+                </button>
+            </div>
+
+            <!-- 文字標註區塊 (將被合併) -->
+            <!-- <div class="col-span-2 pt-3 border-t mt-3 border-gray-200"> ... </div> -->
+            
+            <!-- 畫筆工具 (註記區塊) -->
+            <div class="col-span-2 pt-3 border-t mt-3 border-gray-200">
+                <!-- 標題更新 -->
+                <h3 class="text-lg font-semibold mb-2 text-pink-600">🖍️ 註記工具</h3>
+                
+                <!-- Tool Mode Buttons (整合為 3 個按鈕) -->
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                    <button id="toggle-text-mode-btn" class="interaction-mode-btn w-full interactive-tool p-3 rounded-lg font-bold flex flex-col items-center justify-center transition duration-150">
+                        <!-- SVG icon for Text -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mb-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v2h2a1 1 0 110 2h-2v2h2a1 1 0 110 2h-2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2H2a1 1 0 110-2h2V8H2a1 1 0 010-2h2V4zm2 4v2h8V8H6zm8 4H6v2h8v-2z" clip-rule="evenodd" /></svg>
+                        <span class="text-xs">新增文字</span>
+                    </button>
+
+                    <button id="toggle-drawing-mode-btn" class="interaction-mode-btn w-full interactive-tool p-3 rounded-lg font-bold flex flex-col items-center justify-center transition duration-150">
+                        <!-- SVG icon for pen -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mb-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-8 8a1 1 0 01-.363.189l-4 1A1 1 0 014 17.293l1-4a1 1 0 01.189-.363l8-8zM15 7l-3-3 1.5-1.5 3 3L15 7z" clip-rule="evenodd" /></svg>
+                        <span class="text-xs">繪製/註記</span>
+                    </button>
+
+                    <button id="toggle-eraser-mode-btn" class="interaction-mode-btn w-full interactive-tool p-3 rounded-lg font-bold flex flex-col items-center justify-center transition duration-150">
+                        <!-- SVG icon for eraser -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mb-1" viewBox="0 0 20 20" fill="currentColor"><path d="M4.707 3.293a1 1 0 010 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3z" transform="translate(3 3)" /><path fill-rule="evenodd" d="M5 4a1 1 0 011-1h10a1 1 0 011 1v2a1 1 0 01-1 1H6a1 1 0 01-1-1V4zm2 10a1 1 0 00-1 1v1a1 1 0 001 1h8a1 1 0 001-1v-1a1 1 0 00-1-1H7zm-1 3a1 1 0 011-1h8a1 1 0 011 1v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-1z" clip-rule="evenodd" opacity=".4" /><path fill-rule="evenodd" d="M4.707 7.293a1 1 0 010-1.414l3-3a1 1 0 011.414 0l10 10a1 1 0 010 1.414l-3 3a1 1 0 01-1.414 0l-10-10a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                        <span id="eraser-status" class="text-xs">橡皮擦</span>
+                    </button>
+                </div>
+
+                <!-- Text controls (原文字標註區塊) -->
+                <div id="text-controls" class="mt-3 space-y-2 hidden">
+                    <input type="text" id="text-input" placeholder="輸入要標註的文字..." class="w-full p-2 border rounded-lg mb-2 text-sm">
+                    <button id="add-text-btn" class="w-full interactive-tool p-2 rounded-lg font-bold flex items-center justify-center bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition duration-150 text-sm">
+                        確認新增
+                    </button>
+                </div>
+
+                <!-- Pen controls, now separate -->
+                <div id="pen-controls" class="mt-3 space-y-2 hidden">
+                    <div class="flex space-x-2">
+                        <button id="mode-freehand-btn" class="pen-mode-btn w-1/2 p-2 rounded-lg font-bold border-2 border-pink-500 bg-pink-100 text-pink-800 text-sm" data-mode="freehand">自由手繪 (可拖曳)</button>
+                        <button id="mode-straight-btn" class="pen-mode-btn w-1/2 p-2 rounded-lg font-bold border-2 border-gray-300 bg-white text-gray-500 text-sm" data-mode="straightLine">直線繪製 (可拖曳)</button>
+                    </div>
+
+                    <div class="flex space-x-2">
+                        <div class="w-1/2">
+                            <label for="pen-color" class="block text-sm font-medium text-gray-700">顏色</label>
+                            <input type="color" id="pen-color" value="#000000" class="mt-1 block w-full p-1 h-8 border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div class="w-1/2">
+                            <label for="pen-width" class="block text-sm font-medium text-gray-700">線寬 (<span id="width-display">3</span> px)</label>
+                            <input type="range" id="pen-width" min="1" max="10" step="1" value="3" class="mt-1 w-full">
+                        </div>
+                    </div>
+
+                    <!-- 橡皮擦按鈕已移至上方工具列 -->
+
+                    <button id="clear-annotations-btn" class="w-full bg-orange-400 hover:bg-orange-500 text-white font-bold py-1.5 px-4 rounded-lg transition duration-150 text-sm">
+                        清除所有註記 (線條/文字)
+                    </button>
+                </div>
+            </div>
+
+            <!-- 總面積計算與控制 -->
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg shadow-inner">
+                <h3 class="text-lg font-semibold mb-2">總面積計算</h3>
+                <p class="text-sm text-gray-600 mb-2">圓周率 $\pi$ 取 <strong class="text-red-500">3.14</strong></p>
+                <div class="flex justify-between items-center bg-white p-3 rounded-md font-mono text-xl text-gray-900 border border-gray-300">
+                    <span>總和:</span>
+                    <span id="total-area">0.00</span>
+                </div>
+            </div>
+
+            <div class="mt-4 space-y-2">
+                <button id="clear-canvas-btn" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150">
+                    清除畫布 (重來)
+                </button>
+                <button id="reset-view-btn" class="w-full bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition duration-150">
+                    回到畫布中心
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. 作圖區/畫布 (中央主要區域) -->
+        <div class="lg:col-span-2 flex flex-col bg-white rounded-xl shadow-lg p-0">
+            <div id="canvas-container" class="flex-grow aspect-video">
+                <canvas id="drawing-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- 3. 屬性調整面板 (右側) -->
+        <div id="property-panel" class="lg:col-span-1 bg-white p-4 rounded-xl shadow-lg h-full">
+            <h2 class="text-xl font-semibold mb-3 border-b pb-2 text-indigo-600">圖形屬性調整</h2>
+            
+            <div id="no-selection-message" class="text-gray-500 text-center py-10">
+                <p>請點擊畫布上的圖形來編輯屬性</p>
+                <p>（幾何圖形可編輯，註記線條/文字可拖曳）</p>
+            </div>
+
+            <div id="shape-properties" class="space-y-4 hidden">
+                <!-- 面積加/減模式切換 -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">面積模式</label>
+                    <div class="flex space-x-2">
+                        <button id="mode-add" class="mode-btn w-1/2 p-2 rounded-lg font-bold border-2 border-green-500 bg-green-100 text-green-800" data-mode="add">面積 **加** (+)</button>
+                        <button id="mode-subtract" class="mode-btn w-1/2 p-2 rounded-lg font-bold border-2 border-gray-300 bg-white text-gray-500" data-mode="subtract">面積 **減** (-)</button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">切換圖形在總面積計算中的作用。</p>
+                </div>
+
+                <!-- 顏色和透明度 -->
+                <div class="flex space-x-4">
+                    <div class="w-1/2">
+                        <label for="shape-color" class="block text-sm font-medium text-gray-700">顏色</label>
+                        <input type="color" id="shape-color" class="mt-1 block w-full p-1 h-10 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="w-1/2">
+                        <label for="shape-alpha" class="block text-sm font-medium text-gray-700">透明度 (<span id="alpha-display">100%</span>)</label>
+                        <input type="range" id="shape-alpha" min="0.1" max="1" step="0.1" value="0.7" class="mt-1 w-full">
+                    </div>
+                </div>
+
+                <!-- 尺寸輸入 (通用/長方形/正方形) -->
+                <div id="dim-input-group" class="grid grid-cols-2 gap-4">
+                    <!-- 長度/半徑 (通用) -->
+                    <div>
+                        <label for="shape-dim1" id="label-dim1" class="block text-sm font-medium text-gray-700">半徑 / 長度/底邊</label>
+                        <input type="number" id="shape-dim1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="數值">
+                    </div>
+                    <!-- 寬度 (長方形) -->
+                    <div id="dim-input-2-container">
+                        <label for="shape-dim2" id="label-dim2" class="block text-sm font-medium text-gray-700">寬度/高</label>
+                        <input type="number" id="shape-dim2" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="數值">
+                    </div>
+                </div>
+
+                <!-- 頂點偏移 (三角形專用) -->
+                <div id="apex-offset-group" class="hidden">
+                    <label for="shape-apex-offset" class="block text-sm font-medium text-gray-700">三角形頂點偏移 (公分)</label>
+                    <div class="flex space-x-2 items-center">
+                        <!-- 新增數值輸入框 -->
+                        <input type="number" id="shape-apex-offset-value" min="-9999" max="9999" step="1" class="mt-1 block w-1/3 p-2 border border-gray-300 rounded-md shadow-sm text-center" placeholder="公分">
+                        <!-- 滑桿 -->
+                        <input type="range" id="shape-apex-offset-slider" min="-50" max="50" step="1" value="0" class="mt-1 w-2/3">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">目前偏移量: <strong id="offset-display">0 (0%)</strong></p>
+                    <p class="text-xs text-gray-500 mt-1">調整角度：0 為等腰，最大/小值接近直角 (相對底邊)</p>
+                </div>
+
+                <!-- 扇形角度輸入 -->
+                <div id="angle-input-group" class="hidden">
+                    <label for="sector-angle" class="block text-sm font-medium text-gray-700">圓心角 (度)</label>
+                    <input type="number" id="sector-angle" min="1" max="360" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="1 ~ 360">
+                </div>
+
+                <!-- 面積顯示 -->
+                <div class="pt-4 border-t mt-4">
+                    <label class="block text-sm font-medium text-gray-700">單一圖形面積</label>
+                    <p id="current-area" class="text-2xl font-bold text-indigo-700 mt-1">0.00</p>
+                </div>
+
+                <!-- 圖層控制與刪除 (新) -->
+                <div class="pt-4 border-t">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">圖層控制</h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="send-to-back-btn" class="layer-btn bg-gray-300 hover:bg-gray-400 text-gray-800 py-1.5 rounded-lg transition duration-150 text-xs font-semibold">移到最下層</button>
+                        <button id="move-down-btn" class="layer-btn bg-gray-300 hover:bg-gray-400 text-gray-800 py-1.5 rounded-lg transition duration-150 text-xs font-semibold">向下移一層</button>
+                        <button id="move-up-btn" class="layer-btn bg-gray-300 hover:bg-gray-400 text-gray-800 py-1.5 rounded-lg transition duration-150 text-xs font-semibold">向上移一層</button>
+                        <button id="bring-to-front-btn" class="layer-btn bg-yellow-500 hover:bg-yellow-600 text-white py-1.5 rounded-lg transition duration-150 text-xs font-semibold">移到最上層</button>
+                    </div>
+                </div>
+                <!-- 刪除按鈕 -->
+                <div class="pt-2">
+                    <button id="delete-shape-btn" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150 text-sm">
+                        刪除圖形
+                    </button>
+                </div>
+            </div>
+
+            <!-- 文字屬性編輯 (新增) -->
+            <div id="text-properties" class="space-y-4 hidden">
+                <h3 class="text-lg font-semibold border-b pb-2">✏️ 文字編輯</h3>
+                <input type="text" id="text-content-edit" class="w-full p-2 border rounded-lg" placeholder="編輯文字內容">
+                <div class="flex space-x-4">
+                    <div class="w-1/2">
+                        <label for="text-color" class="block text-sm font-medium text-gray-700">顏色</label>
+                        <input type="color" id="text-color" class="mt-1 block w-full p-1 h-10 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div class="w-1/2">
+                        <label for="text-font-size" class="block text-sm font-medium text-gray-700">字體大小 (<span id="font-size-display">24</span>)</label>
+                        <input type="range" id="text-font-size" min="12" max="48" step="1" value="24" class="mt-1 w-full">
+                    </div>
+                </div>
+                <button id="delete-text-btn" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150 text-sm">
+                    刪除文字
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // 數學常數
+        const PI = 3.14;
+
+        // 畫布與上下文
+        const canvas = document.getElementById('drawing-canvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+
+        // 狀態管理
+        let shapes = []; // 儲存所有幾何圖形物件的陣列
+        let textLabels = []; // 儲存所有文字標註物件的陣列 (新增)
+        let selectedShape = null;
+        let selectedAnnotation = null;
+        let selectedText = null; // 新增
+        let isDragging = false;
+        let isResizing = false;
+        let isRotating = false;
+        let dragOffsetX, dragOffsetY;
+
+        // --- Annotation State ---
+        let annotations = []; 
+        let interactionMode = 'geometry'; // 'geometry' or 'drawing'
+        let drawingMode = 'freehand'; // 'freehand', 'straightLine'
+        let isErasing = false; // 新增
+        let isAddingText = false; // 新增
+        let isDrawing = false;
+        let currentAnnotation = null;
+        let straightLineStart = null;
+        let straightLineEnd = null;
+        let penColor = '#000000';
+        let penWidth = 3;
+        // ------------------------
+
+        // 視角控制 (平移與縮放)
+        let translateX = 0;
+        let translateY = 0;
+        let scale = 1;
+        let isPanning = false;
+
+        // ----------------------------------------------------
+        // I. 幾何計算與繪圖核心 (Shape Class)
+        // ----------------------------------------------------
+
+        class Shape {
+            constructor(type, x, y, options = {}) {
+                this.id = Date.now() + Math.random();
+                this.type = type; // 'Square', 'Rectangle', 'Circle', 'Sector', 'Triangle'
+                this.x = x;
+                this.y = y;
+                this.rotation = options.rotation || 0; 
+                this.color = options.color || '#3b82f6';
+                this.alpha = options.alpha !== undefined ? options.alpha : 0.7;
+                this.mode = options.mode || 'add'; 
+
+                // Dimensions
+                this.r = options.r || 50; 
+                this.w = options.w || 100; // Base/Width (底邊)
+                this.h = options.h || 100; // Height (高)
+                this.angle = options.angle || 90; 
+                this.apexOffset = options.apexOffset || 0; // Triangle apex horizontal offset (三角形頂點水平偏移)
+            }
+
+            // 1. 計算圖形面積
+            calculateArea() {
+                let area = 0;
+                switch (this.type) {
+                    case 'Square':
+                    case 'Rectangle':
+                        area = this.w * this.h;
+                        break;
+                    case 'Circle':
+                        area = PI * this.r * this.r;
+                        break;
+                    case 'Sector':
+                        const fraction = this.angle / 360;
+                        area = PI * this.r * this.r * fraction;
+                        break;
+                    case 'Triangle': 
+                        // Area is not affected by apexOffset, only w (base) and h (height)
+                        area = 0.5 * this.w * this.h;
+                        break;
+                }
+                return this.mode === 'add' ? area : -area;
+            }
+
+            // 2. 繪製圖形
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                
+                // 設定樣式
+                const baseColor = this.color;
+                const alphaValue = this.alpha;
+                const fillColor = `rgba(${parseInt(baseColor.slice(1, 3), 16)}, ${parseInt(baseColor.slice(3, 5), 16)}, ${parseInt(baseColor.slice(5, 7), 16)}, ${alphaValue})`;
+                
+                ctx.fillStyle = fillColor;
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2 / scale;
+
+                ctx.beginPath();
+                switch (this.type) {
+                    case 'Square':
+                    case 'Rectangle':
+                        ctx.rect(-this.w / 2, -this.h / 2, this.w, this.h);
+                        break;
+                    case 'Circle':
+                        ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+                        break;
+                    case 'Sector':
+                        const startAngle = 0;
+                        const endAngle = (this.angle * Math.PI) / 180;
+                        ctx.moveTo(0, 0); 
+                        ctx.arc(0, 0, this.r, startAngle, endAngle);
+                        ctx.closePath();
+                        break;
+                    case 'Triangle':
+                        // Draw triangle with adjustable apex offset
+                        // Base points are fixed at y = h/2 (bottom)
+                        // Apex point is fixed at y = -h/2 (top)
+                        ctx.moveTo(-this.w / 2, this.h / 2); // Bottom Left
+                        ctx.lineTo(this.w / 2, this.h / 2);  // Bottom Right
+                        ctx.lineTo(this.apexOffset, -this.h / 2); // Top Apex (Offset from center x=0)
+                        ctx.closePath();
+                        break;
+                }
+
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+
+                if (selectedShape === this) {
+                    this.drawControls();
+                }
+            }
+            
+            // 3. 繪製選中邊界和控制點 (簡化)
+            drawControls() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                
+                ctx.strokeStyle = 'red';
+                ctx.lineWidth = 1.5 / scale;
+                ctx.setLineDash([4 / scale, 4 / scale]); 
+
+                let bounds;
+                switch (this.type) {
+                    case 'Circle':
+                        bounds = { w: this.r * 2, h: this.r * 2 };
+                        ctx.beginPath();
+                        ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+                        ctx.stroke();
+                        break;
+                    case 'Sector':
+                        bounds = { w: this.r, h: this.r };
+                        ctx.strokeRect(0, 0, this.r, this.r);
+                        this.drawControlPoint(0, 0, 'blue');
+                        this.drawControlPoint(this.r, 0, 'red'); 
+                        this.drawControlPoint(0, -this.r * 0.75, 'green', 'rotate');
+                        ctx.restore();
+                        return;
+
+                    case 'Square':
+                    case 'Rectangle':
+                    case 'Triangle': // 使用邊界框
+                        bounds = { w: this.w, h: this.h };
+                        ctx.strokeRect(-bounds.w / 2, -bounds.h / 2, bounds.w, bounds.h);
+                        break;
+                }
+
+                ctx.setLineDash([]); 
+                
+                // 繪製旋轉控制點 (在中心上方)
+                this.drawControlPoint(0, -bounds.h / 2 - 20 / scale, 'green', 'rotate');
+
+                // 繪製縮放控制點 (右下角)
+                this.drawControlPoint(bounds.w / 2, bounds.h / 2, 'red', 'resize');
+                
+                ctx.restore();
+            }
+
+            // 4. 繪製單個控制點
+            drawControlPoint(cx, cy, color, type) {
+                const size = 5 / scale;
+                ctx.fillStyle = color;
+                ctx.fillRect(cx - size, cy - size, size * 2, size * 2);
+            }
+
+            // 5. 判斷點擊是否在圖形內部 (簡化)
+            containsPoint(mx, my) {
+                const dx = mx - this.x;
+                const dy = my - this.y;
+                
+                const cos = Math.cos(-this.rotation);
+                const sin = Math.sin(-this.rotation);
+                const localX = dx * cos - dy * sin;
+                const localY = dy * cos + dx * sin; // Correct rotation formula
+
+                switch (this.type) {
+                    case 'Square':
+                    case 'Rectangle':
+                        return localX >= -this.w / 2 && localX <= this.w / 2 &&
+                            localY >= -this.h / 2 && localY <= this.h / 2;
+                    case 'Triangle':
+                        // Use bounding box for simplicity in dragging
+                        return localX >= -this.w / 2 && localX <= this.w / 2 &&
+                            localY >= -this.h / 2 && localY <= this.h / 2;
+                    case 'Circle':
+                        return Math.sqrt(dx * dx + dy * dy) <= this.r;
+                    case 'Sector':
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist > this.r) return false;
+                        let angle = Math.atan2(dy, dx) - this.rotation;
+                        if (angle < 0) angle += 2 * Math.PI;
+                        if (angle > 2 * Math.PI) angle -= 2 * Math.PI;
+                        const sectorEndAngle = (this.angle * Math.PI) / 180;
+                        return angle >= 0 && angle <= sectorEndAngle;
+                    default:
+                        return false;
+                }
+            }
+
+            // 6. 檢查是否點擊了控制點 (保持不變)
+            checkControls(mx, my) {
+                const dx = mx - this.x;
+                const dy = my - this.y;
+                const cos = Math.cos(-this.rotation);
+                const sin = Math.sin(-this.rotation);
+                const localX = dx * cos - dy * sin;
+                const localY = dy * cos + dx * sin; // Correct rotation formula
+                const hitSize = 10 / scale;
+
+                if (this.type === 'Sector') {
+                    if (Math.abs(localX - this.r) < hitSize && Math.abs(localY - 0) < hitSize) { return 'resize'; }
+                    if (Math.abs(localX - 0) < hitSize && Math.abs(localY - (-this.r * 0.75)) < hitSize) { return 'rotate'; }
+                    return null;
+                }
+
+                let bounds = (this.type === 'Circle') ? { w: this.r * 2, h: this.r * 2 } : { w: this.w, h: this.h };
+
+                if (Math.abs(localX - bounds.w / 2) < hitSize && Math.abs(localY - bounds.h / 2) < hitSize) { return 'resize'; }
+                if (Math.abs(localX - 0) < hitSize && Math.abs(localY - (-bounds.h / 2 - 20 / scale)) < hitSize) { return 'rotate'; }
+
+                return null;
+            }
+        }
+
+        // ----------------------------------------------------
+        // II. Annotation Class (可拖曳線條/註記)
+        // ----------------------------------------------------
+
+        class Annotation {
+            constructor(points, color, width, x = 0, y = 0) {
+                this.id = Date.now() + Math.random();
+                this.type = 'Annotation'; 
+                this.points = points; 
+                this.color = color;
+                this.width = width;
+                this.x = x; 
+                this.y = y;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = this.width / scale;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                // Highlight if selected
+                if (selectedAnnotation === this) {
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = this.color; 
+                    ctx.lineWidth = (this.width + 2) / scale;
+                }
+
+                ctx.beginPath();
+                if (this.points.length > 0) {
+                    ctx.moveTo(this.points[0].x, this.points[0].y);
+                    for (let i = 1; i < this.points.length; i++) {
+                        ctx.lineTo(this.points[i].x, this.points[i].y);
+                    }
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            containsPoint(mx, my, tolerance = 0) {
+                const localMx = mx - this.x;
+                const localMy = my - this.y;
+                tolerance = (this.width / 2 + 8 + tolerance) / scale; 
+
+                for (let i = 0; i < this.points.length - 1; i++) {
+                    const p1 = this.points[i];
+                    const p2 = this.points[i + 1];
+
+                    // Simple bounding box check around the segment
+                    const minX = Math.min(p1.x, p2.x) - tolerance;
+                    const maxX = Math.max(p1.x, p2.x) + tolerance;
+                    const minY = Math.min(p1.y, p2.y) - tolerance;
+                    const maxY = Math.max(p1.y, p2.y) + tolerance;
+
+                    if (localMx >= minX && localMx <= maxX && localMy >= minY && localMy <= maxY) {
+                         return true;
+                    }
+                }
+                return false;
+            }
+        }
+
+        // --- Helper for creating Annotation objects ---
+        function createAnnotation(points, color, width) {
+            if (points.length < 2) return;
+
+            let minX = Infinity, minY = Infinity;
+            let maxX = -Infinity, maxY = -Infinity;
+
+            for (const p of points) {
+                minX = Math.min(minX, p.x);
+                maxX = Math.max(maxX, p.x);
+                minY = Math.min(minY, p.y);
+                maxY = Math.max(maxY, p.y);
+            }
+
+            const centerX = (minX + maxX) / 2;
+            const centerY = (minY + maxY) / 2;
+
+            const relativePoints = points.map(p => ({
+                x: p.x - centerX,
+                y: p.y - centerY
+            }));
+
+            const newAnnotation = new Annotation(relativePoints, color, width, centerX, centerY);
+            annotations.push(newAnnotation);
+            setSelectedAnnotation(newAnnotation);
+        }
+        
+        // ----------------------------------------------------
+        // III. TextLabel Class (新增)
+        // ----------------------------------------------------
+
+        class TextLabel {
+            constructor(text, x, y, options = {}) {
+                this.id = Date.now() + Math.random();
+                this.type = 'TextLabel';
+                this.text = text;
+                this.x = x;
+                this.y = y;
+                this.color = options.color || '#000000';
+                this.fontSize = options.fontSize || 24;
+                this.w = 0; 
+                this.h = this.fontSize; 
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                ctx.fillStyle = this.color;
+                // Use a standard font size and scale down
+                const currentFontSize = this.fontSize / scale;
+                ctx.font = `bold ${currentFontSize}px Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                ctx.fillText(this.text, 0, 0);
+
+                // Get actual text metrics for hit-testing (approximation)
+                const metrics = ctx.measureText(this.text);
+                // Store unscaled dimensions for consistent hit-testing logic
+                this.w = metrics.width * scale; 
+                this.h = currentFontSize * 1.2 * scale;
+                
+                if (selectedText === this) {
+                    ctx.strokeStyle = 'red';
+                    ctx.lineWidth = 1.5 / scale;
+                    ctx.setLineDash([4 / scale, 4 / scale]);
+                    // Draw bounding box (unscaled dimensions divided by scale)
+                    ctx.strokeRect(-this.w / (2 * scale), -this.h / (2 * scale), this.w / scale, this.h / scale);
+                }
+
+                ctx.restore();
+            }
+            
+            // Check if point is inside the text's bounding box
+            containsPoint(mx, my) {
+                const localX = mx - this.x;
+                const localY = my - this.y;
+                
+                // Check against unscaled dimensions (stored in this.w/h)
+                return localX >= -(this.w / 2) && localX <= (this.w / 2) &&
+                       localY >= -(this.h / 2) && localY <= (this.h / 2);
+            }
+        }
+
+        // ----------------------------------------------------
+        // IV. 初始化與主循環 (Init & Draw Loop)
+        // ----------------------------------------------------
+
+        function initCanvas() {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            translateX = canvas.width / 2;
+            translateY = canvas.height / 2;
+            scale = 1;
+            
+            window.addEventListener('resize', resizeCanvas);
+            
+            // 初始範例圖形
+            const r1 = new Shape('Rectangle', -100, 0, { w: 200, h: 100, color: '#fcd34d', alpha: 0.8 });
+            const s1 = new Shape('Sector', 100, 0, { r: 100, angle: 90, color: '#ef4444', alpha: 0.9, rotation: Math.PI/2 });
+            s1.mode = 'subtract'; 
+            shapes.push(r1, s1);
+
+            // 初始範例文字
+            const t1 = new TextLabel("六年級數學", -200, -150, { fontSize: 30, color: '#6d28d9' });
+            textLabels.push(t1);
+            
+            setupEventListeners();
+            updateInteractionToolsUI(); // 替換 updatePenControls()
+            
+            requestAnimationFrame(drawLoop);
+        }
+
+        function resizeCanvas() {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+
+        function drawAnnotations() {
+            annotations.forEach(annotation => annotation.draw());
+
+            // Draw the temporary straight line during drawing
+            if (interactionMode === 'drawing' && drawingMode === 'straightLine' && straightLineStart && straightLineEnd) {
+                ctx.strokeStyle = penColor;
+                ctx.lineWidth = penWidth / scale;
+                ctx.lineCap = 'square';
+                
+                ctx.beginPath();
+                ctx.moveTo(straightLineStart.x, straightLineStart.y);
+                ctx.lineTo(straightLineEnd.x, straightLineEnd.y);
+                ctx.stroke();
+            }
+        }
+
+        function drawLoop() {
+            ctx.fillStyle = '#f9fafb';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(translateX, translateY);
+            ctx.scale(scale, scale);
+
+            shapes.forEach(shape => shape.draw());
+            drawAnnotations();
+            textLabels.forEach(label => label.draw()); // 繪製文字標註
+            
+            calculateTotalArea();
+
+            ctx.restore();
+
+            requestAnimationFrame(drawLoop);
+        }
+
+        function calculateTotalArea() {
+            const totalArea = shapes.reduce((sum, shape) => sum + shape.calculateArea(), 0);
+            document.getElementById('total-area').textContent = totalArea.toFixed(2);
+        }
+
+        // ----------------------------------------------------
+        // V. 選取與屬性管理 (Selection & Property Management)
+        // ----------------------------------------------------
+
+        function clearSelection() {
+            selectedShape = null;
+            selectedAnnotation = null;
+            selectedText = null; 
+            document.getElementById('shape-properties').classList.add('hidden');
+            document.getElementById('text-properties').classList.add('hidden'); // 隱藏文字編輯面板
+            document.getElementById('no-selection-message').classList.remove('hidden');
+        }
+
+        function setSelectedAnnotation(annotation) {
+            if (selectedAnnotation === annotation) return;
+            clearSelection();
+            selectedAnnotation = annotation;
+        }
+
+        function setSelectedShape(shape) {
+            if (selectedShape === shape) return;
+            clearSelection();
+            selectedShape = shape;
+
+            const panel = document.getElementById('shape-properties');
+            const msg = document.getElementById('no-selection-message');
+            
+            if (shape) {
+                panel.classList.remove('hidden');
+                msg.classList.add('hidden');
+                updatePropertyPanel();
+            } else {
+                clearSelection();
+            }
+        }
+
+        function setSelectedText(text) {
+            if (selectedText === text) return;
+            clearSelection();
+            selectedText = text;
+
+            const panel = document.getElementById('text-properties');
+            const msg = document.getElementById('no-selection-message');
+            
+            if (text) {
+                panel.classList.remove('hidden');
+                msg.classList.add('hidden');
+                updateTextPropertyPanel();
+            } else {
+                clearSelection();
+            }
+        }
+        
+        function updatePropertyPanel() {
+            if (!selectedShape) return;
+
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                const isSelected = btn.dataset.mode === selectedShape.mode;
+                btn.classList.toggle('border-green-500', isSelected);
+                btn.classList.toggle('bg-green-100', isSelected);
+                btn.classList.toggle('text-green-800', isSelected);
+                btn.classList.toggle('border-gray-300', !isSelected);
+                btn.classList.toggle('bg-white', !isSelected);
+                btn.classList.toggle('text-gray-500', !isSelected);
+            });
+            
+            document.getElementById('shape-color').value = selectedShape.color;
+            document.getElementById('shape-alpha').value = selectedShape.alpha;
+            document.getElementById('alpha-display').textContent = `${Math.round(selectedShape.alpha * 100)}%`;
+            
+            const dim1Input = document.getElementById('shape-dim1');
+            const dim2Container = document.getElementById('dim-input-2-container');
+            const angleGroup = document.getElementById('angle-input-group');
+            const offsetGroup = document.getElementById('apex-offset-group'); // 新增
+            
+            const labelDim1 = document.getElementById('label-dim1');
+            const labelDim2 = document.getElementById('label-dim2');
+            
+            dim2Container.classList.add('hidden');
+            angleGroup.classList.add('hidden');
+            offsetGroup.classList.add('hidden'); // 預設隱藏
+
+            switch (selectedShape.type) {
+                case 'Square':
+                    labelDim1.textContent = '邊長 (Side)';
+                    dim1Input.value = selectedShape.w.toFixed(0);
+                    break;
+                case 'Rectangle':
+                    labelDim1.textContent = '長度 (Length)';
+                    labelDim2.textContent = '寬度 (Width)';
+                    dim1Input.value = selectedShape.w.toFixed(0);
+                    document.getElementById('shape-dim2').value = selectedShape.h.toFixed(0);
+                    dim2Container.classList.remove('hidden');
+                    break;
+                case 'Triangle':
+                    labelDim1.textContent = '底邊 (Base)';
+                    labelDim2.textContent = '高 (Height)';
+                    dim1Input.value = selectedShape.w.toFixed(0);
+                    document.getElementById('shape-dim2').value = selectedShape.h.toFixed(0);
+                    dim2Container.classList.remove('hidden');
+                    
+                    // 顯示並設定頂點偏移
+                    const offsetInput = document.getElementById('shape-apex-offset-value'); // 數值輸入框
+                    const offsetSlider = document.getElementById('shape-apex-offset-slider'); // 滑桿
+                    
+                    // 計算比例，用於滑桿顯示 (相對於底邊寬度)
+                    const offsetRatio = (selectedShape.apexOffset / (selectedShape.w / 2)) * 50; 
+                    
+                    offsetInput.value = selectedShape.apexOffset.toFixed(0); // 顯示實際公分數值
+                    offsetSlider.value = offsetRatio.toFixed(0); // 顯示比例值 (映射到 -50到50)
+                    
+                    document.getElementById('offset-display').textContent = `${selectedShape.apexOffset.toFixed(2)} (約 ${offsetRatio.toFixed(0)}%)`;
+
+                    offsetGroup.classList.remove('hidden');
+                    break;
+                case 'Circle':
+                    labelDim1.textContent = '半徑 (Radius)';
+                    dim1Input.value = selectedShape.r.toFixed(0);
+                    break;
+                case 'Sector':
+                    labelDim1.textContent = '半徑 (Radius)';
+                    dim1Input.value = selectedShape.r.toFixed(0);
+                    document.getElementById('sector-angle').value = selectedShape.angle.toFixed(0);
+                    angleGroup.classList.remove('hidden');
+                    break;
+            }
+            
+            document.getElementById('current-area').textContent = selectedShape.calculateArea().toFixed(2);
+        }
+
+        function updateTextPropertyPanel() {
+            if (!selectedText) return;
+            
+            document.getElementById('text-content-edit').value = selectedText.text;
+            document.getElementById('text-color').value = selectedText.color;
+            document.getElementById('text-font-size').value = selectedText.fontSize;
+            document.getElementById('font-size-display').textContent = selectedText.fontSize;
+        }
+
+        // ----------------------------------------------------
+        // VI. 事件處理器 (Event Handlers)
+        // ----------------------------------------------------
+
+        // 統一獲取事件位置 (支援滑鼠和觸控)
+        function getEventPos(event) {
+            // Use event.touches[0] for touch, or event for mouse
+            const source = (event.touches && event.touches.length > 0) ? event.touches[0] : event;
+            
+            const rect = canvas.getBoundingClientRect();
+            
+            // Client positions are used for panning (mouse or touch screen position)
+            const clientX = source.clientX;
+            const clientY = source.clientY;
+
+            // Canvas/World positions are used for interacting with shapes (relative to pan/zoom)
+            const mouseX = (clientX - rect.left - translateX) / scale;
+            const mouseY = (clientY - rect.top - translateY) / scale;
+
+            return { x: mouseX, y: mouseY, clientX: clientX, clientY: clientY };
+        }
+
+        // --- Drawing Mode Controls (unchanged) ---
+
+        function handleToggleInteractionMode() {
+            // 此函數已過時 (被 handleToggleDrawingMode 替換)
+            isErasing = false; 
+            interactionMode = (interactionMode === 'geometry') ? 'drawing' : 'geometry';
+            clearSelection();
+            updateInteractionToolsUI(); // 替換 updatePenControls()
+        }
+
+        // --- 替換為新的工具列邏輯 ---
+        function handleToggleSelectMode() {
+            // 此函數已過時 (預設為選取模式)
+            interactionMode = 'geometry';
+            isErasing = false;
+            isAddingText = false; // 新增
+            clearSelection();
+            updateInteractionToolsUI();
+        }
+
+        function handleToggleTextMode() {
+            if (isAddingText) {
+                // 如果已在文字模式，再次點擊則取消
+                isAddingText = false;
+            } else {
+                // 進入文字模式
+                isAddingText = true;
+                interactionMode = 'geometry';
+                isErasing = false;
+            }
+            clearSelection();
+            updateInteractionToolsUI();
+        }
+        
+        function handleToggleDrawingMode() {
+            if (interactionMode === 'drawing') {
+                // 如果已在繪製模式，再次點擊則取消
+                interactionMode = 'geometry';
+            } else {
+                // 進入繪製模式
+                interactionMode = 'drawing';
+                isErasing = false;
+                isAddingText = false;
+            }
+            clearSelection();
+            updateInteractionToolsUI();
+        }
+
+        function handleToggleEraserMode() {
+            // 橡皮擦模式會自動取消其他模式
+            isErasing = !isErasing; 
+            
+            if (isErasing) {
+                interactionMode = 'geometry'; 
+                isAddingText = false;
+            }
+            
+            clearSelection();
+            updateInteractionToolsUI();
+        }
+
+        function handlePenModeChange(event) {
+            drawingMode = event.currentTarget.dataset.mode;
+            isErasing = false; // 切換筆刷模式時，取消橡皮擦
+            handlePenModeButtonStyles(drawingMode);
+        }
+
+        /* * 移除了重複的 handleToggleEraserMode 函數。
+         * (舊的錯誤函數會阻止 UI 更新)
+         * 現在將正確調用 updateInteractionToolsUI() 來更新按鈕狀態。
+         */
+
+        function handlePenModeButtonStyles(mode) {
+             document.querySelectorAll('.pen-mode-btn').forEach(btn => {
+                const isSelected = btn.dataset.mode === mode;
+                btn.classList.toggle('border-pink-500', isSelected);
+                btn.classList.toggle('bg-pink-100', isSelected);
+                btn.classList.toggle('text-pink-800', isSelected);
+                btn.classList.toggle('border-gray-300', !isSelected);
+                btn.classList.toggle('bg-white', !isSelected);
+                btn.classList.toggle('text-gray-500', !isSelected);
+            });
+        }
+
+
+        function updatePenControls() {
+            // *** 此函數已過時，功能合併到 updateInteractionToolsUI ***
+        }
+        
+        // --- 新增：管理工具列按鈕的 UI 狀態 ---
+        function updateInteractionToolsUI() {
+            const textBtn = document.getElementById('toggle-text-mode-btn');
+            const drawBtn = document.getElementById('toggle-drawing-mode-btn');
+            const eraserBtn = document.getElementById('toggle-eraser-mode-btn');
+            
+            const textControls = document.getElementById('text-controls');
+            const penControls = document.getElementById('pen-controls');
+
+            // 1. 重設所有按鈕樣式
+            document.querySelectorAll('.interaction-mode-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-500', 'text-white', 'shadow-md');
+                btn.classList.remove('bg-red-500'); 
+                btn.classList.add('bg-gray-200', 'text-gray-700');
+            });
+            
+            // 2. 隱藏所有控制項
+            textControls.classList.add('hidden');
+            penControls.classList.add('hidden');
+            
+            let cursorStyle = 'default';
+
+            // 3. 根據模式設定作用中按鈕的樣式和控制項
+            if (isAddingText) {
+                textBtn.classList.add('bg-blue-500', 'text-white', 'shadow-md');
+                textBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                textControls.classList.remove('hidden');
+                cursorStyle = 'text';
+            } else if (interactionMode === 'drawing') {
+                drawBtn.classList.add('bg-blue-500', 'text-white', 'shadow-md');
+                drawBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                penControls.classList.remove('hidden');
+                cursorStyle = 'crosshair';
+            } else if (isErasing) {
+                eraserBtn.classList.add('bg-red-500', 'text-white', 'shadow-md'); 
+                eraserBtn.classList.remove('bg-gray-200', 'text-gray-700');
+                cursorStyle = 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\'><path d=\'M24.7 9.3l-12-12-12 12 12 12 12-12zM21.5 12.5l-9.5 9.5-9.5-9.5 9.5-9.5 9.5 9.5z\' fill=\'#000\' stroke=\'#fff\' stroke-width=\'2\'/></svg>"), auto';
+            }
+            // (如果是預設選取模式，則不執行任何操作，保持灰色和隱藏)
+            
+            // 更新游標
+            canvas.style.cursor = cursorStyle;
+        }
+
+
+        function handleClearAnnotations() {
+             if (confirm('確定要清除畫布上的所有手寫註記和文字標註嗎？')) {
+                annotations = [];
+                textLabels = [];
+                clearSelection();
+            }
+        }
+        
+        // --- Utility Handlers (unchanged) ---
+
+        function handleAddShape(event) {
+            if (interactionMode === 'drawing' || isErasing || isAddingText) return; 
+
+            const btn = event.currentTarget;
+            const shapeType = btn.dataset.shape;
+            
+            let options = { color: btn.style.backgroundColor || btn.dataset.color || '#3b82f6', alpha: 0.7 };
+
+            if (shapeType === 'Square') {
+                options.w = options.h = parseFloat(btn.dataset.s) || 100;
+            } else if (shapeType === 'Rectangle') {
+                options.w = parseFloat(btn.dataset.w) || 120;
+                options.h = parseFloat(btn.dataset.h) || 80;
+            } else if (shapeType === 'Triangle') {
+                options.w = parseFloat(btn.dataset.w) || 100;
+                options.h = parseFloat(btn.dataset.h) || 100;
+                options.apexOffset = parseFloat(btn.dataset.offset) || 0;
+            } else if (shapeType === 'Circle' || shapeType === 'Sector') {
+                options.r = parseFloat(btn.dataset.r) || 50;
+                if (shapeType === 'Sector') {
+                    options.angle = parseFloat(btn.dataset.angle) || 90;
+                }
+            }
+
+            const newShape = new Shape(shapeType, 0, 0, options);
+            shapes.push(newShape);
+            setSelectedShape(newShape);
+        }
+
+        function handleAddText() {
+            if (isAddingText === false) return; // 僅在文字模式下新增
+
+            const textInput = document.getElementById('text-input');
+            const text = textInput.value.trim();
+            if (!text) {
+                alert('請輸入要標註的文字。');
+                return;
+            }
+            const newText = new TextLabel(text, 0, 0); // Center of canvas (0,0 world coords)
+            textLabels.push(newText);
+            setSelectedText(newText);
+            textInput.value = ''; // 清空輸入框
+            
+            // 新增：新增後自動退回選取模式
+            isAddingText = false;
+            updateInteractionToolsUI();
+        }
+
+
+        function handleClearCanvas() {
+            if (confirm('確定要清除畫布上的所有圖形、註記和文字標註嗎？此操作無法復原。')) {
+                shapes = [];
+                annotations = [];
+                textLabels = [];
+                clearSelection();
+            }
+        }
+
+        function handleResetView() {
+            translateX = canvas.width / 2;
+            translateY = canvas.height / 2;
+            scale = 1;
+        }
+
+        function handleDeleteShape() {
+            if (selectedShape) {
+                const index = shapes.indexOf(selectedShape);
+                if (index > -1) { shapes.splice(index, 1); }
+                setSelectedShape(null);
+            } else if (selectedAnnotation) {
+                const index = annotations.indexOf(selectedAnnotation);
+                if (index > -1) { annotations.splice(index, 1); }
+                setSelectedAnnotation(null);
+            } else if (selectedText) { // 新增
+                 const index = textLabels.indexOf(selectedText);
+                if (index > -1) { textLabels.splice(index, 1); }
+                setSelectedText(null);
+            }
+        }
+
+        // --- Layer Management Functions (Updated) ---
+
+        function handleBringToFront() {
+            if (!selectedShape) return;
+            const index = shapes.indexOf(selectedShape);
+            if (index > -1 && index !== shapes.length - 1) {
+                shapes.splice(index, 1);
+                shapes.push(selectedShape);
+            }
+        }
+
+        function handleSendToBack() {
+            if (!selectedShape) return;
+            const index = shapes.indexOf(selectedShape);
+            if (index > 0) {
+                shapes.splice(index, 1);
+                shapes.unshift(selectedShape); // Insert at the beginning (index 0)
+            }
+        }
+
+        function handleMoveUp() {
+            if (!selectedShape) return;
+            const index = shapes.indexOf(selectedShape);
+            if (index > -1 && index < shapes.length - 1) {
+                // Swap with the element above it
+                [shapes[index], shapes[index + 1]] = [shapes[index + 1], shapes[index]];
+            }
+        }
+
+        function handleMoveDown() {
+            if (!selectedShape) return;
+            const index = shapes.indexOf(selectedShape);
+            if (index > 0) {
+                // Swap with the element below it
+                [shapes[index], shapes[index - 1]] = [shapes[index - 1], shapes[index]];
+            }
+        }
+        
+        // --- End Layer Management ---
+        
+        // --- 核心屬性調整 (unchanged) ---
+
+        function updateApexOffset(newOffsetValue, isSlider) {
+            if (!selectedShape || selectedShape.type !== 'Triangle') return;
+
+            const baseWidth = selectedShape.w;
+            let offset;
+            let offsetRatio; // 映射到 -50到50 的滑桿值
+            
+            if (isSlider) {
+                // 從滑桿 (-50 to 50) 更新實際公分數
+                offsetRatio = parseFloat(newOffsetValue);
+                // 將比例值映射回實際的公分數 (-w/2 到 w/2)
+                offset = (offsetRatio / 50) * (baseWidth / 2);
+            } else {
+                // 從數值輸入框 (公分數值) 更新
+                offset = parseFloat(newOffsetValue);
+                // 限制最大偏移量為底邊寬度的一半，以避免奇怪的形狀
+                offset = Math.min(baseWidth / 2, Math.max(-baseWidth / 2, offset)); 
+                
+                // 計算比例值，用於更新滑桿
+                offsetRatio = (offset / (baseWidth / 2)) * 50;
+            }
+
+            selectedShape.apexOffset = offset;
+            
+            // 更新 UI 顯示
+            document.getElementById('shape-apex-offset-value').value = offset.toFixed(2);
+            document.getElementById('shape-apex-offset-slider').value = offsetRatio.toFixed(0);
+            document.getElementById('offset-display').textContent = `${offset.toFixed(2)} (約 ${offsetRatio.toFixed(0)}%)`;
+
+            updatePropertyPanel(); // 觸發重繪
+        }
+
+
+        function handlePropertyChange(event) {
+            if (!selectedShape) return;
+
+            const value = event.target.value;
+            const id = event.target.id;
+            
+            switch (id) {
+                case 'shape-color':
+                    selectedShape.color = value;
+                    break;
+                case 'shape-alpha':
+                    selectedShape.alpha = parseFloat(value);
+                    document.getElementById('alpha-display').textContent = `${Math.round(selectedShape.alpha * 100)}%`;
+                    break;
+                case 'shape-dim1':
+                    if (selectedShape.type === 'Circle' || selectedShape.type === 'Sector') {
+                        selectedShape.r = parseFloat(value);
+                    } else if (selectedShape.type === 'Square') {
+                        selectedShape.w = selectedShape.h = parseFloat(value);
+                    } else if (selectedShape.type === 'Rectangle' || selectedShape.type === 'Triangle') {
+                        selectedShape.w = parseFloat(value);
+                    }
+                    // 如果是三角形，寬度改變需要重新計算 apexOffset 的限制和比例
+                    if (selectedShape.type === 'Triangle') {
+                        updateApexOffset(selectedShape.apexOffset, false); 
+                    }
+                    break;
+                case 'shape-dim2':
+                    if (selectedShape.type === 'Rectangle' || selectedShape.type === 'Triangle') {
+                        selectedShape.h = parseFloat(value);
+                    }
+                    break;
+                case 'shape-apex-offset-value': // 數值輸入框
+                    updateApexOffset(value, false); 
+                    return; // 已經處理完畢
+                case 'shape-apex-offset-slider': // 滑桿
+                    updateApexOffset(value, true); 
+                    return; // 已經處理完畢
+                case 'sector-angle':
+                    selectedShape.angle = Math.min(360, Math.max(1, parseFloat(value)));
+                    break;
+            }
+            
+            updatePropertyPanel();
+        }
+        
+        function handleTextPropertyChange(event) { // 新增
+            if (!selectedText) return;
+
+            const value = event.target.value;
+            const id = event.target.id;
+
+            switch (id) {
+                case 'text-content-edit':
+                    selectedText.text = value;
+                    break;
+                case 'text-color':
+                    selectedText.color = value;
+                    break;
+                case 'text-font-size':
+                    selectedText.fontSize = parseInt(value, 10);
+                    document.getElementById('font-size-display').textContent = selectedText.fontSize;
+                    break;
+            }
+            // Text property changes do not affect area, only redrawing is needed
+        }
+
+
+        function handleModeChange(event) {
+            if (!selectedShape) return;
+            const newMode = event.currentTarget.dataset.mode;
+            selectedShape.mode = newMode;
+            updatePropertyPanel();
+        }
+        
+        // --- Core Mouse/Touch Handlers ---
+
+        function handleMouseDown(event) {
+            // 觸控事件不需要 mouse down, 由 touchstart 處理
+            // if (event.touches) return; // <--- 移除此行檢查，以允許來自 handleTouchStart 的偽事件 (pseudo-event)
+            
+            event.preventDefault();
+            const pos = getEventPos(event);
+            const eraseTolerance = 30 / scale;
+
+            if (isErasing) {
+                isDrawing = true;
+                const erasePoint = { x: pos.x, y: pos.y };
+                annotations = annotations.filter(ann => !ann.containsPoint(erasePoint.x, erasePoint.y, eraseTolerance));
+                textLabels = textLabels.filter(txt => !txt.containsPoint(erasePoint.x, erasePoint.y, eraseTolerance));
+                return;
+            }
+
+            if (interactionMode === 'drawing') {
+                isDrawing = true;
+                if (drawingMode === 'freehand') {
+                    currentAnnotation = { points: [pos], color: penColor, width: penWidth };
+                } else if (drawingMode === 'straightLine') {
+                    straightLineStart = pos;
+                    straightLineEnd = pos;
+                }
+                clearSelection();
+                return;
+            }
+            
+            // 1. Check Controls (only on selectedShape)
+            if (selectedShape) {
+                const controlType = selectedShape.checkControls(pos.x, pos.y);
+                if (controlType === 'resize') { isResizing = true; return; } 
+                if (controlType === 'rotate') { isRotating = true; return; }
+            }
+            
+            // 2. Check Text Label Selection/Drag (最高優先級，確保文字易於選取)
+            let foundText = null;
+            for (let i = textLabels.length - 1; i >= 0; i--) {
+                if (textLabels[i].containsPoint(pos.x, pos.y)) {
+                    foundText = textLabels[i];
+                    break;
+                }
+            }
+            if (foundText) {
+                isDragging = true;
+                setSelectedText(foundText);
+                dragOffsetX = pos.x - foundText.x;
+                dragOffsetY = pos.y - foundText.y;
+                canvas.style.cursor = 'move';
+                return;
+            }
+
+            // 3. Check Geometric Shape Selection/Drag
+            let foundShape = null;
+            for (let i = shapes.length - 1; i >= 0; i--) {
+                if (shapes[i].containsPoint(pos.x, pos.y)) {
+                    foundShape = shapes[i];
+                    break;
+                }
+            }
+            if (foundShape) {
+                isDragging = true;
+                setSelectedShape(foundShape);
+                dragOffsetX = pos.x - foundShape.x;
+                dragOffsetY = pos.y - foundShape.y;
+                canvas.style.cursor = 'move';
+                return;
+            }
+
+            // 4. Check Annotation Selection/Drag
+            let foundAnnotation = null;
+            for (let i = annotations.length - 1; i >= 0; i--) {
+                if (annotations[i].containsPoint(pos.x, pos.y)) {
+                    foundAnnotation = annotations[i];
+                    break;
+                }
+            }
+            if (foundAnnotation) {
+                isDragging = true;
+                setSelectedAnnotation(foundAnnotation);
+                dragOffsetX = pos.x - foundAnnotation.x;
+                dragOffsetY = pos.y - foundAnnotation.y;
+                canvas.style.cursor = 'move';
+                return;
+            }
+
+            // 5. Start Panning
+            clearSelection();
+            isPanning = true;
+            dragOffsetX = pos.clientX - translateX;
+            dragOffsetY = pos.clientY - translateY;
+            canvas.style.cursor = 'grab';
+        }
+
+        function handleMouseMove(event) {
+            // 觸控事件不需要 mouse move
+            // if (event.touches) return; // <--- 移除此行檢查
+
+            const pos = getEventPos(event);
+            const eraseTolerance = 30 / scale;
+
+            // 橡皮擦模式：持續清除
+            if (isErasing && isDrawing) {
+                const erasePoint = { x: pos.x, y: pos.y };
+                annotations = annotations.filter(ann => !ann.containsPoint(erasePoint.x, erasePoint.y, eraseTolerance));
+                textLabels = textLabels.filter(txt => !txt.containsPoint(erasePoint.x, erasePoint.y, eraseTolerance));
+                return;
+            }
+
+            // Drawing Mode: Update current line points
+            if (interactionMode === 'drawing' && isDrawing) {
+                if (drawingMode === 'freehand') {
+                    if (currentAnnotation) { currentAnnotation.points.push(pos); }
+                } else if (drawingMode === 'straightLine') {
+                    straightLineEnd = pos;
+                }
+                return;
+            }
+
+            // Interaction Mode: Drag/Resize/Pan Logic
+            if (isResizing && selectedShape) {
+                const dx = pos.x - selectedShape.x;
+                const dy = pos.y - selectedShape.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (selectedShape.type === 'Circle' || selectedShape.type === 'Sector') {
+                    selectedShape.r = dist;
+                } else {
+                    const scaleFactor = dist / Math.sqrt(selectedShape.w * selectedShape.w / 4 + selectedShape.h * selectedShape.h / 4);
+                    selectedShape.w *= scaleFactor;
+                    selectedShape.h *= scaleFactor;
+                }
+                updatePropertyPanel();
+            } else if (isRotating && selectedShape) {
+                const angle = Math.atan2(pos.y - selectedShape.y, pos.x - selectedShape.x);
+                selectedShape.rotation = angle + Math.PI / 2; 
+                updatePropertyPanel();
+            } else if (isDragging) {
+                if (selectedShape) {
+                    selectedShape.x = pos.x - dragOffsetX;
+                    selectedShape.y = pos.y - dragOffsetY;
+                } else if (selectedAnnotation) {
+                    selectedAnnotation.x = pos.x - dragOffsetX;
+                    selectedAnnotation.y = pos.y - dragOffsetY;
+                } else if (selectedText) { // 新增
+                    selectedText.x = pos.x - dragOffsetX;
+                    selectedText.y = pos.y - dragOffsetY;
+                }
+            } else if (isPanning) {
+                translateX = pos.clientX - dragOffsetX;
+                translateY = pos.clientY - dragOffsetY;
+            } else {
+                // Preview Cursor (Mouse only)
+                let controlType = (selectedShape) ? selectedShape.checkControls(pos.x, pos.y) : null;
+
+                if (isErasing) { canvas.style.cursor = 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\'><path d=\'M24.7 9.3l-12-12-12 12 12 12 12-12zM21.5 12.5l-9.5 9.5-9.5-9.5 9.5-9.5 9.5 9.5z\' fill=\'#000\' stroke=\'#fff\' stroke-width=\'2\'/></svg>"), auto'; }
+                else if (interactionMode === 'drawing') { canvas.style.cursor = 'crosshair'; }
+                else if (controlType === 'resize') { canvas.style.cursor = 'nwse-resize'; } 
+                else if (controlType === 'rotate') { canvas.style.cursor = 'crosshair'; } 
+                else if (selectedShape || selectedAnnotation || selectedText) { canvas.style.cursor = 'move'; } 
+                else { canvas.style.cursor = 'default'; }
+            }
+        }
+
+        function handleMouseUp(event) {
+            // 觸控事件不需要 mouse up, 由 touchend 處理
+            // if (event.touches) return; // <--- 移除此行檢查
+
+            // Drawing Finalization
+            if (interactionMode === 'drawing' && isDrawing) {
+                if (drawingMode === 'freehand') {
+                    if (currentAnnotation && currentAnnotation.points.length > 1) {
+                        createAnnotation(currentAnnotation.points, currentAnnotation.color, currentAnnotation.width);
+                    }
+                } else if (drawingMode === 'straightLine' && straightLineStart && straightLineEnd) {
+                    const points = [straightLineStart, straightLineEnd];
+                    createAnnotation(points, penColor, penWidth);
+                    straightLineStart = null;
+                    straightLineEnd = null;
+                }
+            }
+
+            isDragging = false;
+            isResizing = false;
+            isRotating = false;
+            isPanning = false;
+            isDrawing = false;
+            currentAnnotation = null;
+
+            // Reset cursor after erasing/drawing
+            if (!isErasing && interactionMode === 'drawing') {
+                canvas.style.cursor = 'crosshair';
+            } else if (!isErasing && interactionMode === 'geometry') {
+                canvas.style.cursor = 'default';
+            }
+        }
+        
+        // --- Touch Handlers (Wrapping Mouse/Core logic) ---
+        function handleTouchStart(event) {
+            event.preventDefault(); // Prevent default browser scroll/zoom on touch
+            if (event.touches.length > 1) {
+                // Multi-touch gestures are ignored for now, focusing on single-touch interactions
+                return;
+            }
+            const touch = event.touches[0];
+            // Create a pseudo-mouse event for the core handler
+            const pseudoEvent = {
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                preventDefault: function() { event.preventDefault(); }, // 修正：正確包裝 preventDefault
+                touches: event.touches, 
+                ctrlKey: false, 
+                metaKey: false
+            };
+            handleMouseDown(pseudoEvent);
+        }
+
+        function handleTouchMove(event) {
+            event.preventDefault();
+            if (event.touches.length > 1) return;
+            
+            const touch = event.touches[0];
+            const pseudoEvent = {
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                preventDefault: function() { event.preventDefault(); }, // 修正：正確包裝 preventDefault
+                touches: event.touches 
+            };
+            handleMouseMove(pseudoEvent);
+        }
+
+        function handleTouchEnd(event) {
+            // When a touch ends, call handleMouseUp. It signals the end of drag/draw.
+            handleMouseUp(event);
+        }
+        // --- End Touch Handlers ---
+
+
+        function handleWheel(event) {
+            event.preventDefault();
+            const scaleFactor = 1.1;
+            
+            if (event.ctrlKey || event.metaKey) {
+                const pos = getEventPos(event);
+                const oldScale = scale;
+                scale = event.deltaY < 0 ? scale * scaleFactor : scale / scaleFactor;
+                
+                translateX = pos.x * scale - pos.x * oldScale + translateX;
+                translateY = pos.y * scale - pos.y * oldScale + translateY;
+            } else {
+                translateY -= event.deltaY;
+            }
+        }
+
+        function setupEventListeners() {
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('mouseleave', handleMouseUp);
+            canvas.addEventListener('wheel', handleWheel); 
+            
+            // 綁定觸控事件
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd);
+            
+            document.querySelectorAll('.add-shape-btn').forEach(button => {
+                button.addEventListener('click', handleAddShape);
+            });
+            
+            document.getElementById('add-text-btn').addEventListener('click', handleAddText); // 新增
+            document.getElementById('delete-text-btn').addEventListener('click', handleDeleteShape); // 使用通用刪除
+
+            // --- 更新的工具列事件綁定 ---
+            document.getElementById('toggle-text-mode-btn').addEventListener('click', handleToggleTextMode); // 新增
+            document.getElementById('toggle-drawing-mode-btn').addEventListener('click', handleToggleDrawingMode);
+            document.getElementById('toggle-eraser-mode-btn').addEventListener('click', handleToggleEraserMode); 
+            // --- (舊的 'toggle-interaction-mode-btn' 已被移除) ---
+
+            document.querySelectorAll('.pen-mode-btn').forEach(btn => btn.addEventListener('click', handlePenModeChange));
+            document.getElementById('pen-color').addEventListener('input', (e) => { penColor = e.target.value; });
+            document.getElementById('pen-width').addEventListener('input', (e) => {
+                penWidth = parseInt(e.target.value, 10);
+                document.getElementById('width-display').textContent = penWidth;
+            });
+            document.getElementById('clear-annotations-btn').addEventListener('click', handleClearAnnotations);
+
+            document.getElementById('delete-shape-btn').addEventListener('click', handleDeleteShape);
+            
+            // 綁定新的圖層控制按鈕
+            document.getElementById('bring-to-front-btn').addEventListener('click', handleBringToFront);
+            document.getElementById('send-to-back-btn').addEventListener('click', handleSendToBack);
+            document.getElementById('move-up-btn').addEventListener('click', handleMoveUp);
+            document.getElementById('move-down-btn').addEventListener('click', handleMoveDown);
+            
+            document.getElementById('shape-color').addEventListener('input', handlePropertyChange);
+            document.getElementById('shape-alpha').addEventListener('input', handlePropertyChange);
+            document.getElementById('shape-dim1').addEventListener('input', handlePropertyChange);
+            document.getElementById('shape-dim2').addEventListener('input', handlePropertyChange);
+            
+            // 三角形頂點偏移控制 (新增/修改)
+            document.getElementById('shape-apex-offset-value').addEventListener('input', handlePropertyChange); 
+            document.getElementById('shape-apex-offset-slider').addEventListener('input', handlePropertyChange); 
+            
+            document.getElementById('sector-angle').addEventListener('input', handlePropertyChange);
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.addEventListener('click', handleModeChange));
+            document.getElementById('clear-canvas-btn').addEventListener('click', handleClearCanvas);
+            document.getElementById('reset-view-btn').addEventListener('click', handleResetView);
+            
+            // 文字編輯事件監聽 (新增)
+            document.getElementById('text-content-edit').addEventListener('input', handleTextPropertyChange);
+            document.getElementById('text-color').addEventListener('input', handleTextPropertyChange);
+            document.getElementById('text-font-size').addEventListener('input', handleTextPropertyChange);
+        }
+        
+        // 啟動應用程式
+        window.onload = () => {
+            initCanvas();
+            // 預設啟動選取模式 (已在 initCanvas 中調用)
+            // updateInteractionToolsUI(); 
+        };
+
+    </script>
+</body>
+</html>
+
+
