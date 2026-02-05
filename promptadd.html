@@ -4,22 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 協作教學提示詞庫</title>
+    <!-- 字型與圖示庫 -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
     <style>
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #f0fdf4; }
+        
+        /* 捲軸樣式 */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* 卡片互動 */
         .card-hover { transition: all 0.3s ease; }
         .card-hover:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        /* 載入動畫 */
         .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #0d9488; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        /* Toast Animation */
+
+        /* 提示訊息動畫 */
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
         .toast { animation: slideIn 0.3s ease-out forwards; }
@@ -28,7 +37,7 @@
 </head>
 <body class="text-gray-800 min-h-screen flex flex-col">
 
-    <!-- 頁首 -->
+    <!-- 頁首導航列 -->
     <header class="bg-teal-600 text-white shadow-lg sticky top-0 z-40">
         <div class="container mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3 w-full md:w-auto">
@@ -42,14 +51,16 @@
             <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
                 <!-- 排序選單 -->
                 <div class="relative">
-                    <select id="sort-select" onchange="handleSortChange()" class="appearance-none bg-teal-700 text-white pl-3 pr-8 py-1.5 rounded-lg text-sm font-medium hover:bg-teal-800 transition-colors focus:outline-none cursor-pointer">
+                    <select id="sort-select" onchange="handleSortChange()" class="appearance-none bg-teal-700 text-white pl-3 pr-8 py-1.5 rounded-lg text-sm font-medium hover:bg-teal-800 transition-colors focus:outline-none cursor-pointer border border-teal-600">
                         <option value="newest">最新優先</option>
                         <option value="oldest">最舊優先</option>
+                        <option value="id_asc">ID 數字升冪 (小到大)</option>
+                        <option value="id_desc">ID 數字降冪 (大到小)</option>
                     </select>
                     <i class="ph ph-caret-down absolute right-2 top-1/2 transform -translate-y-1/2 text-teal-300 pointer-events-none"></i>
                 </div>
 
-                <!-- 分類按鈕區 -->
+                <!-- 分類篩選按鈕 -->
                 <div class="flex space-x-1 bg-teal-700 p-1 rounded-lg overflow-x-auto max-w-full">
                     <button onclick="filterPrompts('all')" id="btn-all" class="filter-btn px-3 py-1.5 rounded-md text-sm font-medium bg-white text-teal-700 transition-colors whitespace-nowrap">全部</button>
                     <button onclick="filterPrompts('gemini')" id="btn-gemini" class="filter-btn px-3 py-1.5 rounded-md text-sm font-medium text-white hover:bg-teal-600 transition-colors whitespace-nowrap">Gemini</button>
@@ -58,9 +69,9 @@
                     <button onclick="filterPrompts('other')" id="btn-other" class="filter-btn px-3 py-1.5 rounded-md text-sm font-medium text-white hover:bg-teal-600 transition-colors whitespace-nowrap">其他</button>
                 </div>
                 
-                <!-- 管理員/新增按鈕 -->
-                <div class="flex items-center gap-2">
-                    <button id="admin-login-btn" onclick="openAdminModal()" class="flex items-center justify-center w-9 h-9 bg-teal-800 hover:bg-teal-900 text-teal-200 rounded-lg transition-colors" title="管理員登入">
+                <!-- 管理員與新增按鈕 -->
+                <div class="flex items-center gap-2 border-l border-teal-500 pl-3 ml-1">
+                    <button id="admin-login-btn" onclick="openAdminModal()" class="flex items-center justify-center w-9 h-9 bg-teal-800 hover:bg-teal-900 text-teal-200 rounded-lg transition-colors shadow-sm" title="管理員登入">
                         <i class="ph ph-lock-key text-lg"></i>
                     </button>
                     <button id="add-btn" onclick="openAddModal()" class="hidden flex items-center gap-1 bg-yellow-400 hover:bg-yellow-500 text-teal-900 px-4 py-2 rounded-lg font-bold shadow-md transition-colors text-sm whitespace-nowrap">
@@ -77,17 +88,21 @@
         <div class="max-w-xl mx-auto mb-8 relative flex items-center gap-2">
             <div class="relative w-full">
                 <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl"></i>
-                <input type="text" id="searchInput" placeholder="搜尋提示詞關鍵字..." class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-sm transition-shadow">
+                <input type="text" id="searchInput" placeholder="搜尋提示詞標題、內容或摘要..." class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-sm transition-shadow">
             </div>
             <div id="connection-status" class="text-sm text-gray-500 whitespace-nowrap hidden md:block"></div>
         </div>
 
-        <!-- 載入與卡片區 -->
+        <!-- 狀態顯示 -->
         <div id="loading-state" class="hidden text-center py-10">
             <div class="loader mx-auto mb-4"></div>
-            <p class="text-gray-500">正在從 Google Drive 載入資料...</p>
+            <p class="text-gray-500">正在從雲端載入資料...</p>
         </div>
+        
+        <!-- 卡片容器 -->
         <div id="cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        
+        <!-- 空狀態 -->
         <div id="empty-state" class="hidden text-center py-20">
             <i class="ph ph-smiley-sad text-6xl text-gray-300 mb-4"></i>
             <p class="text-gray-500 text-lg">找不到相關的提示詞。</p>
@@ -99,7 +114,7 @@
         <p>© 2024 AI 協作教學提示詞庫 | Powered by Google Apps Script API</p>
     </footer>
 
-    <!-- View Modal -->
+    <!-- 查看詳細內容 Modal -->
     <div id="modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-300" id="modal-content">
             <div class="flex justify-between items-start p-6 border-b border-gray-100">
@@ -107,74 +122,114 @@
                     <span id="modal-tag" class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-teal-100 text-teal-700 mb-2">標籤</span>
                     <h3 id="modal-title" class="text-2xl font-bold text-gray-800">標題</h3>
                 </div>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"><i class="ph ph-x text-2xl"></i></button>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="ph ph-x text-2xl"></i>
+                </button>
             </div>
             <div class="p-6 overflow-y-auto bg-gray-50 flex-grow">
-                <div class="bg-white border border-gray-200 rounded-lg p-4 relative">
+                <div class="bg-white border border-gray-200 rounded-lg p-4 relative group">
                     <pre id="modal-text" class="whitespace-pre-wrap font-sans text-gray-700 text-base leading-relaxed break-words"></pre>
-                    <button onclick="copyFromModal()" class="absolute top-2 right-2 p-2 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-600" title="複製"><i class="ph ph-copy text-lg"></i></button>
+                    <button onclick="copyFromModal()" class="absolute top-2 right-2 p-2 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-600 transition-colors opacity-0 group-hover:opacity-100" title="複製內容">
+                        <i class="ph ph-copy text-lg"></i>
+                    </button>
                 </div>
-                <div id="modal-note" class="mt-4 text-sm text-gray-500 italic"><i class="ph ph-info mr-1"></i> 您可以修改括號 {} 內的內容。</div>
+                <div id="modal-note" class="mt-4 text-sm text-gray-500 italic">
+                    <i class="ph ph-info mr-1"></i> 您可以根據實際教學情境，修改括號 {} 內的內容。
+                </div>
                 <div id="modal-link-container" class="mt-6 hidden">
-                    <a id="modal-link-btn" href="#" target="_blank" class="block w-full text-center bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg"><i class="ph ph-arrow-square-out mr-2"></i>前往網站工具</a>
+                    <a id="modal-link-btn" href="#" target="_blank" class="block w-full text-center bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-sm">
+                        <i class="ph ph-arrow-square-out mr-2"></i>前往網站工具
+                    </a>
                 </div>
             </div>
             <div class="p-4 border-t border-gray-100 flex justify-end gap-3 bg-white rounded-b-xl">
-                <button onclick="closeModal()" class="px-5 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium">關閉</button>
-                <button onclick="copyFromModal()" class="px-5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-medium shadow-md flex items-center"><i class="ph ph-copy mr-2"></i> 複製</button>
+                <button onclick="closeModal()" class="px-5 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium transition-colors">關閉</button>
+                <button onclick="copyFromModal()" class="px-5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-medium shadow-md shadow-teal-200 transition-colors flex items-center">
+                    <i class="ph ph-copy mr-2"></i> 複製提示詞
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Admin Login Modal -->
+    <!-- 管理員登入 Modal -->
     <div id="admin-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm transform scale-95 transition-transform duration-300">
             <div class="p-6">
-                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="ph ph-lock-key-open text-teal-600"></i> 管理員登入</h3>
-                <p class="text-sm text-gray-500 mb-4">請輸入密碼以啟用新增與刪除功能。</p>
-                <input type="password" id="admin-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 mb-4" placeholder="密碼 (預設: 1234)">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="ph ph-lock-key-open text-teal-600"></i> 管理員登入
+                </h3>
+                <p class="text-sm text-gray-500 mb-4">請輸入密碼以啟用新增、修改與刪除功能。</p>
+                <input type="password" id="admin-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 mb-4 outline-none" placeholder="密碼 (預設: 1234)" onkeyup="if(event.key === 'Enter') verifyAdmin()">
                 <div class="flex justify-end gap-2">
-                    <button onclick="closeAdminModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">取消</button>
-                    <button onclick="verifyAdmin()" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg">確認</button>
+                    <button onclick="closeAdminModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
+                    <button onclick="verifyAdmin()" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors shadow-sm">確認</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Add Modal -->
+    <!-- 新增/修改 Modal -->
     <div id="add-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-300">
             <div class="flex justify-between items-center p-6 border-b border-gray-100 bg-teal-50 rounded-t-xl">
-                <h3 class="text-xl font-bold text-teal-800 flex items-center gap-2"><i class="ph ph-plus-circle"></i> 新增提示詞</h3>
-                <button onclick="closeAddModal()" class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-2xl"></i></button>
+                <h3 id="form-modal-title" class="text-xl font-bold text-teal-800 flex items-center gap-2">
+                    <i class="ph ph-plus-circle"></i> 新增提示詞
+                </h3>
+                <button onclick="closeAddModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="ph ph-x text-2xl"></i>
+                </button>
             </div>
+            
             <form id="addForm" onsubmit="handleFormSubmit(event)" class="p-6 overflow-y-auto flex-grow space-y-4">
+                <input type="hidden" id="edit-id" value="">
+                
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">分類</label>
-                    <select id="add-category-select" onchange="handleCategoryChange()" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 bg-white">
+                    <select id="add-category-select" onchange="handleCategoryChange()" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white outline-none">
                         <option value="gemini">Gemini</option>
                         <option value="edu">E度</option>
                         <option value="tools">教科書廠商</option>
                         <option value="other">其他</option>
                         <option value="custom">✍️ 自訂分類...</option>
                     </select>
-                    <input type="text" id="add-category-custom" class="w-full mt-2 px-4 py-2 border border-teal-300 rounded-lg focus:ring-2 focus:ring-teal-500 bg-teal-50 hidden" placeholder="請輸入自訂分類名稱">
+                    <input type="text" id="add-category-custom" class="w-full mt-2 px-4 py-2 border border-teal-300 rounded-lg focus:ring-2 focus:ring-teal-500 bg-teal-50 hidden outline-none" placeholder="請輸入自訂分類名稱">
                 </div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">標題</label><input type="text" id="add-title" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"></div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">摘要</label><input type="text" id="add-desc" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"></div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">內容 / 網址</label><textarea id="add-content" required rows="5" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"></textarea></div>
-                <div class="flex items-center gap-2"><input type="checkbox" id="add-islink" class="w-4 h-4 text-teal-600"><label for="add-islink" class="text-sm text-gray-700">這是一個外部網址連結</label></div>
-                <div class="pt-2"><button type="submit" id="submit-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg shadow-md flex justify-center items-center gap-2"><span>儲存資料</span></button></div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">標題</label>
+                    <input type="text" id="add-title" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none" placeholder="例如：班級經營策略">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">簡短摘要</label>
+                    <input type="text" id="add-desc" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none" placeholder="一句話描述這個提示詞的用途">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">內容 / 網址</label>
+                    <textarea id="add-content" required rows="6" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none" placeholder="輸入完整的提示詞內容，或是工具的網址連結"></textarea>
+                </div>
+                
+                <div class="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <input type="checkbox" id="add-islink" class="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500 cursor-pointer">
+                    <label for="add-islink" class="text-sm text-gray-700 cursor-pointer select-none">這是一個外部網址連結 (勾選後內容將作為連結開啟)</label>
+                </div>
+                
+                <div class="pt-2">
+                    <button type="submit" id="submit-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-colors flex justify-center items-center gap-2">
+                        <span>儲存資料</span>
+                    </button>
+                </div>
             </form>
         </div>
     </div>
 
-    <!-- Toast -->
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+    <!-- 訊息通知 -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <script>
         // ==========================================
-        // 設定區
+        // 設定區：請在這裡填入你的 Google Apps Script 網址
         // ==========================================
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxTnNRa578exS7uA2eVVhg_mBdo-HlULltPdoeAp6anyalvvdKfnoeaxCRkizWlEQKD/exec";
         const ADMIN_PASSWORD = "671025"; // 簡易密碼設定
@@ -185,37 +240,47 @@
         let currentSort = 'newest';
         let isAdmin = false;
 
+        // 初始化
         document.addEventListener('DOMContentLoaded', () => {
             if (GAS_API_URL.includes("在此處貼上")) {
-                showToast("請先設定 GAS_API_URL", "error");
-                document.getElementById('connection-status').innerHTML = '<span class="text-red-500 font-bold">API 未設定</span>';
+                showToast("請先在程式碼中設定 GAS_API_URL", "error");
+                document.getElementById('connection-status').innerHTML = '<span class="text-red-500 font-bold px-2 py-1 bg-red-100 rounded">API 未設定</span>';
             } else {
                 fetchData();
             }
-            document.getElementById('searchInput').addEventListener('input', (e) => renderCards(currentFilter, e.target.value));
+            
+            // 搜尋監聽
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                renderCards(currentFilter, e.target.value);
+            });
         });
 
-        // 1. 資料操作 (Fetch & Post)
+        // 1. 資料操作 (Fetch & CRUD)
         async function fetchData() {
             const loading = document.getElementById('loading-state');
             const status = document.getElementById('connection-status');
+            
             loading.classList.remove('hidden');
-            status.innerHTML = '<span class="flex items-center gap-1 text-yellow-600"><span class="w-2 h-2 rounded-full bg-yellow-500"></span> 連線中...</span>';
+            status.innerHTML = '<span class="flex items-center gap-1 text-yellow-600 bg-yellow-50 px-2 py-1 rounded text-xs"><span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span> 連線中...</span>';
 
             try {
                 const response = await fetch(GAS_API_URL);
                 const data = await response.json();
+                
                 promptsData = data;
                 sortData(); // 初始排序
                 renderCards();
+                
                 loading.classList.add('hidden');
-                status.innerHTML = '<span class="flex items-center gap-1 text-green-600"><span class="w-2 h-2 rounded-full bg-green-500"></span> 連線正常</span>';
+                status.innerHTML = '<span class="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded text-xs"><span class="w-2 h-2 rounded-full bg-green-500"></span> 連線正常</span>';
             } catch (error) {
                 console.error('Fetch Error:', error);
                 loading.classList.add('hidden');
-                status.innerHTML = '<span class="flex items-center gap-1 text-red-600"><span class="w-2 h-2 rounded-full bg-red-500"></span> 連線失敗</span>';
-                showToast('讀取失敗', 'error');
-                promptsData = getFallbackData(); // 使用備用資料
+                status.innerHTML = '<span class="flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded text-xs"><span class="w-2 h-2 rounded-full bg-red-500"></span> 連線失敗</span>';
+                showToast('讀取失敗，請檢查網址或權限', 'error');
+                
+                // 載入備用資料以免畫面空白
+                promptsData = getFallbackData();
                 renderCards();
             }
         }
@@ -224,42 +289,62 @@
             e.preventDefault();
             const btn = document.getElementById('submit-btn');
             const originalText = btn.innerHTML;
+            
+            if (GAS_API_URL.includes("在此處貼上")) {
+                alert("請先設定 GAS_API_URL");
+                return;
+            }
+
             btn.innerHTML = '<div class="loader w-4 h-4 border-2 border-white border-t-transparent"></div> 處理中...';
             btn.disabled = true;
 
-            // 處理分類 (下拉或自訂)
+            const editId = document.getElementById('edit-id').value;
+            const isEdit = !!editId;
+
+            // 處理分類 (下拉選單或自訂)
             const selectVal = document.getElementById('add-category-select').value;
             const customVal = document.getElementById('add-category-custom').value;
             const finalCategory = (selectVal === 'custom') ? (customVal || '其他') : selectVal;
 
+            const payloadData = {
+                id: isEdit ? editId : Date.now(),
+                category: finalCategory,
+                title: document.getElementById('add-title').value,
+                desc: document.getElementById('add-desc').value,
+                content: document.getElementById('add-content').value,
+                isLink: document.getElementById('add-islink').checked
+            };
+
             const payload = {
-                action: 'add',
-                data: {
-                    id: Date.now(),
-                    category: finalCategory,
-                    title: document.getElementById('add-title').value,
-                    desc: document.getElementById('add-desc').value,
-                    content: document.getElementById('add-content').value,
-                    isLink: document.getElementById('add-islink').checked
-                }
+                action: isEdit ? 'edit' : 'add',
+                data: payloadData
             };
 
             try {
+                // 使用 text/plain 避免 CORS 預檢
                 await fetch(GAS_API_URL, {
                     method: 'POST',
                     body: JSON.stringify(payload),
                     headers: { "Content-Type": "text/plain" }
                 });
-                promptsData.unshift(payload.data);
+
+                // 更新本地資料 (樂觀更新)
+                if (isEdit) {
+                    const index = promptsData.findIndex(p => String(p.id) === String(editId));
+                    if (index !== -1) promptsData[index] = payloadData;
+                    showToast('修改成功！');
+                } else {
+                    promptsData.unshift(payloadData);
+                    showToast('新增成功！');
+                }
+
                 sortData();
                 renderCards(currentFilter, document.getElementById('searchInput').value);
                 closeAddModal();
-                document.getElementById('addForm').reset();
-                // Reset category input visibility
-                handleCategoryChange();
-                showToast('新增成功！');
+
             } catch (error) {
-                showToast('儲存失敗', 'error');
+                console.error('Post Error:', error);
+                showToast(isEdit ? '修改失敗，請檢查網路' : '新增失敗，請檢查網路', 'error');
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
@@ -270,14 +355,15 @@
             if(event) event.stopPropagation();
             if(!confirm('確定要刪除這個提示詞嗎？此動作無法復原。')) return;
 
-            const payload = { action: 'delete', id: id };
-            
-            // 樂觀 UI 更新：先從畫面移除
+            // 備份以便失敗時還原
             const originalData = [...promptsData];
-            promptsData = promptsData.filter(p => p.id != id);
+            
+            // 樂觀更新：先從畫面移除
+            promptsData = promptsData.filter(p => String(p.id) !== String(id));
             renderCards(currentFilter, document.getElementById('searchInput').value);
 
             try {
+                const payload = { action: 'delete', id: id };
                 await fetch(GAS_API_URL, {
                     method: 'POST',
                     body: JSON.stringify(payload),
@@ -285,11 +371,42 @@
                 });
                 showToast('已刪除');
             } catch (error) {
-                // 失敗則復原
+                // 失敗則還原
                 promptsData = originalData;
                 renderCards(currentFilter, document.getElementById('searchInput').value);
-                showToast('刪除失敗', 'error');
+                showToast('刪除失敗，請檢查網路', 'error');
             }
+        }
+
+        // 開啟編輯 Modal
+        function openEditModal(id, event) {
+            if(event) event.stopPropagation();
+            
+            const item = promptsData.find(p => String(p.id) === String(id));
+            if (!item) return;
+
+            document.getElementById('form-modal-title').innerHTML = '<i class="ph ph-pencil-simple text-lg"></i> 修改提示詞';
+            document.getElementById('edit-id').value = item.id;
+            document.getElementById('add-title').value = item.title;
+            document.getElementById('add-desc').value = item.desc;
+            document.getElementById('add-content').value = item.content;
+            document.getElementById('add-islink').checked = item.isLink;
+
+            const select = document.getElementById('add-category-select');
+            const customInput = document.getElementById('add-category-custom');
+            
+            // 檢查是否為標準分類
+            const standardCats = ['gemini', 'edu', 'tools', 'other'];
+            if (standardCats.includes(item.category)) {
+                select.value = item.category;
+                customInput.classList.add('hidden');
+            } else {
+                select.value = 'custom';
+                customInput.value = item.category;
+                customInput.classList.remove('hidden');
+            }
+
+            openAddModal();
         }
 
         // 2. 排序與篩選
@@ -301,23 +418,36 @@
 
         function sortData() {
             promptsData.sort((a, b) => {
-                // id is timestamp-based, so bigger id = newer
-                if (currentSort === 'newest') return b.id - a.id;
-                if (currentSort === 'oldest') return a.id - b.id;
+                const idA = Number(a.id);
+                const idB = Number(b.id);
+                
+                if (currentSort === 'newest') return idB - idA;
+                if (currentSort === 'oldest') return idA - idB;
+                if (currentSort === 'id_asc') return idA - idB;
+                if (currentSort === 'id_desc') return idB - idA;
                 return 0;
             });
         }
 
         function filterPrompts(cat) {
             currentFilter = cat;
+            
+            // 更新按鈕樣式
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 const isActive = btn.id === `btn-${cat}`;
-                btn.className = `filter-btn px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${isActive ? 'bg-white text-teal-700' : 'text-white hover:bg-teal-600'}`;
+                if (isActive) {
+                    btn.classList.remove('bg-teal-600', 'text-white', 'hover:bg-teal-600');
+                    btn.classList.add('bg-white', 'text-teal-700', 'shadow-sm');
+                } else {
+                    btn.classList.add('text-white', 'hover:bg-teal-600');
+                    btn.classList.remove('bg-white', 'text-teal-700', 'shadow-sm');
+                }
             });
+
             renderCards(cat, document.getElementById('searchInput').value);
         }
 
-        // 3. UI 渲染
+        // 3. UI 渲染邏輯
         const categoryConfig = {
             'gemini': { name: 'Gemini', color: 'bg-blue-100 text-blue-800', icon: 'ph-sparkle' },
             'edu': { name: 'E度', color: 'bg-green-100 text-green-800', icon: 'ph-student' },
@@ -330,13 +460,15 @@
             container.innerHTML = '';
             
             const filtered = promptsData.filter(item => {
-                // 處理分類過濾：如果是標準分類則精確比對，如果是 'other' 或自訂，則非標準分類都算
+                // 處理分類過濾
                 let matchesCat = false;
                 if (filter === 'all') matchesCat = true;
                 else if (['gemini', 'edu', 'tools'].includes(filter)) matchesCat = (item.category === filter);
                 else if (filter === 'other') matchesCat = !['gemini', 'edu', 'tools'].includes(item.category);
 
+                // 處理搜尋過濾
                 const matchesSearch = (item.title+item.desc+item.content).toLowerCase().includes(searchQuery.toLowerCase());
+                
                 return matchesCat && matchesSearch;
             });
 
@@ -344,35 +476,45 @@
                 document.getElementById('empty-state').classList.remove('hidden');
             } else {
                 document.getElementById('empty-state').classList.add('hidden');
+                
                 filtered.forEach(item => {
                     const card = document.createElement('div');
                     card.className = 'bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative card-hover flex flex-col h-full cursor-pointer group/card';
-                    card.onclick = (e) => { if(!e.target.closest('button')) openModal(item); };
+                    card.onclick = (e) => { 
+                        // 如果點擊的是按鈕，不要開啟 Modal
+                        if(!e.target.closest('button')) openModal(item); 
+                    };
                     
-                    // 處理自訂分類樣式
+                    // 處理自訂分類的顯示樣式
                     const config = categoryConfig[item.category] || { 
                         name: item.category, 
                         color: 'bg-purple-100 text-purple-800', 
                         icon: 'ph-tag' 
                     };
 
-                    const deleteBtn = isAdmin ? `
-                        <button onclick="deletePrompt(${item.id}, event)" class="absolute top-2 right-2 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover/card:opacity-100" title="刪除">
-                            <i class="ph ph-trash text-lg"></i>
-                        </button>
+                    // 管理員按鈕 (修改/刪除)
+                    const adminBtns = isAdmin ? `
+                        <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity z-10">
+                            <button onclick="openEditModal(${item.id}, event)" class="p-2 bg-white/80 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-full transition-colors shadow-sm border border-gray-100" title="修改">
+                                <i class="ph ph-pencil-simple text-lg"></i>
+                            </button>
+                            <button onclick="deletePrompt(${item.id}, event)" class="p-2 bg-white/80 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors shadow-sm border border-gray-100" title="刪除">
+                                <i class="ph ph-trash text-lg"></i>
+                            </button>
+                        </div>
                     ` : '';
                     
                     card.innerHTML = `
-                        ${deleteBtn}
-                        <div class="flex justify-between items-start mb-4 pr-6">
-                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color} max-w-[150px] truncate">
+                        ${adminBtns}
+                        <div class="flex justify-between items-start mb-4 pr-16">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color} max-w-[150px] truncate border border-black/5">
                                 <i class="ph ${config.icon}"></i> ${config.name}
                             </span>
                         </div>
                         <h3 class="text-lg font-bold text-gray-800 mb-2 leading-tight">${item.title}</h3>
                         <p class="text-gray-500 text-sm mb-4 line-clamp-3 flex-grow">${item.desc}</p>
                         <div class="mt-auto pt-4 border-t border-gray-50 flex justify-between items-center">
-                            <button onclick="copyToClipboard('${(item.content||'').replace(/'/g,"\\'").replace(/\n/g,"\\n")}', event)" class="text-gray-400 hover:text-teal-600 transition-colors flex items-center gap-1 text-xs">
+                            <button onclick="copyToClipboard('${(item.content||'').replace(/'/g,"\\'").replace(/\n/g,"\\n")}', event)" class="text-gray-400 hover:text-teal-600 transition-colors flex items-center gap-1 text-xs px-2 py-1 rounded hover:bg-teal-50">
                                 <i class="ph ph-copy text-sm"></i> 快速複製
                             </button>
                             <span class="text-teal-600 text-sm font-medium flex items-center group">
@@ -385,7 +527,7 @@
             }
         }
 
-        // 4. Modal & Admin Logic
+        // 4. Modal 相關操作
         function handleCategoryChange() {
             const select = document.getElementById('add-category-select');
             const customInput = document.getElementById('add-category-custom');
@@ -399,17 +541,22 @@
 
         function openAdminModal() {
             if (isAdmin) {
-                // 如果已經登入，則登出
+                // 登出邏輯
                 isAdmin = false;
                 document.getElementById('add-btn').classList.add('hidden');
-                document.getElementById('admin-login-btn').classList.replace('bg-teal-600', 'bg-teal-800');
-                document.getElementById('admin-login-btn').innerHTML = '<i class="ph ph-lock-key text-lg"></i>';
+                const btn = document.getElementById('admin-login-btn');
+                btn.classList.replace('bg-teal-600', 'bg-teal-800');
+                btn.innerHTML = '<i class="ph ph-lock-key text-lg"></i>';
+                btn.title = "管理員登入";
                 showToast('已登出管理員模式');
                 renderCards(currentFilter, document.getElementById('searchInput').value);
             } else {
                 const modal = document.getElementById('admin-modal');
                 modal.classList.remove('hidden');
-                setTimeout(() => { modal.classList.remove('opacity-0'); modal.children[0].classList.replace('scale-95','scale-100'); }, 10);
+                setTimeout(() => { 
+                    modal.classList.remove('opacity-0'); 
+                    modal.children[0].classList.replace('scale-95','scale-100'); 
+                }, 10);
                 document.getElementById('admin-password').value = '';
                 document.getElementById('admin-password').focus();
             }
@@ -417,7 +564,8 @@
 
         function closeAdminModal() {
             const modal = document.getElementById('admin-modal');
-            modal.classList.add('opacity-0'); modal.children[0].classList.replace('scale-100','scale-95');
+            modal.classList.add('opacity-0'); 
+            modal.children[0].classList.replace('scale-100','scale-95');
             setTimeout(() => modal.classList.add('hidden'), 300);
         }
 
@@ -426,21 +574,23 @@
             if (pwd === ADMIN_PASSWORD) {
                 isAdmin = true;
                 document.getElementById('add-btn').classList.remove('hidden');
-                // 變更鎖頭圖示為開鎖狀態
                 const btn = document.getElementById('admin-login-btn');
                 btn.innerHTML = '<i class="ph ph-lock-key-open text-lg"></i>';
                 btn.classList.add('bg-teal-600'); 
+                btn.title = "登出管理員";
                 
                 closeAdminModal();
                 showToast('管理員登入成功！');
-                renderCards(currentFilter, document.getElementById('searchInput').value); // 重新渲染以顯示刪除按鈕
+                renderCards(currentFilter, document.getElementById('searchInput').value);
             } else {
                 showToast('密碼錯誤', 'error');
                 document.getElementById('admin-password').value = '';
+                document.getElementById('admin-password').classList.add('ring-2', 'ring-red-500');
+                setTimeout(() => document.getElementById('admin-password').classList.remove('ring-2', 'ring-red-500'), 500);
             }
         }
 
-        // Standard Modal Functions (Open/Close)
+        // 通用 Modal 開關
         const modal = document.getElementById('modal');
         const addModal = document.getElementById('add-modal');
         const adminModal = document.getElementById('admin-modal');
@@ -448,6 +598,7 @@
         function openModal(item) {
             document.getElementById('modal-title').innerText = item.title;
             document.getElementById('modal-text').innerText = item.content;
+            
             const config = categoryConfig[item.category] || { name: item.category, color: 'bg-purple-100 text-purple-800', icon: 'ph-tag' };
             document.getElementById('modal-tag').className = `inline-block px-3 py-1 text-xs font-bold rounded-full mb-2 ${config.color}`;
             document.getElementById('modal-tag').innerHTML = `<i class="ph ${config.icon} mr-1"></i>${config.name}`;
@@ -462,21 +613,40 @@
             }
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); modal.children[0].classList.replace('scale-95','scale-100'); }, 10);
-        }
-        function closeModal() {
-            modal.classList.add('opacity-0'); modal.children[0].classList.replace('scale-100','scale-95');
-            setTimeout(() => modal.classList.add('hidden'), 300);
-        }
-        function openAddModal() {
-            addModal.classList.remove('hidden');
-            setTimeout(() => { addModal.classList.remove('opacity-0'); addModal.children[0].classList.replace('scale-95','scale-100'); }, 10);
-        }
-        function closeAddModal() {
-            addModal.classList.add('opacity-0'); addModal.children[0].classList.replace('scale-100','scale-95');
-            setTimeout(() => addModal.classList.add('hidden'), 300);
+            document.body.style.overflow = 'hidden';
         }
 
-        // Close on background click
+        function closeModal() {
+            modal.classList.add('opacity-0'); 
+            modal.children[0].classList.replace('scale-100','scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); document.body.style.overflow = ''; }, 300);
+        }
+
+        function openAddModal() {
+            // 如果 ID 為空，表示是純新增，需要重置表單
+            if(!document.getElementById('edit-id').value) {
+                document.getElementById('form-modal-title').innerHTML = '<i class="ph ph-plus-circle text-lg"></i> 新增提示詞';
+                document.getElementById('addForm').reset();
+                document.getElementById('edit-id').value = '';
+                handleCategoryChange();
+            }
+            addModal.classList.remove('hidden');
+            setTimeout(() => { addModal.classList.remove('opacity-0'); addModal.children[0].classList.replace('scale-95','scale-100'); }, 10);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeAddModal() {
+            addModal.classList.add('opacity-0'); 
+            addModal.children[0].classList.replace('scale-100','scale-95');
+            setTimeout(() => { 
+                addModal.classList.add('hidden'); 
+                document.getElementById('addForm').reset();
+                document.getElementById('edit-id').value = '';
+                document.body.style.overflow = '';
+            }, 300);
+        }
+
+        // 點擊背景關閉
         [modal, addModal, adminModal].forEach(m => {
             m.addEventListener('click', e => { if(e.target === m) {
                 if(m.id === 'admin-modal') closeAdminModal();
@@ -485,22 +655,29 @@
             }});
         });
 
-        // Utilities
+        // 複製與提示工具
         function copyToClipboard(text, e) {
             if(e) e.stopPropagation();
             navigator.clipboard.writeText(text).then(() => showToast('已複製！')).catch(() => showToast('複製失敗','error'));
         }
         function copyFromModal() { copyToClipboard(document.getElementById('modal-text').innerText); }
+        
         function showToast(msg, type='success') {
             const container = document.getElementById('toast-container');
             const t = document.createElement('div');
             const color = type === 'success' ? 'bg-teal-600' : 'bg-red-500';
             const icon = type === 'success' ? 'ph-check-circle' : 'ph-warning-circle';
-            t.className = `toast flex items-center gap-3 ${color} text-white px-6 py-3 rounded-lg shadow-lg`;
+            
+            t.className = `toast flex items-center gap-3 ${color} text-white px-6 py-3 rounded-lg shadow-lg pointer-events-auto`;
             t.innerHTML = `<i class="ph ${icon} text-xl"></i><span class="font-medium">${msg}</span>`;
+            
             container.appendChild(t);
-            setTimeout(() => { t.classList.add('hiding'); t.addEventListener('animationend', () => t.remove()); }, 2000);
+            setTimeout(() => { 
+                t.classList.add('hiding'); 
+                t.addEventListener('animationend', () => t.remove()); 
+            }, 2000);
         }
+        
         function getFallbackData() {
             return [{id:0, category:'gemini', title:'連線失敗', desc:'無法讀取雲端資料。', content:'請檢查 API 設定。', isLink:false}];
         }
