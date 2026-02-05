@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 協作教學提示詞庫</title>
+    <!-- 字型與樣式庫 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f0fdf4; }
+        
+        /* 捲軸美化 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* 卡片懸浮效果 */
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+
+        /* 文字截斷 */
+        .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        /* 載入動畫 */
+        .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #0d9488; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 提示訊息動畫 */
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        .toast { animation: slideIn 0.3s ease-out forwards; }
+        .toast.hiding { animation: fadeOut 0.3s ease-in forwards; }
+    </style>
+</head>
+<body class="text-gray-800 min-h-screen flex flex-col">
+
+    <!-- 頁首 -->
+    <header class="bg-teal-600 text-white shadow-lg sticky top-0 z-40">
+        <div class="container mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <i class="ph ph-chalkboard-teacher text-3xl"></i>
+                <div>
+                    <h1 class="text-2xl font-bold">AI 協作教學提示詞庫</h1>
+                    <p class="text-teal-100 text-sm">提升備課效率的數位百寶箱</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+                <!-- 分類按鈕區 -->
+                <div class="flex space-x-1 bg-teal-700 p-1 rounded-lg overflow-x-auto max-w-full">
+                    <button onclick="filterPrompts('all')" id="btn-all" class="filter-btn px-3 py-1.5 rounded-md text-sm font-medium bg-white text-teal-700 transition-colors whitespace-nowrap">全部</button>
+                    <button onclick="filterPrompts('gemini')" id="btn-gemini" class="filter-btn px-3 py-1.5 rounded-md text-sm font-medium text-white hover:bg-teal-600 transition-colors whitespace-nowrap">Gemini</button>
+                    <button onclick="filterPrompts('edu')" id="btn-edu" class="filter-btn px-3 py-1.5 rounded-md text-sm font-medium text-white hover:bg-teal-600 transition-colors whitespace-nowrap">E度</button>
+                    <button onclick="filterPrompts('tools')" id="btn-tools" class="filter-btn px-3 py-1.5 rounded-md text-sm font-medium text-white hover:bg-teal-600 transition-colors whitespace-nowrap">教科書廠商</button>
+                    <button onclick="filterPrompts('other')" id="btn-other" class="filter-btn px-3 py-1.5 rounded-md text-sm font-medium text-white hover:bg-teal-600 transition-colors whitespace-nowrap">其他</button>
+                </div>
+                
+                <!-- 新增按鈕 -->
+                <button onclick="openAddModal()" class="flex items-center gap-1 bg-yellow-400 hover:bg-yellow-500 text-teal-900 px-4 py-2 rounded-lg font-bold shadow-md transition-colors text-sm whitespace-nowrap">
+                    <i class="ph ph-plus-circle text-lg"></i> 新增
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要內容區 -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+        
+        <!-- 搜尋列 -->
+        <div class="max-w-xl mx-auto mb-8 relative flex items-center gap-2">
+            <div class="relative w-full">
+                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl"></i>
+                <input type="text" id="searchInput" placeholder="搜尋提示詞關鍵字..." class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-sm transition-shadow">
+            </div>
+            <div id="connection-status" class="text-sm text-gray-500 whitespace-nowrap hidden md:block">
+                <!-- 連線狀態會顯示在這裡 -->
+            </div>
+        </div>
+
+        <!-- 載入中畫面 -->
+        <div id="loading-state" class="hidden text-center py-10">
+            <div class="loader mx-auto mb-4"></div>
+            <p class="text-gray-500">正在從 Google Drive 載入資料...</p>
+        </div>
+
+        <!-- 卡片列表區 -->
+        <div id="cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- JavaScript 會在這裡插入卡片 -->
+        </div>
+
+        <!-- 無資料畫面 -->
+        <div id="empty-state" class="hidden text-center py-20">
+            <i class="ph ph-smiley-sad text-6xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500 text-lg">找不到相關的提示詞。</p>
+        </div>
+    </main>
+
+    <!-- 頁尾 -->
+    <footer class="bg-gray-800 text-gray-300 py-6 text-center text-sm">
+        <p>© 2024 AI 協作教學提示詞庫 | Powered by Google Apps Script API</p>
+    </footer>
+
+    <!-- 詳細內容 Modal -->
+    <div id="modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-300" id="modal-content">
+            <div class="flex justify-between items-start p-6 border-b border-gray-100">
+                <div>
+                    <span id="modal-tag" class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-teal-100 text-teal-700 mb-2">標籤</span>
+                    <h3 id="modal-title" class="text-2xl font-bold text-gray-800">標題</h3>
+                </div>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100">
+                    <i class="ph ph-x text-2xl"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto bg-gray-50 flex-grow">
+                <div class="bg-white border border-gray-200 rounded-lg p-4 relative">
+                    <pre id="modal-text" class="whitespace-pre-wrap font-sans text-gray-700 text-base leading-relaxed break-words"></pre>
+                    <button onclick="copyFromModal()" class="absolute top-2 right-2 p-2 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-600 transition-colors" title="複製內容">
+                        <i class="ph ph-copy text-lg"></i>
+                    </button>
+                </div>
+                <div id="modal-note" class="mt-4 text-sm text-gray-500 italic">
+                    <i class="ph ph-info mr-1"></i> 您可以根據實際教學情境，修改括號 {} 內的內容。
+                </div>
+                <div id="modal-link-container" class="mt-6 hidden">
+                    <a id="modal-link-btn" href="#" target="_blank" class="block w-full text-center bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                        <i class="ph ph-arrow-square-out mr-2"></i>前往網站工具
+                    </a>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gray-100 flex justify-end gap-3 bg-white rounded-b-xl">
+                <button onclick="closeModal()" class="px-5 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium transition-colors">關閉</button>
+                <button onclick="copyFromModal()" class="px-5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-medium shadow-md shadow-teal-200 transition-colors flex items-center">
+                    <i class="ph ph-copy mr-2"></i> 複製提示詞
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增資料 Modal -->
+    <div id="add-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-300">
+            <div class="flex justify-between items-center p-6 border-b border-gray-100 bg-teal-50 rounded-t-xl">
+                <h3 class="text-xl font-bold text-teal-800 flex items-center gap-2">
+                    <i class="ph ph-plus-circle"></i> 新增提示詞
+                </h3>
+                <button onclick="closeAddModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="ph ph-x text-2xl"></i>
+                </button>
+            </div>
+            
+            <form id="addForm" onsubmit="handleFormSubmit(event)" class="p-6 overflow-y-auto flex-grow space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">分類</label>
+                    <select id="add-category" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
+                        <option value="gemini">Gemini</option>
+                        <option value="edu">E度</option>
+                        <option value="tools">教科書廠商</option>
+                        <option value="other">其他</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">標題</label>
+                    <input type="text" id="add-title" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500" placeholder="例如：班級公約制定">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">簡短摘要</label>
+                    <input type="text" id="add-desc" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500" placeholder="一句話描述用途">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">內容 / 網址</label>
+                    <textarea id="add-content" required rows="5" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500" placeholder="輸入內容或網址"></textarea>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="add-islink" class="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500">
+                    <label for="add-islink" class="text-sm text-gray-700">這是一個外部網址連結</label>
+                </div>
+                <div class="pt-2">
+                    <button type="submit" id="submit-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-colors flex justify-center items-center gap-2">
+                        <span>儲存資料</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 訊息通知 -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+
+    <script>
+        // ==========================================
+        // 設定區：請在這裡填入你的 Google Apps Script 網址
+        // ==========================================
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxTnNRa578exS7uA2eVVhg_mBdo-HlULltPdoeAp6anyalvvdKfnoeaxCRkizWlEQKD/exec";
+        // ==========================================
+
+        let promptsData = [];
+        let currentFilter = 'all';
+
+        // 頁面初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            if (GAS_API_URL.includes("在此處貼上")) {
+                showToast("請先在 index.html 程式碼中設定 GAS_API_URL", "error");
+                document.getElementById('connection-status').innerHTML = '<span class="text-red-500 font-bold">尚未設定 API 網址</span>';
+            } else {
+                fetchData();
+            }
+            
+            // 搜尋監聽
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                renderCards(currentFilter, e.target.value);
+            });
+        });
+
+        // 1. 從 GAS 讀取資料 (GET)
+        async function fetchData() {
+            const loading = document.getElementById('loading-state');
+            const status = document.getElementById('connection-status');
+            
+            loading.classList.remove('hidden');
+            status.innerHTML = '<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-500"></span> 連線中...</span>';
+            document.getElementById('empty-state').classList.add('hidden');
+
+            try {
+                const response = await fetch(GAS_API_URL);
+                const data = await response.json();
+                
+                promptsData = data;
+                renderCards();
+                
+                loading.classList.add('hidden');
+                status.innerHTML = '<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500"></span> 已連線至雲端</span>';
+                showToast('資料同步完成');
+            } catch (error) {
+                console.error('Fetch Error:', error);
+                loading.classList.add('hidden');
+                status.innerHTML = '<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> 連線失敗</span>';
+                showToast('讀取失敗，請檢查網址或權限', 'error');
+                
+                // 載入備用資料
+                promptsData = getFallbackData();
+                renderCards();
+            }
+        }
+
+        // 2. 傳送資料到 GAS (POST)
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            const originalText = btn.innerHTML;
+            
+            if (GAS_API_URL.includes("在此處貼上")) {
+                alert("請先設定 GAS_API_URL");
+                return;
+            }
+
+            btn.innerHTML = '<div class="loader w-4 h-4 border-2 border-white border-t-transparent"></div> 處理中...';
+            btn.disabled = true;
+
+            const newPrompt = {
+                id: Date.now(),
+                category: document.getElementById('add-category').value,
+                title: document.getElementById('add-title').value,
+                desc: document.getElementById('add-desc').value,
+                content: document.getElementById('add-content').value,
+                isLink: document.getElementById('add-islink').checked
+            };
+
+            try {
+                // 使用 text/plain 避免 CORS 預檢 (Preflight)
+                await fetch(GAS_API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(newPrompt),
+                    headers: { "Content-Type": "text/plain" }
+                });
+
+                // 更新前端畫面
+                promptsData.unshift(newPrompt);
+                renderCards(currentFilter, document.getElementById('searchInput').value);
+                
+                closeAddModal();
+                document.getElementById('addForm').reset();
+                showToast('新增成功！已儲存至雲端');
+
+            } catch (error) {
+                console.error('Post Error:', error);
+                showToast('儲存失敗，請檢查網路', 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // --- UI 渲染邏輯 ---
+        
+        // 更新分類對應的樣式與文字
+        const categoryColors = { 
+            'gemini': 'bg-blue-100 text-blue-800', 
+            'edu': 'bg-green-100 text-green-800', 
+            'tools': 'bg-orange-100 text-orange-800',
+            'other': 'bg-gray-100 text-gray-800'
+        };
+        const categoryNames = { 
+            'gemini': 'Gemini', 
+            'edu': 'E度', 
+            'tools': '教科書廠商',
+            'other': '其他'
+        };
+        const categoryIcons = { 
+            'gemini': 'ph-sparkle', 
+            'edu': 'ph-student', 
+            'tools': 'ph-books',
+            'other': 'ph-dots-three-circle'
+        };
+
+        function renderCards(filter = 'all', searchQuery = '') {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+            
+            const filtered = promptsData.filter(item => {
+                const matchesCat = filter === 'all' || item.category === filter;
+                const matchesSearch = (item.title+item.desc+item.content).toLowerCase().includes(searchQuery.toLowerCase());
+                return matchesCat && matchesSearch;
+            });
+
+            if (filtered.length === 0) {
+                document.getElementById('empty-state').classList.remove('hidden');
+            } else {
+                document.getElementById('empty-state').classList.add('hidden');
+                filtered.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative card-hover flex flex-col h-full cursor-pointer';
+                    card.onclick = (e) => { if(!e.target.closest('.copy-btn')) openModal(item); };
+                    
+                    const tagClass = categoryColors[item.category] || 'bg-gray-100 text-gray-800';
+                    const icon = categoryIcons[item.category] || 'ph-star';
+                    const name = categoryNames[item.category] || item.category;
+                    
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${tagClass}">
+                                <i class="ph ${icon}"></i> ${name}
+                            </span>
+                            <button onclick="copyToClipboard('${(item.content||'').replace(/'/g,"\\'").replace(/\n/g,"\\n")}', event)" class="copy-btn text-gray-400 hover:text-teal-600 transition-colors p-1.5 rounded-md hover:bg-teal-50" title="複製內容">
+                                <i class="ph ph-copy text-xl"></i>
+                            </button>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-800 mb-2 leading-tight">${item.title}</h3>
+                        <p class="text-gray-500 text-sm mb-4 line-clamp-3 flex-grow">${item.desc}</p>
+                        <div class="mt-auto pt-4 border-t border-gray-50 flex justify-between items-center">
+                            <span class="text-xs text-gray-400 font-mono">ID: ${String(item.id).slice(-3)}</span>
+                            <span class="text-teal-600 text-sm font-medium flex items-center group">
+                                查看詳情 <i class="ph ph-arrow-right ml-1 group-hover:translate-x-1 transition-transform"></i>
+                            </span>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+        }
+
+        // 分類過濾
+        function filterPrompts(cat) {
+            currentFilter = cat;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                const isActive = btn.id === `btn-${cat}`;
+                if (isActive) {
+                    btn.classList.remove('bg-teal-600', 'text-white', 'hover:bg-teal-600');
+                    btn.classList.add('bg-white', 'text-teal-700');
+                } else {
+                    btn.classList.add('text-white', 'hover:bg-teal-600');
+                    btn.classList.remove('bg-white', 'text-teal-700');
+                }
+            });
+            renderCards(cat, document.getElementById('searchInput').value);
+        }
+
+        // Modal 操作
+        const modal = document.getElementById('modal');
+        const addModal = document.getElementById('add-modal');
+        const modalContentDiv = document.getElementById('modal-content');
+        
+        function openModal(item) {
+            document.getElementById('modal-title').innerText = item.title;
+            document.getElementById('modal-text').innerText = item.content;
+            document.getElementById('modal-tag').className = `inline-block px-3 py-1 text-xs font-bold rounded-full mb-2 ${categoryColors[item.category] || 'bg-gray-100'}`;
+            document.getElementById('modal-tag').innerHTML = `<i class="ph ${categoryIcons[item.category] || 'ph-star'} mr-1"></i>${categoryNames[item.category] || item.category}`;
+            
+            if(item.isLink) {
+                document.getElementById('modal-link-container').classList.remove('hidden');
+                document.getElementById('modal-link-btn').href = item.content;
+                document.getElementById('modal-note').classList.add('hidden');
+            } else {
+                document.getElementById('modal-link-container').classList.add('hidden');
+                document.getElementById('modal-note').classList.remove('hidden');
+            }
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); modalContentDiv.classList.replace('scale-95','scale-100'); }, 10);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.classList.add('opacity-0'); modalContentDiv.classList.replace('scale-100','scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); document.body.style.overflow = ''; }, 300);
+        }
+
+        function openAddModal() {
+            addModal.classList.remove('hidden');
+            setTimeout(() => { addModal.classList.remove('opacity-0'); addModal.querySelector('div').classList.replace('scale-95','scale-100'); }, 10);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeAddModal() {
+            addModal.classList.add('opacity-0'); addModal.querySelector('div').classList.replace('scale-100','scale-95');
+            setTimeout(() => { addModal.classList.add('hidden'); document.body.style.overflow = ''; }, 300);
+        }
+        
+        // 點擊背景關閉
+        modal.addEventListener('click', e => { if(e.target === modal) closeModal(); });
+        addModal.addEventListener('click', e => { if(e.target === addModal) closeAddModal(); });
+
+        // 複製與提示
+        function copyToClipboard(text, e) {
+            if(e) e.stopPropagation();
+            navigator.clipboard.writeText(text).then(() => showToast('已複製！')).catch(() => showToast('複製失敗','error'));
+        }
+        function copyFromModal() { copyToClipboard(document.getElementById('modal-text').innerText); }
+        
+        function showToast(msg, type='success') {
+            const container = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-teal-600' : 'bg-red-500';
+            const icon = type === 'success' ? 'ph-check-circle' : 'ph-warning-circle';
+            t.className = `toast flex items-center gap-3 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg`;
+            t.innerHTML = `<i class="ph ${icon} text-xl"></i><span class="font-medium">${msg}</span>`;
+            container.appendChild(t);
+            setTimeout(() => { t.classList.add('hiding'); t.addEventListener('animationend', () => t.remove()); }, 2000);
+        }
+        
+        // 備用資料
+        function getFallbackData() {
+            return [{id:0, category:'gemini', title:'連線失敗', desc:'無法從雲端讀取資料，目前顯示此範例。請檢查 GAS API 設定。', content:'請檢查 index.html 中的 GAS_API_URL 是否正確，以及 GAS 部署權限是否設為 "所有人"。', isLink:false}];
+        }
+    </script>
+</body>
+</html>
