@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校務佈告欄 v1.4.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .notebook-lines {
+            background-image: linear-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 100% 2rem;
+            line-height: 2rem;
+        }
+    </style>
+</head>
+<body class="bg-amber-50 min-h-screen flex flex-col items-center justify-start font-sans">
+    
+    <header class="w-full bg-indigo-800 text-white shadow-md border-b-4 border-amber-400">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                <h1 class="text-2xl md:text-3xl font-bold tracking-wider">校務佈告欄</h1>
+                <span class="text-xs bg-amber-400 text-indigo-900 px-2 py-1 rounded font-bold">v1.4.0 API 版</span>
+            </div>
+            <!-- 切換到後台登入的按鈕 (改為直接跳轉網址) -->
+            <button onclick="window.location.href='lmppostadmin.html'" class="flex items-center gap-2 bg-indigo-700 hover:bg-indigo-600 border border-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                管理員登入
+            </button>
+        </div>
+    </header>
+
+    <main class="w-full max-w-6xl p-4 md:p-8 mt-4 flex-grow">
+        <div id="board-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="col-span-full text-center text-slate-500 py-10 flex flex-col items-center justify-center">
+                <svg class="animate-spin h-8 w-8 text-indigo-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                載入校務公告中...
+            </div>
+        </div>
+    </main>
+
+    <!-- 點擊放大的 Modal -->
+    <div id="modal" class="fixed inset-0 bg-slate-900 bg-opacity-70 flex flex-col items-center justify-center px-4 hidden z-50 transition-all duration-300">
+        <div class="bg-amber-50 rounded-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] shadow-2xl border-2 border-slate-300">
+            <div class="bg-indigo-800 px-6 py-5 flex justify-between items-center relative">
+                <h2 id="modal-title" class="text-xl md:text-2xl font-bold text-white pr-8 truncate">標題</h2>
+                <button onclick="closeModal()" class="text-amber-400 hover:text-white focus:outline-none absolute right-4 top-4 transition-colors">
+                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <div class="p-6 md:p-8 overflow-y-auto no-scrollbar flex-grow bg-white notebook-lines relative">
+                <div class="absolute top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 rounded-full bg-red-500 shadow-md border-2 border-red-700"></div>
+                <div class="text-sm text-indigo-600 font-semibold mb-6 pb-2 flex items-center pt-2">
+                    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    發布時間: <span id="modal-date" class="ml-1"></span>
+                </div>
+                <div id="modal-content" class="text-slate-800 whitespace-pre-wrap text-base md:text-lg font-medium"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =======================================================================
+        // ★★★ 請將下方的網址替換為您 Google Apps Script 發布的網頁應用程式網址 ★★★
+        // =======================================================================
+        const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzObsBvS0oKrnJFyOPrmwycRri74xV7aYBrdp0G4arChC509BJclWeVT-EMbfgmrRUQ/exec'; 
+
+        let currentData = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchAnnouncements();
+        });
+
+        // 核心 API 呼叫函式 (使用標準 fetch)
+        async function fetchAPI(action, payload = {}) {
+            if (GAS_API_URL === '請替換成您的_GAS_API_網址') {
+                throw new Error("尚未設定 GAS_API_URL！請開啟原始碼修改。");
+            }
+            
+            payload.action = action;
+            try {
+                // 使用 text/plain 避免瀏覽器的 CORS 預檢請求 (Preflight)
+                const response = await fetch(GAS_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                return await response.json();
+            } catch (error) {
+                console.error("Fetch API Error:", error);
+                throw error;
+            }
+        }
+
+        async function fetchAnnouncements() {
+            try {
+                const response = await fetchAPI('getAnnouncements', { isAdmin: false });
+                if (response.status !== 'success') {
+                    showError(response.message);
+                    return;
+                }
+                
+                currentData = response.data;
+                const container = document.getElementById('board-container');
+                container.innerHTML = '';
+                
+                if (currentData.length === 0) {
+                    container.innerHTML = `<div class="col-span-full text-center text-slate-500 py-10 bg-white rounded-lg shadow-sm border-t-4 border-slate-300">目前校園內無最新公告。</div>`;
+                    return;
+                }
+                
+                currentData.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = "bg-white rounded-lg shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border-t-4 border-amber-400 flex flex-col p-6 group relative";
+                    card.onclick = () => openModal(item.id);
+                    card.innerHTML = `
+                        <div class="absolute -top-1 -right-2 w-8 h-10 bg-indigo-600 transform rotate-12 origin-top-right shadow-sm hidden md:block"></div>
+                        <div class="text-xs text-slate-500 font-semibold mb-3 flex items-center">
+                            <svg class="w-4 h-4 mr-1 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            ${item.date}
+                        </div>
+                        <h3 class="text-lg font-bold text-indigo-900 mb-2 truncate group-hover:text-indigo-600">${item.title}</h3>
+                        <p class="text-slate-600 text-sm line-clamp-3 flex-grow leading-relaxed">${item.content}</p>
+                        <div class="mt-5 text-amber-600 text-sm font-bold flex items-center">
+                            詳細閱讀 
+                            <svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                showError("資料載入失敗: " + error.message);
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById('board-container').innerHTML = `<div class="col-span-full text-center text-red-600 bg-red-50 p-6 rounded-lg font-bold border-l-4 border-red-500">${msg}</div>`;
+        }
+
+        function openModal(id) {
+            const item = currentData.find(d => d.id === id);
+            if (!item) return;
+            document.getElementById('modal-title').textContent = item.title;
+            document.getElementById('modal-date').textContent = item.date;
+            document.getElementById('modal-content').textContent = item.content;
+            document.getElementById('modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        document.getElementById('modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+    </script>
+</body>
+</html>
