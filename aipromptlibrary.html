@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 協作教學提示詞庫 (Firebase 安全認證版)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f0fdf4; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+        .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #0d9488; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        .toast { animation: slideIn 0.3s ease-out forwards; }
+        .toast.hiding { animation: fadeOut 0.3s ease-in forwards; }
+    </style>
+</head>
+<body class="text-gray-800 min-h-screen flex flex-col">
+
+    <header class="bg-teal-600 text-white shadow-lg sticky top-0 z-40">
+        <div class="container mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <i class="ph ph-chalkboard-teacher text-3xl"></i>
+                <div>
+                    <h1 class="text-2xl font-bold">AI 協作教學提示詞庫</h1>
+                    <p class="text-teal-100 text-sm">提升備課效率的數位百寶箱</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+                <div class="relative">
+                    <select id="sort-select" onchange="handleSortChange()" class="appearance-none bg-teal-700 text-white pl-3 pr-8 py-1.5 rounded-lg text-sm font-medium hover:bg-teal-800 transition-colors focus:outline-none cursor-pointer border border-teal-600">
+                        <option value="order_asc">排列序號 (小到大)</option>
+                        <option value="newest">最新新增優先</option>
+                        <option value="oldest">最舊新增優先</option>
+                    </select>
+                    <i class="ph ph-caret-down absolute right-2 top-1/2 transform -translate-y-1/2 text-teal-300 pointer-events-none"></i>
+                </div>
+
+                <div class="flex space-x-1 bg-teal-700 p-1 rounded-lg overflow-x-auto max-w-full">
+                    <button onclick="filterPrompts('all')" id="btn-all" class="filter-btn px-3 py-1.5 rounded-md text-sm font-medium bg-white text-teal-700 transition-colors whitespace-nowrap shadow-sm">全部</button>
+                    <button onclick="filterPrompts('gemini')" id="btn-gemini" class="filter-btn px-3 py-1.5 rounded-md text-sm font-medium text-white hover:bg-teal-600 transition-colors whitespace-nowrap">Gemini</button>
+                    <button onclick="filterPrompts('notebooklm')" id="btn-notebooklm" class="filter-btn px-3 py-1.5 rounded-md text-sm font-medium text-white hover:bg-teal-600 transition-colors whitespace-nowrap">NotebookLM</button>
+                    <button onclick="filterPrompts('edu')" id="btn-edu" class="filter-btn px-3 py-1.5 rounded-md text-sm font-medium text-white hover:bg-teal-600 transition-colors whitespace-nowrap">E度</button>
+                    <button onclick="filterPrompts('tools')" id="btn-tools" class="filter-btn px-3 py-1.5 rounded-md text-sm font-medium text-white hover:bg-teal-600 transition-colors whitespace-nowrap">廠商</button>
+                    <button onclick="filterPrompts('other')" id="btn-other" class="filter-btn px-3 py-1.5 rounded-md text-sm font-medium text-white hover:bg-teal-600 transition-colors whitespace-nowrap">其他</button>
+                </div>
+                
+                <div class="flex items-center gap-2 border-l border-teal-500 pl-3 ml-1">
+                    <button id="admin-login-btn" onclick="openAdminModal()" class="flex items-center justify-center w-9 h-9 bg-teal-800 hover:bg-teal-900 text-teal-200 rounded-lg transition-colors shadow-sm" title="管理員登入">
+                        <i class="ph ph-lock-key text-lg"></i>
+                    </button>
+                    <button id="add-btn" onclick="openAddModal()" class="hidden flex items-center gap-1 bg-yellow-400 hover:bg-yellow-500 text-teal-900 px-4 py-2 rounded-lg font-bold shadow-md transition-colors text-sm whitespace-nowrap">
+                        <i class="ph ph-plus-circle text-lg"></i> 新增
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <div class="max-w-xl mx-auto mb-8 relative flex items-center gap-2">
+            <div class="relative w-full">
+                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl"></i>
+                <input type="text" id="searchInput" placeholder="搜尋標題或內容..." class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-sm transition-shadow">
+            </div>
+            <div id="connection-status" class="text-sm text-gray-500 whitespace-nowrap hidden md:block"></div>
+        </div>
+
+        <div id="loading-state" class="text-center py-10">
+            <div class="loader mx-auto mb-4"></div>
+            <p class="text-gray-500">正在建立安全連線並載入資料...</p>
+        </div>
+        
+        <div id="cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        
+        <div id="empty-state" class="hidden text-center py-20">
+            <i class="ph ph-smiley-sad text-6xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500 text-lg">找不到相關的提示詞。</p>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-gray-300 py-6 text-center text-sm">
+        <p>© 2024 AI 協作教學提示詞庫 | Powered by Firebase Authentication & Firestore</p>
+    </footer>
+
+    <div id="modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-300" id="modal-content">
+            <div class="flex justify-between items-start p-6 border-b border-gray-100">
+                <div class="w-full pr-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span id="modal-order" class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded shadow-inner border border-gray-200">序號: -</span>
+                        <span id="modal-tag" class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full border border-black/5">標籤</span>
+                    </div>
+                    <h3 id="modal-title" class="text-2xl font-bold text-gray-800">標題</h3>
+                </div>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors shrink-0">
+                    <i class="ph ph-x text-2xl"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto bg-gray-50 flex-grow">
+                <div class="bg-white border border-gray-200 rounded-lg p-5 relative group shadow-sm">
+                    <pre id="modal-text" class="whitespace-pre-wrap font-sans text-gray-700 text-base leading-relaxed break-words"></pre>
+                    <button onclick="copyFromModal()" class="absolute top-2 right-2 p-2 bg-gray-50 hover:bg-gray-200 rounded-md text-gray-500 transition-colors opacity-0 group-hover:opacity-100 border border-gray-200" title="複製提示詞">
+                        <i class="ph ph-copy text-lg"></i>
+                    </button>
+                </div>
+                <div id="modal-note" class="mt-4 text-sm text-gray-500 flex items-center gap-1">
+                    <i class="ph ph-info text-gray-400"></i> 您可以根據實際教學情境，修改括號 {} 內的內容。
+                </div>
+                <div id="modal-link-container" class="mt-6 hidden">
+                    <a id="modal-link-btn" href="#" target="_blank" class="block w-full text-center bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-sm">
+                        <i class="ph ph-arrow-square-out mr-2"></i>前往網站
+                    </a>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gray-100 flex justify-end gap-3 bg-white rounded-b-xl">
+                <button onclick="closeModal()" class="px-5 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium transition-colors">關閉</button>
+                <button onclick="copyFromModal()" class="px-5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-medium shadow-md shadow-teal-200 transition-colors flex items-center">
+                    <i class="ph ph-copy mr-2"></i> 複製提示詞
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm transform scale-95 transition-transform duration-300">
+            <div class="p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="ph ph-lock-key-open text-teal-600"></i> 管理員登入
+                </h3>
+                <p class="text-sm text-gray-500 mb-4">請輸入密碼以啟用新增、修改與刪除功能。</p>
+                <input type="password" id="admin-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 mb-4 outline-none" placeholder="密碼 (預設: 1234)" onkeyup="if(event.key === 'Enter') verifyAdmin()">
+                <div class="flex justify-end gap-2">
+                    <button onclick="closeAdminModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">取消</button>
+                    <button onclick="verifyAdmin()" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors shadow-sm">確認</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-300">
+            <div class="flex justify-between items-center p-6 border-b border-gray-100 bg-teal-50 rounded-t-xl">
+                <h3 id="form-modal-title" class="text-xl font-bold text-teal-800 flex items-center gap-2">
+                    <i class="ph ph-plus-circle"></i> 新增提示詞
+                </h3>
+                <button onclick="closeAddModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="ph ph-x text-2xl"></i>
+                </button>
+            </div>
+            
+            <form id="addForm" onsubmit="handleFormSubmit(event)" class="p-6 overflow-y-auto flex-grow space-y-4">
+                <input type="hidden" id="edit-id" value="">
+                <input type="hidden" id="edit-created-at" value="">
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">排列序號</label>
+                        <input type="number" id="add-order" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none" placeholder="例如：1">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">分類</label>
+                        <select id="add-category-select" onchange="handleCategoryChange()" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 bg-white outline-none">
+                            <option value="gemini">Gemini</option>
+                            <option value="notebooklm">NotebookLM</option>
+                            <option value="edu">E度</option>
+                            <option value="tools">廠商</option>
+                            <option value="other">其他</option>
+                            <option value="custom">✍️ 自訂分類...</option>
+                        </select>
+                    </div>
+                </div>
+                <input type="text" id="add-category-custom" class="w-full px-4 py-2 border border-teal-300 rounded-lg focus:ring-2 focus:ring-teal-500 bg-teal-50 hidden outline-none" placeholder="請輸入自訂分類名稱">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">標題</label>
+                    <input type="text" id="add-title" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none" placeholder="例如：研習講義重點摘要">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">內容 / 網址</label>
+                    <textarea id="add-content" required rows="6" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none" placeholder="輸入完整的提示詞內容，或是工具的網址連結"></textarea>
+                </div>
+                
+                <div class="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <input type="checkbox" id="add-islink" class="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500 cursor-pointer">
+                    <label for="add-islink" class="text-sm text-gray-700 cursor-pointer select-none">這是一個外部網址連結 (勾選後內容將作為連結開啟)</label>
+                </div>
+                
+                <div class="pt-2">
+                    <button type="submit" id="submit-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-colors flex justify-center items-center gap-2">
+                        <span>儲存資料</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        // =========================================================================
+        // Firebase 設定區 (請將 Firebase Console 中的 config 貼到這裡)
+        // =========================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAcc53rZ2e-140K72KwpF-CrJdZulblDRI",
+            authDomain: "ai-prompt-library-6ce4c.firebaseapp.com",
+            projectId: "ai-prompt-library-6ce4c",
+            storageBucket: "ai-prompt-library-6ce4c.firebasestorage.app",
+            messagingSenderId: "725421014206",
+            appId: "1:725421014206:web:cd1e5da5d7aff83f03b2ef"
+        };
+        const ADMIN_PASSWORD = "6514110"; // 前端管理員密碼
+        // =========================================================================
+
+        let promptsData = [];
+        let currentFilter = 'all';
+        let currentSort = 'order_asc';
+        let isAdmin = false;
+
+        // 初始化 Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const COLLECTION_NAME = "prompts";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (firebaseConfig.projectId === "your-project-id") {
+                showToast("請先在程式碼中設定 Firebase Config", "error");
+                document.getElementById('connection-status').innerHTML = '<span class="text-red-500 font-bold px-2 py-1 bg-red-100 rounded">尚未設定 Firebase</span>';
+                document.getElementById('loading-state').classList.add('hidden');
+                return;
+            }
+
+            // 監聽 Firebase 登入狀態
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    // 已成功匿名登入
+                    console.log("Firebase 匿名登入成功:", user.uid);
+                    fetchData();
+                } else {
+                    // 尚未登入，執行匿名登入
+                    auth.signInAnonymously().catch((error) => {
+                        console.error("匿名登入失敗:", error);
+                        showToast("安全認證失敗", "error");
+                        document.getElementById('loading-state').classList.add('hidden');
+                        document.getElementById('connection-status').innerHTML = '<span class="text-red-500 font-bold px-2 py-1 bg-red-100 rounded">認證失敗</span>';
+                    });
+                }
+            });
+            
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                renderCards(currentFilter, e.target.value);
+            });
+        });
+
+        // 1. Firebase 資料操作 (CRUD)
+        async function fetchData() {
+            const loading = document.getElementById('loading-state');
+            const status = document.getElementById('connection-status');
+            
+            try {
+                // 從 Firestore 讀取資料
+                const snapshot = await db.collection(COLLECTION_NAME).get();
+                promptsData = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                sortData(); 
+                renderCards();
+                
+                loading.classList.add('hidden');
+                status.innerHTML = '<span class="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded text-xs"><span class="w-2 h-2 rounded-full bg-green-500"></span> 安全連線已建立</span>';
+            } catch (error) {
+                console.error('Firebase Fetch Error:', error);
+                loading.classList.add('hidden');
+                status.innerHTML = '<span class="flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded text-xs"><span class="w-2 h-2 rounded-full bg-red-500"></span> 連線失敗</span>';
+                showToast('讀取失敗，請檢查資料庫權限設定', 'error');
+            }
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<div class="loader w-4 h-4 border-2 border-white border-t-transparent"></div> 處理中...';
+            btn.disabled = true;
+
+            const editId = document.getElementById('edit-id').value;
+            const isEdit = !!editId;
+
+            const selectVal = document.getElementById('add-category-select').value;
+            const customVal = document.getElementById('add-category-custom').value;
+            const finalCategory = (selectVal === 'custom') ? (customVal || '其他') : selectVal;
+
+            const payloadData = {
+                order: Number(document.getElementById('add-order').value),
+                category: finalCategory,
+                title: document.getElementById('add-title').value,
+                content: document.getElementById('add-content').value,
+                isLink: document.getElementById('add-islink').checked,
+                createdAt: isEdit ? Number(document.getElementById('edit-created-at').value) : Date.now()
+            };
+
+            try {
+                if (isEdit) {
+                    await db.collection(COLLECTION_NAME).doc(editId).update(payloadData);
+                    const index = promptsData.findIndex(p => p.id === editId);
+                    if (index !== -1) promptsData[index] = { id: editId, ...payloadData };
+                    showToast('修改成功！');
+                } else {
+                    const docRef = await db.collection(COLLECTION_NAME).add(payloadData);
+                    promptsData.push({ id: docRef.id, ...payloadData });
+                    showToast('新增成功！');
+                }
+
+                sortData();
+                renderCards(currentFilter, document.getElementById('searchInput').value);
+                closeAddModal();
+            } catch (error) {
+                console.error('Firebase Add/Update Error:', error);
+                showToast(isEdit ? '修改失敗，權限不足' : '新增失敗，權限不足', 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function deletePrompt(id, event) {
+            if(event) event.stopPropagation();
+            if(!confirm('確定要刪除這個提示詞嗎？此動作無法復原。')) return;
+
+            const originalData = [...promptsData];
+            promptsData = promptsData.filter(p => p.id !== id);
+            renderCards(currentFilter, document.getElementById('searchInput').value);
+
+            try {
+                await db.collection(COLLECTION_NAME).doc(id).delete();
+                showToast('已刪除');
+            } catch (error) {
+                promptsData = originalData;
+                renderCards(currentFilter, document.getElementById('searchInput').value);
+                showToast('刪除失敗，權限不足', 'error');
+            }
+        }
+
+        function openEditModal(id, event) {
+            if(event) event.stopPropagation();
+            const item = promptsData.find(p => p.id === id);
+            if (!item) return;
+
+            document.getElementById('form-modal-title').innerHTML = '<i class="ph ph-pencil-simple text-lg"></i> 修改提示詞';
+            document.getElementById('edit-id').value = item.id;
+            document.getElementById('edit-created-at').value = item.createdAt || Date.now();
+            document.getElementById('add-order').value = item.order || '';
+            document.getElementById('add-title').value = item.title;
+            document.getElementById('add-content').value = item.content || '';
+            document.getElementById('add-islink').checked = item.isLink || false;
+
+            const select = document.getElementById('add-category-select');
+            const customInput = document.getElementById('add-category-custom');
+            
+            const standardCats = ['gemini', 'notebooklm', 'edu', 'tools', 'other'];
+            if (standardCats.includes(item.category)) {
+                select.value = item.category;
+                customInput.classList.add('hidden');
+            } else {
+                select.value = 'custom';
+                customInput.value = item.category;
+                customInput.classList.remove('hidden');
+            }
+
+            openAddModal();
+        }
+
+        // 2. 排序與篩選
+        function handleSortChange() {
+            currentSort = document.getElementById('sort-select').value;
+            sortData();
+            renderCards(currentFilter, document.getElementById('searchInput').value);
+        }
+
+        function sortData() {
+            promptsData.sort((a, b) => {
+                if (currentSort === 'order_asc') {
+                    const orderA = a.order !== "" && a.order !== null && a.order !== undefined ? Number(a.order) : 999999;
+                    const orderB = b.order !== "" && b.order !== null && b.order !== undefined ? Number(b.order) : 999999;
+                    if(orderA !== orderB) return orderA - orderB;
+                    return (b.createdAt || 0) - (a.createdAt || 0); // 序號相同，新的在前
+                }
+                const timeA = a.createdAt || 0;
+                const timeB = b.createdAt || 0;
+                if (currentSort === 'newest') return timeB - timeA;
+                if (currentSort === 'oldest') return timeA - timeB;
+                return 0;
+            });
+        }
+
+        function filterPrompts(cat) {
+            currentFilter = cat;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                const isActive = btn.id === `btn-${cat}`;
+                if (isActive) {
+                    btn.classList.remove('bg-teal-600', 'text-white', 'hover:bg-teal-600');
+                    btn.classList.add('bg-white', 'text-teal-700', 'shadow-sm');
+                } else {
+                    btn.classList.add('text-white', 'hover:bg-teal-600');
+                    btn.classList.remove('bg-white', 'text-teal-700', 'shadow-sm');
+                }
+            });
+            renderCards(cat, document.getElementById('searchInput').value);
+        }
+
+        // 3. UI 渲染邏輯
+        const categoryConfig = {
+            'gemini': { name: 'Gemini', color: 'bg-blue-100 text-blue-800', icon: 'ph-sparkle' },
+            'notebooklm': { name: 'NotebookLM', color: 'bg-indigo-100 text-indigo-800', icon: 'ph-notebook' }, 
+            'edu': { name: 'E度', color: 'bg-green-100 text-green-800', icon: 'ph-student' },
+            'tools': { name: '廠商', color: 'bg-orange-100 text-orange-800', icon: 'ph-books' },
+            'other': { name: '其他', color: 'bg-gray-100 text-gray-800', icon: 'ph-dots-three-circle' }
+        };
+
+        function renderCards(filter = 'all', searchQuery = '') {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+            
+            const filtered = promptsData.filter(item => {
+                let matchesCat = false;
+                const coreCategories = ['gemini', 'notebooklm', 'edu', 'tools'];
+                
+                if (filter === 'all') matchesCat = true;
+                else if (coreCategories.includes(filter)) matchesCat = (item.category === filter);
+                else if (filter === 'other') matchesCat = !coreCategories.includes(item.category);
+
+                const matchesSearch = (item.title+(item.content||'')).toLowerCase().includes(searchQuery.toLowerCase());
+                return matchesCat && matchesSearch;
+            });
+
+            if (filtered.length === 0) {
+                document.getElementById('empty-state').classList.remove('hidden');
+            } else {
+                document.getElementById('empty-state').classList.add('hidden');
+                
+                filtered.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative card-hover flex flex-col h-full cursor-pointer group/card';
+                    card.onclick = (e) => { 
+                        if(!e.target.closest('button')) openModal(item); 
+                    };
+                    
+                    const config = categoryConfig[item.category] || { 
+                        name: item.category, color: 'bg-purple-100 text-purple-800', icon: 'ph-tag' 
+                    };
+
+                    const adminBtns = isAdmin ? `
+                        <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity z-10">
+                            <button onclick="openEditModal('${item.id}', event)" class="p-2 bg-white/80 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-full transition-colors shadow-sm border border-gray-100" title="修改">
+                                <i class="ph ph-pencil-simple text-lg"></i>
+                            </button>
+                            <button onclick="deletePrompt('${item.id}', event)" class="p-2 bg-white/80 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors shadow-sm border border-gray-100" title="刪除">
+                                <i class="ph ph-trash text-lg"></i>
+                            </button>
+                        </div>
+                    ` : '';
+                    
+                    const textToCopy = (item.content || item.title || '').replace(/'/g,"\\'").replace(/\n/g,"\\n");
+
+                    card.innerHTML = `
+                        ${adminBtns}
+                        <div class="flex items-center gap-2 mb-3 pr-16">
+                            <span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded shadow-inner border border-gray-200">序號: ${item.order || '-'}</span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color} max-w-[150px] truncate border border-black/5">
+                                <i class="ph ${config.icon}"></i> ${config.name}
+                            </span>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-800 leading-tight flex-grow">${item.title}</h3>
+                        <div class="mt-4 pt-4 border-t border-gray-50 flex justify-between items-center">
+                            <button onclick="copyToClipboard('${textToCopy}', event)" class="text-gray-400 hover:text-teal-600 transition-colors flex items-center gap-1 text-xs px-2 py-1 rounded hover:bg-teal-50">
+                                <i class="ph ph-copy text-sm"></i> 快速複製
+                            </button>
+                            <span class="text-teal-600 text-sm font-medium flex items-center group">
+                                查看詳情 <i class="ph ph-arrow-right ml-1 group-hover:translate-x-1 transition-transform"></i>
+                            </span>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+        }
+
+        // 4. Modal 相關操作
+        function handleCategoryChange() {
+            const select = document.getElementById('add-category-select');
+            const customInput = document.getElementById('add-category-custom');
+            if (select.value === 'custom') {
+                customInput.classList.remove('hidden');
+                customInput.focus();
+            } else {
+                customInput.classList.add('hidden');
+            }
+        }
+
+        function openAdminModal() {
+            if (isAdmin) {
+                isAdmin = false;
+                document.getElementById('add-btn').classList.add('hidden');
+                const btn = document.getElementById('admin-login-btn');
+                btn.classList.replace('bg-teal-600', 'bg-teal-800');
+                btn.innerHTML = '<i class="ph ph-lock-key text-lg"></i>';
+                showToast('已登出管理員模式');
+                renderCards(currentFilter, document.getElementById('searchInput').value);
+            } else {
+                const modal = document.getElementById('admin-modal');
+                modal.classList.remove('hidden');
+                setTimeout(() => { modal.classList.remove('opacity-0'); modal.children[0].classList.replace('scale-95','scale-100'); }, 10);
+                document.getElementById('admin-password').value = '';
+                document.getElementById('admin-password').focus();
+            }
+        }
+
+        function closeAdminModal() {
+            const modal = document.getElementById('admin-modal');
+            modal.classList.add('opacity-0'); 
+            modal.children[0].classList.replace('scale-100','scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        function verifyAdmin() {
+            const pwd = document.getElementById('admin-password').value;
+            if (pwd === ADMIN_PASSWORD) {
+                isAdmin = true;
+                document.getElementById('add-btn').classList.remove('hidden');
+                const btn = document.getElementById('admin-login-btn');
+                btn.innerHTML = '<i class="ph ph-lock-key-open text-lg"></i>';
+                btn.classList.add('bg-teal-600'); 
+                closeAdminModal();
+                showToast('管理員登入成功！');
+                renderCards(currentFilter, document.getElementById('searchInput').value);
+            } else {
+                showToast('密碼錯誤', 'error');
+                document.getElementById('admin-password').value = '';
+            }
+        }
+
+        const modal = document.getElementById('modal');
+        const addModal = document.getElementById('add-modal');
+        const adminModal = document.getElementById('admin-modal');
+        
+        function openModal(item) {
+            document.getElementById('modal-order').innerText = `序號: ${item.order || '-'}`;
+            const config = categoryConfig[item.category] || { name: item.category, color: 'bg-purple-100 text-purple-800', icon: 'ph-tag' };
+            document.getElementById('modal-tag').className = `inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full border border-black/5 ${config.color}`;
+            document.getElementById('modal-tag').innerHTML = `<i class="ph ${config.icon} mr-1"></i>${config.name}`;
+            
+            document.getElementById('modal-title').innerText = item.title;
+            document.getElementById('modal-text').innerText = item.content || '';
+            
+            if(item.isLink) {
+                document.getElementById('modal-link-container').classList.remove('hidden');
+                document.getElementById('modal-link-btn').href = item.content;
+                document.getElementById('modal-note').classList.add('hidden');
+            } else {
+                document.getElementById('modal-link-container').classList.add('hidden');
+                document.getElementById('modal-note').classList.remove('hidden');
+            }
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); modal.children[0].classList.replace('scale-95','scale-100'); }, 10);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.classList.add('opacity-0'); 
+            modal.children[0].classList.replace('scale-100','scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); document.body.style.overflow = ''; }, 300);
+        }
+
+        function openAddModal() {
+            if(!document.getElementById('edit-id').value) {
+                document.getElementById('form-modal-title').innerHTML = '<i class="ph ph-plus-circle text-lg"></i> 新增提示詞';
+                document.getElementById('addForm').reset();
+                document.getElementById('edit-id').value = '';
+                document.getElementById('edit-created-at').value = '';
+                handleCategoryChange();
+            }
+            addModal.classList.remove('hidden');
+            setTimeout(() => { addModal.classList.remove('opacity-0'); addModal.children[0].classList.replace('scale-95','scale-100'); }, 10);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeAddModal() {
+            addModal.classList.add('opacity-0'); 
+            addModal.children[0].classList.replace('scale-100','scale-95');
+            setTimeout(() => { 
+                addModal.classList.add('hidden'); 
+                document.getElementById('addForm').reset();
+                document.getElementById('edit-id').value = '';
+                document.body.style.overflow = '';
+            }, 300);
+        }
+
+        [modal, addModal, adminModal].forEach(m => {
+            m.addEventListener('click', e => { if(e.target === m) {
+                if(m.id === 'admin-modal') closeAdminModal();
+                else if(m.id === 'add-modal') closeAddModal();
+                else closeModal();
+            }});
+        });
+
+        function copyToClipboard(text, e) {
+            if(e) e.stopPropagation();
+            navigator.clipboard.writeText(text).then(() => showToast('已複製！')).catch(() => showToast('複製失敗','error'));
+        }
+        function copyFromModal() { copyToClipboard(document.getElementById('modal-text').innerText); }
+        
+        function showToast(msg, type='success') {
+            const container = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            const color = type === 'success' ? 'bg-teal-600' : 'bg-red-500';
+            const icon = type === 'success' ? 'ph-check-circle' : 'ph-warning-circle';
+            t.className = `toast flex items-center gap-3 ${color} text-white px-6 py-3 rounded-lg shadow-lg pointer-events-auto`;
+            t.innerHTML = `<i class="ph ${icon} text-xl"></i><span class="font-medium">${msg}</span>`;
+            container.appendChild(t);
+            setTimeout(() => { t.classList.add('hiding'); t.addEventListener('animationend', () => t.remove()); }, 2000);
+        }
+    </script>
+</body>
+</html>
