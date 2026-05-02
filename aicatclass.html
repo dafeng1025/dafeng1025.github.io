@@ -1,0 +1,2307 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>班級寵物養成系統 Pro - 多班級科任進化版</title>
+    <style>
+        /* ================= 字體與基礎設定 ================= */
+        @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
+        
+        :root {
+            --primary: #ff6b81;
+            --secondary: #48dbfb;
+            --accent: #ffeb3b;
+            --success: #1dd1a1;
+            --warning: #feca57;
+            --danger: #ff4757;
+            --text-dark: #2f3542;
+            --bg-light: #f1f2f6;
+            
+            /* RPG 風格主題色 */
+            --ui-border: #594236;
+            --ui-bg: #f3e8d2;
+            
+            /* 教室主題背景：早晨、午後、傍晚、夜晚 (黑板深綠色) */
+            --bg-theme1: linear-gradient(to bottom, #fffaf0 0%, #fffaf0 12%, #a67c52 12%, #a67c52 16%, #2E5C3A 16%, #2E5C3A 56%, #a67c52 56%, #a67c52 60%, #fffaf0 60%, #fffaf0 68%, #d6a06f 68%, #d6a06f 75%, #c89362 75%, #c89362 82%, #ba8554 82%, #ba8554 90%, #ac7847 90%, #ac7847 100%);
+            --bg-theme2: linear-gradient(to bottom, #fff0e6 0%, #fff0e6 12%, #8c5a3c 12%, #8c5a3c 16%, #254B2F 16%, #254B2F 56%, #8c5a3c 56%, #8c5a3c 60%, #fff0e6 60%, #fff0e6 68%, #c78b5a 68%, #c78b5a 75%, #b97e4d 75%, #b97e4d 82%, #ab7140 82%, #ab7140 90%, #9d6433 90%, #9d6433 100%);
+            --bg-theme3: linear-gradient(to bottom, #e0e5ec 0%, #e0e5ec 12%, #6b5240 12%, #6b5240 16%, #1C3A24 16%, #1C3A24 56%, #6b5240 56%, #6b5240 60%, #e0e5ec 60%, #e0e5ec 68%, #9f8168 68%, #9f8168 75%, #91745b 75%, #91745b 82%, #83674e 82%, #83674e 90%, #755a41 90%, #755a41 100%);
+            --bg-theme4: linear-gradient(to bottom, #2d3436 0%, #2d3436 12%, #4a3629 12%, #4a3629 16%, #132918 16%, #132918 56%, #4a3629 56%, #4a3629 60%, #2d3436 60%, #2d3436 68%, #664d3b 68%, #664d3b 75%, #5a412f 75%, #5a412f 82%, #4e3523 82%, #4e3523 90%, #422917 90%, #422917 100%);
+        }
+
+        /* 允許特定元素選取文字，解除全局不可選的限制 */
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        input, select, textarea { user-select: auto; -webkit-user-select: auto; }
+        
+        /* 開放按鈕與列表文字反白複製，並替換原本的游標設定 */
+        .selectable-text { 
+            user-select: text !important; 
+            -webkit-user-select: text !important; 
+            cursor: auto !important; 
+        }
+
+        body {
+            font-family: 'Varela Round', 'Microsoft JhengHei', sans-serif;
+            background-color: #2f3542;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--text-dark);
+        }
+
+        /* ================= 雙欄主佈局 ================= */
+        .app-container {
+            background: var(--ui-bg);
+            width: 98vw;
+            max-width: 1800px;
+            height: 96vh;
+            border-radius: 16px;
+            box-shadow: 8px 8px 0px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 8px solid var(--ui-border);
+            position: relative;
+        }
+
+        @media (min-width: 900px) { .app-container { flex-direction: row; } }
+
+        .mute-btn {
+            position: absolute; top: 15px; left: 15px; z-index: 100;
+            background: var(--ui-bg); border: 4px solid var(--ui-border);
+            border-radius: 50%; width: 45px; height: 45px; font-size: 1.4rem;
+            cursor: pointer; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 4px 0 var(--ui-border); transition: all 0.1s;
+        }
+        .mute-btn:active { transform: translateY(4px); box-shadow: 0 0 0 var(--ui-border); }
+
+        /* ================= 多班級管理區塊樣式 ================= */
+        .class-header {
+            background: #e6d4b8; padding: 10px 15px 10px 70px; border-bottom: 3px solid var(--ui-border);
+            display: flex; justify-content: space-between; align-items: center; gap: 10px;
+        }
+        .class-select {
+            padding: 8px 10px; border-radius: 8px; border: 3px solid var(--ui-border); font-family: inherit; font-weight: bold;
+            font-size: 1.2rem; background: white; color: var(--ui-border); cursor: pointer; flex: 1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .class-manage-btn {
+            background: var(--warning); border: 3px solid var(--ui-border); border-radius: 8px; width: 42px; height: 42px;
+            display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 3px 0 var(--ui-border); transition: transform 0.1s; font-size: 1.3rem;
+        }
+        .class-manage-btn:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ui-border); }
+
+        /* ===== 左側：寵物展示區 ===== */
+        .left-panel { flex: 1; display: flex; flex-direction: column; background: var(--ui-bg); border-right: 6px solid var(--ui-border); }
+        .header { text-align: center; padding: 15px; padding-top: 20px; background-color: #e6d4b8; border-bottom: 6px solid var(--ui-border); }
+        
+        .level-badge {
+            font-size: 2.2rem; font-weight: bold; color: white; background: #ff9f43;
+            padding: 5px 30px; border-radius: 12px; border: 4px solid var(--ui-border);
+            box-shadow: 0 4px 0 #cc8e35; display: inline-block; margin-bottom: 10px;
+            text-shadow: 2px 2px 0px var(--ui-border);
+        }
+        .daily-quote { font-size: 1.3rem; color: var(--ui-border); font-weight: bold; text-shadow: 1px 1px 0px white; }
+
+        .stage {
+            flex: 1; position: relative; display: flex; justify-content: center; align-items: flex-end;
+            background: var(--bg-theme1); transition: background 1s ease; 
+            min-height: 250px; border: 6px solid var(--ui-border); border-radius: 12px;
+            margin: 15px; box-shadow: inset 0 0 20px rgba(0,0,0,0.15);
+        }
+        .stage::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background-image: radial-gradient(rgba(255,255,255,0.08) 2.5px, transparent 2.5px);
+            background-size: 24px 24px; pointer-events: none; z-index: 2; border-radius: 6px;
+        }
+        .stage-decor { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; border-radius: 6px; overflow: hidden; }
+        
+        .pet-name-tag { 
+            position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.9); 
+            padding: 5px 15px; border-radius: 20px; border: 3px solid var(--ui-border); 
+            font-weight: bold; color: var(--ui-border); z-index: 10; box-shadow: 0 4px 0 rgba(0,0,0,0.15); 
+            display: flex; align-items: center; gap: 8px; font-size: 1.1rem;
+        }
+        .edit-name-btn { 
+            background: #ffeb3b; border: 2px solid var(--ui-border); border-radius: 50%; 
+            width: 26px; height: 26px; cursor: pointer; display: flex; justify-content: center; 
+            align-items: center; padding: 0; font-size: 12px; box-shadow: 0 2px 0 var(--ui-border); pointer-events: auto;
+        }
+        .edit-name-btn:active { transform: translateY(2px); box-shadow: 0 0 0 var(--ui-border); }
+
+        .pet-container { width: 250px; height: 250px; position: relative; bottom: 10px; cursor: pointer; z-index: 5; }
+        .pet-svg { width: 100%; height: 100%; filter: drop-shadow(0 15px 10px rgba(0,0,0,0.15)); display: none; overflow: visible; transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.6s ease; }
+        .pet-svg.active { display: block; }
+        .pet-svg.evolved { transform: scale(1.25) translateY(-10px); filter: drop-shadow(0 20px 20px rgba(255, 234, 167, 0.6)); }
+        .accessory { display: none; }
+
+        /* ================= 形態特徵引擎 (Morph System) ================= */
+        .morph { display: none; transition: opacity 0.3s; }
+        [data-pet="1"] .m-1, [data-pet="2"] .m-2, [data-pet="3"] .m-3, [data-pet="4"] .m-4,
+        [data-pet="5"] .m-5, [data-pet="6"] .m-6, [data-pet="7"] .m-7, [data-pet="8"] .m-8,
+        [data-pet="9"] .m-9, [data-pet="10"] .m-10, [data-pet="11"] .m-11, [data-pet="12"] .m-12,
+        [data-pet="13"] .m-13, [data-pet="14"] .m-14, [data-pet="15"] .m-15, [data-pet="16"] .m-16,
+        [data-pet="17"] .m-17, [data-pet="18"] .m-18, [data-pet="19"] .m-19, [data-pet="20"] .m-20 { display: block !important; }
+
+        /* 動畫引擎 */
+        .anime-float { animation: animeFloat 3s ease-in-out infinite; transform-origin: center; }
+        .anime-breathe { animation: animeBreathe 2.5s ease-in-out infinite; transform-origin: 50px 85px; }
+        .anime-shadow { animation: animeShadow 3s ease-in-out infinite; transform-origin: 50px 92px; }
+        .anime-blink { animation: animeBlink 4s infinite; }
+        .anime-wag { animation: tailWag 2s ease-in-out infinite; transform-origin: 80px 75px; }
+        .anime-flutter { animation: wingFlutter 0.3s infinite alternate; transform-origin: 50px 50px; }
+        .anime-spin { animation: spin 4s linear infinite; transform-origin: 50px 50px; }
+        .anime-wave { animation: wandWave 0.6s infinite alternate ease-in-out; }
+
+        @keyframes animeFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+        @keyframes animeBreathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.04, 0.96); } }
+        @keyframes animeShadow { 0%, 100% { transform: scale(1); opacity: 0.25; } 50% { transform: scale(0.7); opacity: 0.1; } }
+        @keyframes animeBlink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0.1); } }
+        @keyframes tailWag { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(20deg); } }
+        @keyframes wingFlutter { 0% { transform: rotate(-15deg) scaleX(0.8); } 100% { transform: rotate(15deg) scaleX(1); } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes wandWave { 0% { transform: rotate(-5deg); } 100% { transform: rotate(15deg); } }
+        @keyframes jiggle { 0% { transform: rotate(-2deg); } 100% { transform: rotate(2deg); } }
+        
+        .jump { animation: jumpAnim 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        @keyframes jumpAnim { 0% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-60px) scaleY(1.1); } 100% { transform: translateY(0) scaleY(1); } }
+
+        /* 左側狀態列 */
+        .status-board { display: flex; justify-content: space-around; padding: 15px; background: #e6d4b8; border-top: 6px solid var(--ui-border); }
+        .status-item { flex: 1; margin: 0 10px; text-align: center; }
+        .status-label { font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; color: var(--ui-border); }
+        .bar-bg { background: #2d3436; height: 22px; border-radius: 6px; overflow: hidden; border: 3px solid var(--ui-border); box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
+        .bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s; }
+
+        /* AI 按鈕樣式 */
+        .ai-btn {
+            background: linear-gradient(45deg, #a29bfe, #fd79a8); border: 2px solid var(--ui-border); border-radius: 50%;
+            width: 28px; height: 28px; font-size: 14px; cursor: pointer; display: inline-flex; justify-content: center;
+            align-items: center; margin-left: 5px; box-shadow: 0 2px 0 var(--ui-border); color: white; transition: transform 0.1s; vertical-align: middle;
+        }
+        .ai-btn:active { transform: translateY(2px); box-shadow: 0 0 0 var(--ui-border); }
+
+        .exp-wrap { padding: 15px; background: var(--ui-bg); text-align: center; border-top: 4px dashed var(--ui-border); }
+        .exp-bar-bg { background: #2d3436; height: 35px; border-radius: 10px; position: relative; margin-top: 5px; border: 4px solid var(--ui-border); box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); overflow: hidden; }
+        .exp-bar-fill { background: linear-gradient(to bottom, #f1c40f, #e67e22); height: 100%; border-radius: 4px; transition: width 0.5s; position: relative; }
+        .exp-bar-fill::after {
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent); animation: shine 2.5s infinite;
+        }
+        @keyframes shine { 100% { left: 200%; } }
+        .exp-text { position: absolute; top: 0; left: 0; right: 0; line-height: 27px; font-weight: bold; color: white; text-shadow: 2px 2px 0 var(--ui-border); font-size: 1.3rem;}
+
+        /* ===== 右側：老師控制台 ===== */
+        .right-panel { flex: 1.4; display: flex; flex-direction: column; background: var(--ui-bg); }
+        .tabs { display: flex; background: #d1c1a3; border-bottom: 6px solid var(--ui-border); }
+        .tab { flex: 1; padding: 15px 5px; text-align: center; font-weight: bold; font-size: 1.1rem; cursor: pointer; color: #8c7362; border-bottom: 4px solid transparent; transition: all 0.2s; }
+        .tab:hover { background: rgba(255,255,255,0.3); }
+        .tab.active { color: var(--ui-border); border-bottom: 4px solid var(--primary); background: var(--ui-bg); }
+        .tab-content { flex: 1; padding: 20px; overflow-y: auto; display: none; }
+        .tab-content.active { display: block; }
+
+        .action-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+        .action-grid.edit-mode .btn { animation: jiggle 0.3s infinite alternate; opacity: 0.8; pointer-events: none; }
+        .action-grid.edit-mode .del-action-btn { display: flex; }
+
+        .btn {
+            border: 4px solid var(--ui-border); border-radius: 12px; padding: 15px 10px;
+            font-size: 1.2rem; font-weight: bold; color: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; box-shadow: 0 6px 0 var(--ui-border); transition: all 0.1s; text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+        }
+        .btn:active { transform: translateY(6px); box-shadow: 0 0 0 var(--ui-border); }
+        .btn span { font-size: 2rem; margin-bottom: 5px; }
+        .btn-green { background-color: var(--success); } .btn-blue { background-color: var(--secondary); color: var(--text-dark); text-shadow: none; } .btn-yellow { background-color: var(--warning); color: var(--ui-border); text-shadow: none;} .btn-red { background-color: var(--danger); } .btn-gray { background-color: #a4b0be; }
+
+        .section-title { font-size: 1.3rem; color: var(--ui-border); margin: 0 0 15px 0; border-left: 6px solid var(--primary); padding-left: 10px; display:flex; justify-content:space-between; align-items:center; }
+        
+        /* 將任務清單改為雙欄或多欄網格排列 */
+        .task-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; align-items: start; }
+        .task-item { 
+            background: #e6d4b8; border: 3px solid var(--ui-border); border-radius: 12px; padding: 15px; 
+            display: flex; justify-content: space-between; align-items: center; color: var(--ui-border); font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
+        }
+        .task-item:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        .task-item.done { background: #c8d6b9; border-color: var(--success); opacity: 0.8; transform: scale(0.98); box-shadow: none; }
+        /* 加上自動換行，適應雙欄後變窄的空間 */
+        .task-text { transition: all 0.3s; word-break: break-word; line-height: 1.3; padding-right: 5px; }
+        .task-item.done .task-text { text-decoration: line-through; opacity: 0.6; color: #555; }
+        .task-btn { background: var(--success); color: white; border: 3px solid var(--ui-border); padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 3px 0 var(--ui-border); transition: all 0.1s; flex-shrink: 0;}
+        .task-btn:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ui-border); }
+        
+        /* 任務與學生的編輯模式樣式 */
+        .task-item .task-del-btn { display: none !important; background: var(--danger) !important; border-color: var(--danger) !important; padding: 5px 10px !important; }
+        .task-list.edit-mode .task-item .task-del-btn { display: block !important; }
+
+        .action-btn-wrapper { position: relative; }
+        .del-action-btn { display: none; position: absolute; top: -8px; right: -8px; background: var(--danger); color: white; border: 3px solid var(--ui-border); border-radius: 50%; width: 28px; height: 28px; font-size: 14px; font-weight: bold; cursor: pointer; justify-content: center; align-items: center; box-shadow: 0 3px 0 var(--ui-border); z-index: 10; }
+        .del-action-btn:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ui-border); }
+
+        /* 學生榜單修改為自適應網格 */
+        .student-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+        .student-item { display: flex; justify-content: space-between; align-items: center; background: #e6d4b8; padding: 8px 10px; border-radius: 10px; border: 3px solid var(--ui-border); font-weight: bold; color: var(--ui-border);}
+        .student-pts { font-weight: bold; color: #1e3799; font-size: 1.05rem; text-shadow: 1px 1px 0px white;} 
+        .student-actions { display: flex; align-items: center; flex-shrink: 0; }
+        .student-actions button { background: white; border: 3px solid var(--ui-border); border-radius: 6px; width: 28px; height: 28px; cursor: pointer; font-weight: bold; box-shadow: 0 3px 0 var(--ui-border); margin-left: 4px; display: flex; justify-content: center; align-items: center; padding: 0; font-size: 0.9rem;}
+        .student-actions button:hover { background: #eee; }
+        .student-actions button:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ui-border); }
+        .student-actions .student-del-btn { display: none !important; background: var(--danger) !important; color: white !important; border-color: var(--danger) !important; }
+        .student-list.edit-mode .student-actions .student-del-btn { display: flex !important; }
+
+        .add-student-box { display: flex; gap: 10px; margin-bottom: 15px; }
+        .add-student-box input { flex: 1; padding: 10px; border: 3px solid var(--ui-border); border-radius: 10px; font-size: 1rem; background: #e6d4b8; color: var(--ui-border); font-weight: bold;}
+
+        .sys-btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        .sys-btn { flex: 1; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; border: 3px solid var(--ui-border); box-shadow: 0 4px 0 var(--ui-border); text-align: center; transition: transform 0.1s, box-shadow 0.1s; font-size: 1.1rem; }
+        .sys-btn:active { transform: translateY(4px); box-shadow: 0 0 0 var(--ui-border); }
+
+        .history-list { font-size: 0.95rem; color: #555; }
+        .history-item { padding: 10px 0; border-bottom: 1px dashed var(--ui-border); display: flex; gap: 10px;}
+        .history-time { color: #a4b0be; font-size: 0.85rem; }
+
+        .floating-text { position: absolute; font-size: 2.5rem; font-weight: bold; color: #ffeb3b; text-shadow: 2px 2px 0 var(--ui-border), -2px -2px 0 var(--ui-border); pointer-events: none; animation: floatUp 1s ease-out forwards; z-index: 20; }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-100px) scale(1.5); } }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal { background: var(--ui-bg); padding: 30px; border-radius: 16px; text-align: center; max-width: 90%; width: 500px; transform: scale(0.8); transition: transform 0.3s; border: 8px solid var(--ui-border); box-shadow: 8px 8px 0px rgba(0,0,0,0.5); }
+        .modal-overlay.active .modal { transform: scale(1); }
+        .modal h2 { font-size: 2.2rem; color: var(--primary); margin-top: 0; text-shadow: 1px 1px 0px var(--ui-border); }
+        .modal-btn { background: var(--success); color: white; border: 4px solid var(--ui-border); padding: 15px 40px; font-size: 1.3rem; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 6px 0 var(--ui-border); text-shadow: 1px 1px 0 rgba(0,0,0,0.3);}
+        .modal-btn:active { transform: translateY(6px); box-shadow: 0 0 0 var(--ui-border); }
+        
+        /* 圖鑑寵物網格 */
+        .pet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin: 15px 0; }
+        .pet-card { position: relative; background: #e6d4b8; border: 4px solid var(--ui-border); border-radius: 12px; padding: 10px 5px; cursor: pointer; text-align:center; font-weight:bold; color: var(--ui-border); transition: transform 0.2s;}
+        .pet-card:hover:not(.locked) { transform: scale(1.05); }
+        .pet-card.selected { border-color: var(--primary); background: #fff0f2; box-shadow: inset 0 0 10px rgba(255,107,129,0.3);}
+        .pet-card.locked { filter: grayscale(100%) brightness(0.9); opacity: 0.6; cursor: not-allowed; }
+        .pet-badge { position: absolute; top: -8px; right: -8px; font-size: 1.4rem; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.4)); animation: floatUp 2s ease-in-out infinite alternate; }
+
+        .chest-icon { font-size: 5rem; animation: shake 0.5s infinite; text-shadow: 3px 3px 0px var(--ui-border);}
+        @keyframes shake { 0% {transform: rotate(0deg);} 25% {transform: rotate(-10deg);} 50% {transform: rotate(0deg);} 75% {transform: rotate(10deg);} 100% {transform: rotate(0deg);} }
+
+        .emoji-picker { position: absolute; display: none; grid-template-columns: repeat(6, 1fr); gap: 8px; background: var(--ui-bg); border: 4px solid var(--ui-border); border-radius: 12px; padding: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.3); z-index: 1000; }
+        .emoji-picker button { background: transparent; border: none; font-size: 1.6rem; cursor: pointer; border-radius: 8px; transition: transform 0.1s, background 0.1s; padding: 5px; }
+        .emoji-picker button:hover { background: rgba(0,0,0,0.1); transform: scale(1.2); }
+        .icon-btn { width: 50px; padding: 0; border: 3px solid var(--ui-border); border-radius: 10px; background: #e6d4b8; color: var(--ui-border); font-weight: bold; text-align: center; font-size: 1.5rem; cursor: pointer; box-shadow: 0 3px 0 var(--ui-border); display: flex; justify-content: center; align-items: center; }
+        .icon-btn:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ui-border); }
+        .clickable-icon { font-size: 1.6rem; cursor: pointer; transition: transform 0.2s; display: inline-block; }
+        .clickable-icon:hover { transform: scale(1.3) rotate(-10deg); }
+
+        /* ================= 響應式設計 (RWD) 電腦、平板、手機自適應 ================= */
+        .input-group { display: flex; gap: 5px; margin-bottom: 15px; align-items: stretch; }
+
+        /* 平板直向與一般螢幕 */
+        @media (max-width: 899px) {
+            body { padding: 0; background: var(--ui-bg); overflow: auto; }
+            .app-container {
+                width: 100vw; min-height: 100vh; height: auto;
+                border: none; border-radius: 0; box-shadow: none;
+                display: flex; flex-direction: column;
+            }
+            .left-panel { flex: none; border-right: none; border-bottom: 6px solid var(--ui-border); height: auto; }
+            .right-panel { flex: none; height: auto; overflow: visible; }
+            .tab-content { overflow-y: visible; }
+            
+            .class-header { padding: 10px 10px 10px 60px; }
+            .mute-btn { top: 10px; left: 10px; }
+            .stage { min-height: 200px; }
+            .pet-container { width: 180px; height: 180px; }
+            .tabs { overflow-x: auto; white-space: nowrap; }
+        }
+
+        /* 手機版特化 (介面緊湊化，鎖定內部滾動類似原生 App) */
+        @media (max-width: 480px) {
+            body { overflow: hidden; }
+            .app-container { height: 100vh; height: 100dvh; }
+            .left-panel { height: 42%; flex: 0 0 42%; display: flex; flex-direction: column; }
+            .right-panel { height: 58%; flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+            
+            .class-header { padding: 5px 5px 5px 45px; border-bottom-width: 2px; }
+            .class-select { font-size: 0.95rem; padding: 4px; border-width: 2px; flex: 1; width: 0; text-overflow: ellipsis; }
+            .class-manage-btn { width: 30px; height: 30px; font-size: 1rem; border-width: 2px; flex-shrink: 0; }
+            .mute-btn { width: 30px; height: 30px; font-size: 1rem; top: 5px; left: 5px; border-width: 2px; }
+            
+            .header { padding: 5px; border-bottom-width: 3px; }
+            .level-badge { font-size: 1.1rem; padding: 2px 10px; margin-bottom: 4px; border-width: 2px; }
+            .daily-quote { font-size: 0.85rem; }
+            .ai-btn { width: 22px; height: 22px; font-size: 11px; }
+            
+            .stage { min-height: 0; flex: 1; margin: 4px; border-width: 3px; border-radius: 8px; }
+            .pet-container { width: 120px; height: 120px; bottom: 5px; }
+            .pet-name-tag { font-size: 0.8rem; padding: 2px 8px; top: 5px; right: 5px; border-width: 2px; }
+            
+            .status-board { padding: 5px; border-top-width: 3px; }
+            .status-label { font-size: 0.8rem; margin-bottom: 2px; }
+            .bar-bg { height: 10px; border-width: 2px; }
+            
+            .exp-wrap { padding: 5px; border-top-width: 2px; }
+            .exp-wrap strong { font-size: 0.9rem !important; margin-bottom: 2px !important; }
+            .exp-bar-bg { height: 16px; border-width: 2px; margin-top: 2px; }
+            .exp-text { font-size: 0.85rem; line-height: 16px; }
+            .exp-wrap div:last-child { display: none; }
+            
+            .tabs { padding-bottom: 0; border-bottom-width: 3px; }
+            .tab { padding: 8px 12px; font-size: 0.9rem; }
+            .tab-content { padding: 8px; flex: 1; overflow-y: auto; }
+            
+            .section-title { font-size: 1.05rem; margin-bottom: 8px; border-left-width: 3px; padding-left: 6px; }
+            
+            /* 輸入框群組智慧換行 */
+            .input-group { flex-wrap: wrap; gap: 4px !important; margin-bottom: 10px !important; }
+            .input-group > input[type="text"] { flex: 1 1 100% !important; order: -1; margin-bottom: 2px !important; font-size: 0.95rem !important; padding: 6px !important; border-width: 2px !important; }
+            .input-group > button.icon-btn { flex: 0 0 36px !important; padding: 0 !important; font-size: 1.2rem !important; border-width: 2px !important; height: 36px; }
+            .input-group > input[type="number"] { flex: 1 1 50px !important; width: auto !important; font-size: 0.95rem !important; padding: 6px !important; border-width: 2px !important; height: 36px; }
+            .input-group > button:not(.icon-btn) { flex: 1 1 auto !important; padding: 0 10px !important; font-size: 0.9rem !important; border-width: 2px !important; height: 36px; }
+            
+            .action-grid { grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 15px !important; }
+            .btn { padding: 6px 4px; font-size: 0.9rem; border-width: 2px; border-radius: 8px; box-shadow: 0 3px 0 var(--ui-border); }
+            .btn:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ui-border); }
+            .btn span { font-size: 1.4rem; margin-bottom: 2px; }
+            .del-action-btn { width: 22px; height: 22px; font-size: 10px; top: -5px; right: -5px; border-width: 2px; }
+            
+            /* 手機版任務改回單欄，以利觸控 */
+            .task-list { grid-template-columns: 1fr; }
+            .task-item { padding: 8px; border-width: 2px; font-size: 0.9rem; }
+            .task-btn { padding: 5px 10px; font-size: 0.85rem; border-width: 2px; }
+            
+            .add-student-box { margin-bottom: 10px; }
+            .add-student-box input { padding: 6px !important; font-size: 0.95rem !important; border-width: 2px !important; }
+            .add-student-box button { padding: 6px 12px !important; font-size: 0.9rem !important; border-width: 2px !important; }
+            
+            /* 手機版為了容納更多按鈕改為一欄 */
+            .student-list { grid-template-columns: 1fr; gap: 6px; }
+            .student-item { padding: 4px 6px; font-size: 0.85rem; border-width: 2px; }
+            .student-pts { font-size: 0.9rem; margin-right: 2px; }
+            .student-actions button { width: 22px !important; height: 22px !important; font-size: 0.8rem !important; border-width: 2px !important; margin-left: 2px !important; }
+            
+            .pet-grid { grid-template-columns: repeat(4, 1fr); gap: 4px; }
+            .pet-card { padding: 4px; border-width: 2px; font-size: 0.75rem; }
+            .pet-card div:first-child { font-size: 1.6rem !important; margin-bottom: 2px; }
+            .pet-badge { font-size: 0.9rem; top: -4px; right: -4px; }
+            
+            .sys-btn-group { flex-direction: column; gap: 6px; }
+            .sys-btn { padding: 8px !important; font-size: 0.95rem !important; border-width: 2px !important; width: 100% !important; margin: 0 !important; }
+            
+            .modal { width: 95% !important; padding: 15px; border-width: 4px; }
+            .modal h2 { font-size: 1.4rem; margin-bottom: 10px; }
+            .modal p { font-size: 1rem !important; margin-bottom: 15px !important; }
+            .modal-btn { font-size: 1rem; padding: 10px 20px; border-width: 2px; margin-top: 10px; }
+            
+            #classManagerModal { padding: 15px; }
+            #classManagerModal h2 { margin-bottom: 10px; }
+            #classManagerModal p { display: none; }
+            #classList > div { padding: 8px !important; flex-direction: column; align-items: stretch !important; gap: 5px; }
+            #classList span { font-size: 1rem !important; }
+            #classList .sys-btn { flex: 1; }
+            
+            .emoji-picker { left: 50% !important; transform: translateX(-50%); width: 90vw; grid-template-columns: repeat(6, 1fr); gap: 4px; padding: 8px; }
+            .emoji-picker button { font-size: 1.4rem; padding: 2px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <button id="muteBtn" class="mute-btn" onclick="toggleMute()" title="開啟/關閉音效">🔊</button>
+
+        <!-- 左側：寵物大廳 -->
+        <div class="left-panel">
+            
+            <!-- 新增：多班級管理標頭 -->
+            <div class="class-header">
+                <select id="classSelect" class="class-select" onchange="changeClass()"></select>
+                <button class="class-manage-btn" onclick="openClassManager()" title="管理任教班級">⚙️</button>
+            </div>
+
+            <div class="header" style="border-top: none; padding-top: 10px;">
+                <div class="level-badge" id="levelDisplay">⭐ Lv. 1</div>
+                <div class="daily-quote"><span id="quoteDisplay">「大家今天精神真好！繼續保持喔✨」</span> <button class="ai-btn" style="transform: translateY(-2px);" onclick="generateAiQuote()" title="✨ 讓 AI 寵物說說話">💬</button></div>
+            </div>
+
+            <div class="stage" id="stage">
+                
+                <div class="pet-name-tag">
+                    <span id="petNameText">班級寶貝</span>
+                    <button class="edit-name-btn" onclick="openRenameModal()" title="修改名字">✏️</button>
+                </div>
+
+                <!-- 背景裝飾 (粉筆字與課桌椅) -->
+                <svg class="stage-decor" viewBox="0 0 400 250" preserveAspectRatio="none">
+                    <text x="10%" y="32%" font-family="'Comic Sans MS', cursive, sans-serif" font-weight="bold" font-size="22" fill="rgba(255,255,255,0.4)" transform="rotate(-5 40 80)">1 + 1 = 2</text>
+                    <text x="80%" y="25%" font-family="'Comic Sans MS', cursive, sans-serif" font-weight="bold" font-size="26" fill="rgba(255,255,255,0.4)" transform="rotate(8 320 60)">A B C</text>
+                    <text x="50%" y="38%" font-family="'Comic Sans MS', cursive, sans-serif" font-weight="bold" font-size="28" fill="rgba(255,255,255,0.2)" text-anchor="middle">Welcome!</text>
+                    
+                    <g transform="translate(30, 180) scale(0.65)" opacity="0.85">
+                        <rect x="10" y="40" width="8" height="50" fill="#4a3629" rx="2"/>
+                        <rect x="70" y="40" width="8" height="50" fill="#4a3629" rx="2"/>
+                        <rect x="90" y="50" width="6" height="40" fill="#5c4332" rx="2"/>
+                        <rect x="120" y="50" width="6" height="40" fill="#5c4332" rx="2"/>
+                        <rect x="85" y="45" width="45" height="8" fill="#a67c52" rx="2"/>
+                        <rect x="120" y="20" width="6" height="30" fill="#5c4332" rx="2"/>
+                        <rect x="85" y="25" width="40" height="15" fill="#a67c52" rx="4"/>
+                        <path d="M 0 35 L 90 35 L 85 45 L -5 45 Z" fill="#d6a06f"/>
+                        <rect x="5" y="45" width="78" height="6" fill="#a67c52" rx="2"/>
+                    </g>
+                    <g transform="translate(280, 190) scale(0.75)" opacity="0.85">
+                        <rect x="10" y="40" width="8" height="50" fill="#4a3629" rx="2"/>
+                        <rect x="70" y="40" width="8" height="50" fill="#4a3629" rx="2"/>
+                        <rect x="90" y="50" width="6" height="40" fill="#5c4332" rx="2"/>
+                        <rect x="120" y="50" width="6" height="40" fill="#5c4332" rx="2"/>
+                        <rect x="85" y="45" width="45" height="8" fill="#a67c52" rx="2"/>
+                        <rect x="120" y="20" width="6" height="30" fill="#5c4332" rx="2"/>
+                        <rect x="85" y="25" width="40" height="15" fill="#a67c52" rx="4"/>
+                        <path d="M 0 35 L 90 35 L 85 45 L -5 45 Z" fill="#d6a06f"/>
+                        <rect x="5" y="45" width="78" height="6" fill="#a67c52" rx="2"/>
+                    </g>
+                </svg>
+
+                <div class="pet-container" id="pet" data-pet="1" onclick="triggerAction('poke', '逗弄寵物')">
+                    
+                    <!-- ================= 基礎模型 1：恐龍型 (適用 1, 9, 20) ================= -->
+                    <svg id="pet-dino" class="pet-svg active" viewBox="0 0 100 100">
+                        <defs>
+                            <linearGradient id="grad_dino_1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#55efc4" /><stop offset="100%" stop-color="#00b894" /></linearGradient>
+                            <linearGradient id="grad_dino_2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ffeaa7" /><stop offset="100%" stop-color="#fdcb6e" /></linearGradient>
+                        </defs>
+                        <ellipse cx="50" cy="92" rx="35" ry="5" fill="black" class="anime-shadow" />
+                        <g class="anime-float">
+                            <g class="morph m-20 anime-flutter" style="transform-origin: 50px 50px;">
+                                <path d="M 50 40 Q 20 20 10 30 Q 20 50 30 40 Q 20 60 50 60 Z" fill="url(#grad_dino_2)"/>
+                                <path d="M 50 40 Q 80 20 90 30 Q 80 50 70 40 Q 80 60 50 60 Z" fill="url(#grad_dino_2)"/>
+                            </g>
+
+                            <g class="anime-breathe">
+                                <path class="morph m-1 m-20" d="M 60 70 Q 85 85 92 50 Q 80 70 65 60 Z" fill="url(#grad_dino_1)"/>
+                                <polygon class="morph m-1 m-20" points="78,63 88,58 84,68" fill="url(#grad_dino_2)"/>
+                                <ellipse cx="50" cy="65" rx="24" ry="26" fill="url(#grad_dino_1)"/>
+                                <ellipse cx="50" cy="68" rx="16" ry="18" fill="rgba(255,255,255,0.4)"/>
+                                <path d="M 33 85 L 28 95 L 42 95 Z" fill="url(#grad_dino_1)" stroke="url(#grad_dino_1)" stroke-width="2" stroke-linejoin="round"/>
+                                <path d="M 58 85 L 67 95 L 53 95 Z" fill="url(#grad_dino_1)" stroke="url(#grad_dino_1)" stroke-width="2" stroke-linejoin="round"/>
+                                
+                                <g class="morph m-1 m-20">
+                                    <polygon points="45,18 50,2 55,18" fill="url(#grad_dino_2)"/>
+                                    <polygon points="30,24 20,12 38,20" fill="url(#grad_dino_2)"/>
+                                    <polygon points="70,24 80,12 62,20" fill="url(#grad_dino_2)"/>
+                                </g>
+
+                                <g class="morph m-20">
+                                    <path d="M 30 20 Q 15 10 10 20" stroke="url(#grad_dino_2)" stroke-width="4" fill="none" stroke-linecap="round"/>
+                                    <path d="M 70 20 Q 85 10 90 20" stroke="url(#grad_dino_2)" stroke-width="4" fill="none" stroke-linecap="round"/>
+                                </g>
+
+                                <g class="morph m-9">
+                                    <circle cx="32" cy="20" r="10" fill="url(#grad_dino_1)"/><circle cx="68" cy="20" r="10" fill="url(#grad_dino_1)"/>
+                                    <circle cx="32" cy="18" r="4" fill="#fff"/><circle cx="32" cy="18" r="2" fill="#333"/>
+                                    <circle cx="68" cy="18" r="4" fill="#fff"/><circle cx="68" cy="18" r="2" fill="#333"/>
+                                </g>
+
+                                <ellipse cx="50" cy="40" rx="30" ry="25" fill="url(#grad_dino_1)"/>
+                                <ellipse class="morph m-1 m-20" cx="50" cy="48" rx="22" ry="14" fill="rgba(255,255,255,0.3)"/>
+                                
+                                <path class="morph m-1 m-20" d="M 32 60 Q 22 65 26 72" stroke="url(#grad_dino_1)" stroke-width="4" stroke-linecap="round" fill="none"/>
+                                <path class="morph m-1 m-20" d="M 68 60 Q 78 65 74 72" stroke="url(#grad_dino_1)" stroke-width="4" stroke-linecap="round" fill="none"/>
+                                <path class="morph m-9" d="M 28 65 Q 15 75 25 85" stroke="url(#grad_dino_1)" stroke-width="4" stroke-linecap="round" fill="none"/>
+                                <path class="morph m-9" d="M 72 65 Q 85 75 75 85" stroke="url(#grad_dino_1)" stroke-width="4" stroke-linecap="round" fill="none"/>
+                                
+                                <g class="accessory acc-hat" transform="translate(0, -18)"><path d="M35,30 L65,30 L50,0 Z" fill="#8e44ad"/><rect x="30" y="30" width="40" height="5" fill="#9b59b6"/></g>
+                                <g class="accessory acc-balloon"><path d="M 80 40 Q 70 55 55 65" stroke="#bdc3c7" stroke-width="1.5" fill="none"/><g class="anime-float" style="animation-duration: 2.5s; animation-delay: 0.5s;"><ellipse cx="80" cy="40" rx="10" ry="14" fill="#ff7675"/><polygon points="78,54 82,54 80,51" fill="#ff7675"/><ellipse cx="76" cy="35" rx="2.5" ry="5" fill="#fff" opacity="0.5" transform="rotate(-30 76 35)"/></g></g>
+                                <g class="accessory acc-clothes"><path d="M 32 78 Q 50 96 68 78 L 63 71 Q 50 81 37 71 Z" fill="#0984e3"/><path d="M 38 71 L 38 65 M 62 71 L 62 65" stroke="#0984e3" stroke-width="3" stroke-linecap="round"/><circle cx="38" cy="71" r="2" fill="#ffeaa7"/><circle cx="62" cy="71" r="2" fill="#ffeaa7"/></g>
+                                <g class="accessory acc-bow" transform="translate(40, 62)"><polygon points="20,0 20,10 10,5" fill="#e74c3c"/><polygon points="0,0 0,10 10,5" fill="#e74c3c"/><circle cx="10" cy="5" r="3" fill="#c0392b"/></g>
+                                <g class="accessory acc-stars anime-spin" style="animation-duration: 6s; transform-origin: 50px 50px;"><polygon points="50,5 53,15 63,15 55,21 58,31 50,25 42,31 45,21 37,15 47,15" fill="#ffeb3b" transform="translate(-25, -15) scale(0.4)"/><polygon points="50,5 53,15 63,15 55,21 58,31 50,25 42,31 45,21 37,15 47,15" fill="#ffeb3b" transform="translate(30, 5) scale(0.5)"/><polygon points="50,5 53,15 63,15 55,21 58,31 50,25 42,31 45,21 37,15 47,15" fill="#ffeb3b" transform="translate(-15, 35) scale(0.4)"/></g>
+                                
+                                <g class="accessory acc-glasses">
+                                    <!-- 恐龍與噴火龍的墨鏡位置 -->
+                                    <g class="morph m-1 m-20" transform="translate(28, 27)"><path d="M -2 5 L 42 5" stroke="#2d3436" stroke-width="2.5"/><path d="M 0 5 L 4 14 Q 9 17 14 14 L 18 5 Z" fill="#2d3436"/><path d="M 22 5 L 26 14 Q 31 17 36 14 L 40 5 Z" fill="#2d3436"/><path d="M 2 7 L 8 5" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/><path d="M 24 7 L 30 5" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/></g>
+                                    <!-- 青蛙的墨鏡位置 (移到頭頂) -->
+                                    <g class="morph m-9" transform="translate(28, 12)"><path d="M -2 5 L 42 5" stroke="#2d3436" stroke-width="2.5"/><path d="M 0 5 L 4 14 Q 9 17 14 14 L 18 5 Z" fill="#2d3436"/><path d="M 22 5 L 26 14 Q 31 17 36 14 L 40 5 Z" fill="#2d3436"/><path d="M 2 7 L 8 5" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/><path d="M 24 7 L 30 5" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/></g>
+                                </g>
+
+                                <g class="accessory acc-evo-aura anime-spin" style="animation-duration: 8s; transform-origin: 50px 60px;"><circle cx="50" cy="60" r="42" fill="none" stroke="#ffeaa7" stroke-width="3" stroke-dasharray="10 10"/><circle cx="50" cy="60" r="48" fill="none" stroke="#fdcb6e" stroke-width="1.5" stroke-dasharray="5 15"/></g>
+                                
+                                <g class="accessory acc-wand">
+                                    <g class="morph m-1 m-20" transform="translate(21, 46)">
+                                        <g class="anime-wave" style="transform-origin: 5px 25px;">
+                                            <line x1="5" y1="25" x2="20" y2="5" stroke="#742a1a" stroke-width="3" stroke-linecap="round"/>
+                                            <line x1="5" y1="25" x2="20" y2="5" stroke="#e67e22" stroke-width="1.5" stroke-linecap="round"/>
+                                            <g class="anime-spin" style="animation-duration: 3s; transform-origin: 20px 5px;"><polygon points="20,-5 23,2 30,2 24,7 26,14 20,10 14,14 16,7 10,2 17,2" fill="#f1c40f"/><polygon points="20,-1 21,3 25,3 22,6 23,9 20,7 17,9 18,6 15,3 19,3" fill="#fff"/></g>
+                                            <circle cx="10" cy="0" r="1.5" fill="#ffeb3b" class="anime-blink"/><circle cx="28" cy="15" r="2" fill="#fff" class="anime-blink" style="animation-delay: 0.5s;"/>
+                                        </g>
+                                    </g>
+                                    <!-- 青蛙的魔杖位置 (移到手上) -->
+                                    <g class="morph m-9" transform="translate(10, 60)">
+                                        <g class="anime-wave" style="transform-origin: 5px 25px;">
+                                            <line x1="5" y1="25" x2="20" y2="5" stroke="#742a1a" stroke-width="3" stroke-linecap="round"/>
+                                            <line x1="5" y1="25" x2="20" y2="5" stroke="#e67e22" stroke-width="1.5" stroke-linecap="round"/>
+                                            <g class="anime-spin" style="animation-duration: 3s; transform-origin: 20px 5px;"><polygon points="20,-5 23,2 30,2 24,7 26,14 20,10 14,14 16,7 10,2 17,2" fill="#f1c40f"/><polygon points="20,-1 21,3 25,3 22,6 23,9 20,7 17,9 18,6 15,3 19,3" fill="#fff"/></g>
+                                            <circle cx="10" cy="0" r="1.5" fill="#ffeb3b" class="anime-blink"/><circle cx="28" cy="15" r="2" fill="#fff" class="anime-blink" style="animation-delay: 0.5s;"/>
+                                        </g>
+                                        <ellipse cx="5" cy="25" rx="4" ry="3" fill="url(#grad_dino_1)" transform="rotate(-30 5 25)"/>
+                                    </g>
+                                </g>
+
+                                <!-- 基礎臉部表情 -->
+                                <g class="mood-normal anime-blink">
+                                    <g class="morph m-1 m-20" style="transform-origin: 38px 35px;"><ellipse cx="38" cy="35" rx="5" ry="8" fill="#2d3436"/><circle cx="39.5" cy="32" r="2.5" fill="white"/></g>
+                                    <g class="morph m-1 m-20" style="transform-origin: 62px 35px;"><ellipse cx="62" cy="35" rx="5" ry="8" fill="#2d3436"/><circle cx="63.5" cy="32" r="2.5" fill="white"/></g>
+                                    <ellipse cx="28" cy="42" rx="4" ry="2.5" fill="#ff7675" opacity="0.6"/><ellipse cx="72" cy="42" rx="4" ry="2.5" fill="#ff7675" opacity="0.6"/>
+                                    <path d="M 45 52 Q 50 56 55 52" stroke="#2d3436" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                                    <circle class="morph m-1 m-20" cx="43" cy="45" r="1.5" fill="#2d3436" opacity="0.6"/><circle class="morph m-1 m-20" cx="57" cy="45" r="1.5" fill="#2d3436" opacity="0.6"/>
+                                </g>
+                                <g class="mood-happy" style="display:none;">
+                                    <path class="morph m-1 m-20" d="M 33 35 Q 38 30 43 35" stroke="#2d3436" stroke-width="3" fill="none" stroke-linecap="round"/>
+                                    <path class="morph m-1 m-20" d="M 57 35 Q 62 30 67 35" stroke="#2d3436" stroke-width="3" fill="none" stroke-linecap="round"/>
+                                    <path d="M 43 52 Q 50 62 57 52 Z" fill="#ff7675" />
+                                    <ellipse cx="28" cy="40" rx="5" ry="3" fill="#ff7675" opacity="0.8"/><ellipse cx="72" cy="40" rx="5" ry="3" fill="#ff7675" opacity="0.8"/>
+                                </g>
+                                <g class="mood-sad" style="display:none;">
+                                    <g class="morph m-1 m-20"><ellipse cx="38" cy="36" rx="5" ry="8" fill="#2d3436"/><circle cx="39.5" cy="33" r="2.5" fill="white"/><ellipse cx="62" cy="36" rx="5" ry="8" fill="#2d3436"/><circle cx="63.5" cy="33" r="2.5" fill="white"/></g>
+                                    <path d="M 45 54 Q 50 50 55 54" stroke="#2d3436" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                                    <circle cx="38" cy="46" r="2" fill="#74b9ff"/><circle cx="62" cy="46" r="2" fill="#74b9ff"/>
+                                </g>
+                            </g>
+                        </g>
+                    </svg>
+
+                    <!-- ================= 基礎模型 2：圓潤型 (適用 2, 5, 7, 8, 10, 12, 13, 14, 15) ================= -->
+                    <svg id="pet-cat" class="pet-svg" viewBox="0 0 100 100">
+                        <defs>
+                            <linearGradient id="grad_cat_1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ffffff" /><stop offset="100%" stop-color="#dfe6e9" /></linearGradient>
+                            <linearGradient id="grad_cat_2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#fab1a0" /><stop offset="100%" stop-color="#ff7675" /></linearGradient>
+                        </defs>
+                        <ellipse cx="50" cy="92" rx="30" ry="5" fill="black" class="anime-shadow" />
+                        <g class="anime-float">
+                            <!-- Tails -->
+                            <path class="morph m-2 m-10 anime-wag" d="M 65 75 Q 90 85 85 50" stroke="#b2bec3" stroke-width="6" stroke-linecap="round" fill="none" style="transform-origin: 65px 75px;" />
+                            <path class="morph m-7 anime-wag" d="M 65 75 Q 100 90 90 50 Q 80 80 65 75" stroke="url(#grad_cat_2)" stroke-width="12" stroke-linecap="round" fill="none" style="transform-origin: 65px 75px;" />
+                            <path class="morph m-13 m-15 anime-wag" d="M 65 75 Q 90 85 85 50" stroke="url(#grad_cat_2)" stroke-width="3" stroke-linecap="round" fill="none" style="transform-origin: 65px 75px;" />
+                            <!-- 棕熊(5) 與 其他圓尾巴 -->
+                            <circle class="morph m-5 m-8 m-12 m-14" cx="75" cy="80" r="6" fill="url(#grad_cat_2)"/>
+                            
+                            <g class="anime-breathe">
+                                <!-- Body -->
+                                <ellipse cx="50" cy="72" rx="22" ry="20" fill="url(#grad_cat_1)" />
+                                <ellipse cx="50" cy="75" rx="14" ry="12" fill="rgba(255,255,255,0.7)" />
+                                <ellipse cx="36" cy="90" rx="6" ry="4" fill="url(#grad_cat_1)" /><ellipse cx="64" cy="90" rx="6" ry="4" fill="url(#grad_cat_1)" />
+                                <ellipse cx="43" cy="83" rx="4.5" ry="7" fill="rgba(255,255,255,0.8)" /><ellipse cx="57" cy="83" rx="4.5" ry="7" fill="rgba(255,255,255,0.8)" />
+                                
+                                <!-- Arms -->
+                                <path d="M 22 42 L 10 38 M 22 46 L 10 46 M 22 50 L 10 54" stroke="#b2bec3" stroke-width="1.5" stroke-linecap="round" opacity="0"/> <!-- Balance -->
+                                
+                                <!-- Ears -->
+                                <g class="morph m-2 m-10">
+                                    <polygon points="28,35 25,15 45,28" fill="url(#grad_cat_1)" /><polygon points="31,32 28,20 42,28" fill="url(#grad_cat_2)" />
+                                    <polygon points="72,35 75,15 55,28" fill="url(#grad_cat_1)" /><polygon points="69,32 72,20 58,28" fill="url(#grad_cat_2)" />
+                                </g>
+                                <g class="morph m-7">
+                                    <polygon points="26,38 18,5 42,25" fill="url(#grad_cat_1)" /><polygon points="30,34 22,12 40,25" fill="url(#grad_cat_2)" />
+                                    <polygon points="74,38 82,5 58,25" fill="url(#grad_cat_1)" /><polygon points="70,34 78,12 60,25" fill="url(#grad_cat_2)" />
+                                </g>
+                                <!-- 棕熊專屬：雙層熊耳 -->
+                                <g class="morph m-5">
+                                    <circle cx="25" cy="22" r="10" fill="url(#grad_cat_2)" /><circle cx="25" cy="22" r="5" fill="url(#grad_cat_1)" />
+                                    <circle cx="75" cy="22" r="10" fill="url(#grad_cat_2)" /><circle cx="75" cy="22" r="5" fill="url(#grad_cat_1)" />
+                                </g>
+                                <!-- 貓熊專屬：頭頂圓耳 -->
+                                <g class="morph m-8">
+                                    <circle cx="28" cy="25" r="10" fill="url(#grad_cat_2)" />
+                                    <circle cx="72" cy="25" r="10" fill="url(#grad_cat_2)" />
+                                </g>
+                                <!-- 猴子專屬：臉頰兩側的圓耳 -->
+                                <g class="morph m-15">
+                                    <circle cx="22" cy="45" r="10" fill="url(#grad_cat_2)" />
+                                    <circle cx="22" cy="45" r="5" fill="url(#grad_cat_1)" />
+                                    <circle cx="78" cy="45" r="10" fill="url(#grad_cat_2)" />
+                                    <circle cx="78" cy="45" r="5" fill="url(#grad_cat_1)" />
+                                </g>
+                                <g class="morph m-13 m-14">
+                                    <circle cx="22" cy="28" r="16" fill="url(#grad_cat_1)" /><circle cx="22" cy="28" r="10" fill="url(#grad_cat_2)" />
+                                    <circle cx="78" cy="28" r="16" fill="url(#grad_cat_1)" /><circle cx="78" cy="28" r="10" fill="url(#grad_cat_2)" />
+                                </g>
+                                <g class="morph m-12"><polygon points="35,25 10,35 25,45" fill="url(#grad_cat_2)" /><polygon points="65,25 90,35 75,45" fill="url(#grad_cat_2)" /></g>
+
+                                <!-- Head -->
+                                <circle cx="50" cy="45" r="23" fill="url(#grad_cat_1)" />
+                                
+                                <!-- Whiskers (排除 5 棕熊、15 猴子、12 豬、14 無尾熊 等) -->
+                                <g class="morph m-2 m-7 m-10 m-13">
+                                    <path d="M 22 42 L 10 38 M 22 46 L 10 46 M 22 50 L 10 54" stroke="rgba(0,0,0,0.3)" stroke-width="1.5" stroke-linecap="round"/>
+                                    <path d="M 78 42 L 90 38 M 78 46 L 90 46 M 78 50 L 90 54" stroke="rgba(0,0,0,0.3)" stroke-width="1.5" stroke-linecap="round"/>
+                                </g>
+
+                                <!-- Face Patterns -->
+                                <path class="morph m-15" d="M 35 40 Q 50 30 65 40 Q 70 55 50 60 Q 30 55 35 40 Z" fill="rgba(255,255,255,0.4)" />
+                                <path class="morph m-10" d="M 45 28 L 55 28 M 42 32 L 58 32 M 47 36 L 53 36" stroke="#2d3436" stroke-width="2" stroke-linecap="round"/>
+                                
+                                <!-- 貓熊專屬黑眼圈 (保留白眼底) -->
+                                <g class="morph m-8">
+                                    <ellipse cx="35" cy="42" rx="9" ry="7" fill="#2d3436" transform="rotate(-15 35 42)"/>
+                                    <circle cx="35" cy="42" r="5" fill="#ffffff"/>
+                                    <ellipse cx="65" cy="42" rx="9" ry="7" fill="#2d3436" transform="rotate(15 65 42)"/>
+                                    <circle cx="65" cy="42" r="5" fill="#ffffff"/>
+                                </g>
+
+                                <g class="morph m-12"><ellipse cx="50" cy="49" rx="8" ry="5" fill="url(#grad_cat_2)"/><circle cx="47" cy="49" r="1.5" fill="#2d3436"/><circle cx="53" cy="49" r="1.5" fill="#2d3436"/></g>
+                                <ellipse class="morph m-14" cx="50" cy="48" rx="8" ry="11" fill="#2d3436"/>
+                                
+                                <!-- 棕熊專屬：立體吻部與寬黑鼻 -->
+                                <g class="morph m-5">
+                                    <ellipse cx="50" cy="48" rx="14" ry="11" fill="rgba(255,255,255,0.8)"/>
+                                    <ellipse cx="50" cy="43" rx="6" ry="4" fill="#2d3436"/>
+                                </g>
+
+                                <!-- 配件 -->
+                                <g class="accessory acc-hat" transform="translate(0, -15)"><path d="M35,30 L65,30 L50,0 Z" fill="#8e44ad"/><rect x="30" y="30" width="40" height="5" fill="#9b59b6"/></g>
+                                <g class="accessory acc-balloon"><path d="M 80 40 Q 70 55 55 65" stroke="#bdc3c7" stroke-width="1.5" fill="none"/><g class="anime-float" style="animation-duration: 2.5s; animation-delay: 0.5s;"><ellipse cx="80" cy="40" rx="10" ry="14" fill="#ff7675"/><polygon points="78,54 82,54 80,51" fill="#ff7675"/><ellipse cx="76" cy="35" rx="2.5" ry="5" fill="#fff" opacity="0.5" transform="rotate(-30 76 35)"/></g></g>
+                                <g class="accessory acc-clothes"><path d="M 35 68 Q 50 81 65 68 L 60 61 Q 50 71 40 61 Z" fill="#0984e3"/><polygon points="50,71 45,81 55,81" fill="#d63031"/><path d="M 35 68 L 40 61 M 65 68 L 60 61" stroke="#fff" stroke-width="2"/></g>
+                                <g class="accessory acc-bow" transform="translate(40, 58)"><polygon points="20,0 20,10 10,5" fill="#e74c3c"/><polygon points="0,0 0,10 10,5" fill="#e74c3c"/><circle cx="10" cy="5" r="3" fill="#c0392b"/></g>
+                                <g class="accessory acc-stars anime-spin" style="animation-duration: 6s; transform-origin: 50px 50px;"><polygon points="50,5 53,15 63,15 55,21 58,31 50,25 42,31 45,21 37,15 47,15" fill="#ffeb3b" transform="translate(-25, -15) scale(0.4)"/><polygon points="50,5 53,15 63,15 55,21 58,31 50,25 42,31 45,21 37,15 47,15" fill="#ffeb3b" transform="translate(30, 5) scale(0.5)"/><polygon points="50,5 53,15 63,15 55,21 58,31 50,25 42,31 45,21 37,15 47,15" fill="#ffeb3b" transform="translate(-15, 35) scale(0.4)"/></g>
+                                <g class="accessory acc-glasses" transform="translate(23, 34) scale(1.3)"><path d="M -2 5 L 42 5" stroke="#2d3436" stroke-width="2.5"/><path d="M 0 5 L 4 14 Q 9 17 14 14 L 18 5 Z" fill="#2d3436"/><path d="M 22 5 L 26 14 Q 31 17 36 14 L 40 5 Z" fill="#2d3436"/><path d="M 2 7 L 8 5" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/><path d="M 24 7 L 30 5" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/></g>
+                                <g class="accessory acc-evo-aura anime-spin" style="animation-duration: 8s; transform-origin: 50px 60px;"><circle cx="50" cy="60" r="40" fill="none" stroke="#ffeaa7" stroke-width="3" stroke-dasharray="10 10"/><circle cx="50" cy="60" r="46" fill="none" stroke="#fdcb6e" stroke-width="1.5" stroke-dasharray="5 15"/></g>
+                                <g class="accessory acc-wand" transform="translate(18, 48)">
+                                    <g class="anime-wave" style="transform-origin: 5px 25px;">
+                                        <line x1="5" y1="25" x2="20" y2="5" stroke="#742a1a" stroke-width="3" stroke-linecap="round"/>
+                                        <line x1="5" y1="25" x2="20" y2="5" stroke="#e67e22" stroke-width="1.5" stroke-linecap="round"/>
+                                        <g class="anime-spin" style="animation-duration: 3s; transform-origin: 20px 5px;"><polygon points="20,-5 23,2 30,2 24,7 26,14 20,10 14,14 16,7 10,2 17,2" fill="#f1c40f"/><polygon points="20,-1 21,3 25,3 22,6 23,9 20,7 17,9 18,6 15,3 19,3" fill="#fff"/></g>
+                                        <circle cx="10" cy="0" r="1.5" fill="#ffeb3b" class="anime-blink"/><circle cx="28" cy="15" r="2" fill="#fff" class="anime-blink" style="animation-delay: 0.5s;"/>
+                                    </g>
+                                    <ellipse cx="5" cy="25" rx="4" ry="3" fill="url(#grad_cat_1)" transform="rotate(-30 5 25)"/>
+                                </g>
+
+                                <!-- 基礎臉部表情 -->
+                                <g class="mood-normal anime-blink">
+                                    <g style="transform-origin: 35px 42px;"><ellipse cx="35" cy="42" rx="5" ry="8" fill="#2d3436"/><circle cx="37" cy="39" r="2" fill="white"/></g>
+                                    <g style="transform-origin: 65px 42px;"><ellipse cx="65" cy="42" rx="5" ry="8" fill="#2d3436"/><circle cx="67" cy="39" r="2" fill="white"/></g>
+                                    <path class="morph m-2 m-7 m-8 m-10 m-13 m-14 m-15" d="M 45 48 Q 50 53 55 48" stroke="#2d3436" stroke-width="2" fill="none" stroke-linecap="round"/>
+                                    <!-- 棕熊專屬：倒Ｙ字型熊嘴巴 -->
+                                    <path class="morph m-5" d="M 50 47 L 50 50 M 45 52 Q 50 55 55 52" stroke="#2d3436" stroke-width="2" fill="none" stroke-linecap="round"/>
+                                </g>
+                                <g class="mood-happy" style="display:none;">
+                                    <path d="M 30 42 Q 35 36 40 42" stroke="#2d3436" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                                    <path d="M 60 42 Q 65 36 70 42" stroke="#2d3436" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                                    <path class="morph m-2 m-7 m-8 m-10 m-13 m-14 m-15" d="M 45 48 Q 50 58 55 48 Z" fill="#ff7675" />
+                                    <!-- 棕熊專屬：開心熊嘴巴 -->
+                                    <path class="morph m-5" d="M 50 47 L 50 50 M 44 51 Q 50 58 56 51 Z" fill="#ff7675" stroke="#2d3436" stroke-width="2" stroke-linejoin="round"/>
+                                    <ellipse cx="30" cy="45" rx="4" ry="2" fill="#ff7675" opacity="0.6"/><ellipse cx="70" cy="45" rx="4" ry="2" fill="#ff7675" opacity="0.6"/>
+                                </g>
+                                <g class="mood-sad" style="display:none;">
+                                    <ellipse cx="35" cy="42" rx="5" ry="8" fill="#2d3436"/><ellipse cx="65" cy="42" rx="5" ry="8" fill="#2d3436"/>
+                                    <path class="morph m-2 m-7 m-8 m-10 m-13 m-14 m-15" d="M 45 52 Q 50 47 55 52" stroke="#2d3436" stroke-width="2" fill="none" stroke-linecap="round"/>
+                                    <!-- 棕熊專屬：難過熊嘴巴 -->
+                                    <path class="morph m-5" d="M 50 47 L 50 52 M 46 54 Q 50 52 54 54" stroke="#2d3436" stroke-width="2" fill="none" stroke-linecap="round"/>
+                                    <path d="M 33 49 L 33 54" stroke="#74b9ff" stroke-width="2" stroke-linecap="round"/><path d="M 67 49 L 67 54" stroke="#74b9ff" stroke-width="2" stroke-linecap="round"/>
+                                </g>
+                            </g>
+                        </g>
+                    </svg>
+
+                    <!-- ================= 基礎模型 3：垂耳型 (適用 3, 6, 11, 19) ================= -->
+                    <svg id="pet-dog" class="pet-svg" viewBox="0 0 100 100">
+                        <defs>
+                            <linearGradient id="grad_dog_1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ffeaa7" /><stop offset="100%" stop-color="#fdcb6e" /></linearGradient>
+                            <linearGradient id="grad_dog_2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#fab1a0" /><stop offset="100%" stop-color="#e17055" /></linearGradient>
+                        </defs>
+                        <ellipse cx="50" cy="92" rx="32" ry="5" fill="black" class="anime-shadow" />
+                        <g class="anime-float">
+                            <path class="morph m-3 m-19 anime-wag" d="M 60 75 Q 85 80 80 55" stroke="url(#grad_dog_2)" stroke-width="7" stroke-linecap="round" fill="none" style="transform-origin: 60px 75px;" />
+                            <circle class="morph m-6" cx="75" cy="80" r="8" fill="url(#grad_dog_1)"/>
+                            <g class="morph m-11 anime-wag" style="transform-origin: 60px 75px;"><path d="M 60 75 Q 85 80 80 55" stroke="url(#grad_dog_1)" stroke-width="4" fill="none"/><circle cx="80" cy="55" r="5" fill="url(#grad_dog_2)"/></g>
+                            <g class="anime-breathe">
+                                <circle class="morph m-11" cx="50" cy="45" r="32" fill="url(#grad_dog_2)"/>
+                                <path class="morph m-19" d="M 50 10 Q 20 30 30 60" stroke="#fd79a8" stroke-width="8" stroke-linecap="round" fill="none"/>
+                                <ellipse cx="50" cy="72" rx="22" ry="20" fill="url(#grad_dog_1)" />
+                                <ellipse cx="50" cy="75" rx="14" ry="12" fill="#fff" opacity="0.8" />
+                                <ellipse cx="35" cy="90" rx="6.5" ry="4.5" fill="url(#grad_dog_1)" /><ellipse cx="65" cy="90" rx="6.5" ry="4.5" fill="url(#grad_dog_1)" />
+                                <ellipse cx="42" cy="83" rx="5" ry="7" fill="rgba(255,255,255,0.8)" /><ellipse cx="58" cy="83" rx="5" ry="7" fill="rgba(255,255,255,0.8)" />
+                                <circle cx="50" cy="44" r="24" fill="url(#grad_dog_1)" />
+                                <ellipse cx="50" cy="51" rx="14" ry="10" fill="#fff" opacity="0.9"/>
+                                <polygon class="morph m-19" points="46,20 54,20 50,-5" fill="#f1c40f"/>
+                                <g class="morph m-3">
+                                    <g class="anime-flutter" style="transform-origin: 25px 35px;"><ellipse cx="22" cy="45" rx="8" ry="18" fill="url(#grad_dog_2)" transform="rotate(15 22 45)"/></g>
+                                    <g class="anime-flutter" style="transform-origin: 75px 35px; animation-delay: -0.15s;"><ellipse cx="78" cy="45" rx="8" ry="18" fill="url(#grad_dog_2)" transform="rotate(-15 78 45)"/></g>
+                                </g>
+                                <g class="morph m-6">
+                                    <ellipse cx="32" cy="15" rx="6" ry="22" fill="url(#grad_dog_1)" transform="rotate(-10 32 15)"/>
+                                    <ellipse cx="32" cy="15" rx="3" ry="18" fill="url(#grad_dog_2)" transform="rotate(-10 32 15)"/>
+                                    <ellipse cx="68" cy="15" rx="6" ry="22" fill="url(#grad_dog_1)" transform="rotate(10 68 15)"/>
+                                    <ellipse cx="68" cy="15" rx="3" ry="18" fill="url(#grad_dog_2)" transform="rotate(10 68 15)"/>
+                                </g>
+                                <g class="morph m-11 m-19"><circle cx="30" cy="25" r="7" fill="url(#grad_dog_2)"/><circle cx="70" cy="25" r="7" fill="url(#grad_dog_2)"/></g>
+                                
+                                <g class="accessory acc-hat" transform="translate(0, -15)"><path d="M35,30 L65,30 L50,0 Z" fill="#8e44ad"/><rect x="30" y="30" width="40" height="5" fill="#9b59b6"/></g>
+                                <g class="accessory acc-balloon"><path d="M 80 40 Q 70 55 55 65" stroke="#bdc3c7" stroke-width="1.5" fill="none"/><g class="anime-float" style="animation-duration: 2.5s; animation-delay: 0.5s;"><ellipse cx="80" cy="40" rx="10" ry="14" fill="#ff7675"/><polygon points="78,54 82,54 80,51" fill="#ff7675"/><ellipse cx="76" cy="35" rx="2.5" ry="5" fill="#fff" opacity="0.5" transform="rotate(-30 76 35)"/></g></g>
+                                <g class="accessory acc-clothes"><path d="M 30 65 L 20 85 Q 50 95 80 85 L 70 65 Z" fill="#d63031"/><path d="M 38 62 Q 50 72 62 62" stroke="#ffeaa7" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="50" cy="69" r="5" fill="#ffeaa7"/></g>
+                                <g class="accessory acc-bow" transform="translate(40, 57)"><polygon points="20,0 20,10 10,5" fill="#e74c3c"/><polygon points="0,0 0,10 10,5" fill="#e74c3c"/><circle cx="10" cy="5" r="3" fill="#c0392b"/></g>
+                                <g class="accessory acc-stars anime-spin" style="animation-duration: 6s; transform-origin: 50px 50px;"><polygon points="50,5 53,15 63,15 55,21 58,31 50,25 42,31 45,21 37,15 47,15" fill="#ffeb3b" transform="translate(-25, -15) scale(0.4)"/><polygon points="50,5 53,15 63,15 55,21 58,31 50,25 42,31 45,21 37,15 47,15" fill="#ffeb3b" transform="translate(30, 5) scale(0.5)"/><polygon points="50,5 53,15 63,15 55,21 58,31 50,25 42,31 45,21 37,15 47,15" fill="#ffeb3b" transform="translate(-15, 35) scale(0.4)"/></g>
+                                <g class="accessory acc-glasses" transform="translate(28, 32)"><path d="M -2 5 L 42 5" stroke="#2d3436" stroke-width="2.5"/><path d="M 0 5 L 4 14 Q 9 17 14 14 L 18 5 Z" fill="#2d3436"/><path d="M 22 5 L 26 14 Q 31 17 36 14 L 40 5 Z" fill="#2d3436"/><path d="M 2 7 L 8 5" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/><path d="M 24 7 L 30 5" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/></g>
+                                <g class="accessory acc-evo-aura anime-spin" style="animation-duration: 8s; transform-origin: 50px 60px;"><circle cx="50" cy="60" r="40" fill="none" stroke="#ffeaa7" stroke-width="3" stroke-dasharray="10 10"/><circle cx="50" cy="60" r="46" fill="none" stroke="#fdcb6e" stroke-width="1.5" stroke-dasharray="5 15"/></g>
+                                <g class="accessory acc-wand" transform="translate(18, 48)">
+                                    <g class="anime-wave" style="transform-origin: 5px 25px;">
+                                        <line x1="5" y1="25" x2="20" y2="5" stroke="#742a1a" stroke-width="3" stroke-linecap="round"/>
+                                        <line x1="5" y1="25" x2="20" y2="5" stroke="#e67e22" stroke-width="1.5" stroke-linecap="round"/>
+                                        <g class="anime-spin" style="animation-duration: 3s; transform-origin: 20px 5px;"><polygon points="20,-5 23,2 30,2 24,7 26,14 20,10 14,14 16,7 10,2 17,2" fill="#f1c40f"/><polygon points="20,-1 21,3 25,3 22,6 23,9 20,7 17,9 18,6 15,3 19,3" fill="#fff"/></g>
+                                        <circle cx="10" cy="0" r="1.5" fill="#ffeb3b" class="anime-blink"/><circle cx="28" cy="15" r="2" fill="#fff" class="anime-blink" style="animation-delay: 0.5s;"/>
+                                    </g>
+                                    <ellipse cx="5" cy="25" rx="4" ry="3" fill="url(#grad_dog_1)" transform="rotate(-30 5 25)"/>
+                                </g>
+
+                                <g class="mood-normal anime-blink"><g style="transform-origin: 38px 40px;"><circle cx="38" cy="40" r="4.5" fill="#2d3436"/><circle cx="39.5" cy="38" r="1.5" fill="white"/></g><g style="transform-origin: 62px 40px;"><circle cx="62" cy="40" r="4.5" fill="#2d3436"/><circle cx="63.5" cy="38" r="1.5" fill="white"/></g><ellipse cx="50" cy="47" rx="6" ry="4" fill="#2d3436" /><path d="M 46 53 Q 50 57 54 53" stroke="#2d3436" stroke-width="2" fill="none" stroke-linecap="round"/></g>
+                                <g class="mood-happy" style="display:none;"><path d="M 33 40 Q 38 35 43 40" stroke="#2d3436" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M 57 40 Q 62 35 67 40" stroke="#2d3436" stroke-width="2.5" fill="none" stroke-linecap="round"/><ellipse cx="50" cy="47" rx="6" ry="4" fill="#2d3436" /><path d="M 45 53 Q 50 63 55 53 Z" fill="#ff7675" /></g>
+                                <g class="mood-sad" style="display:none;"><circle cx="38" cy="40" r="4.5" fill="#2d3436"/><circle cx="62" cy="40" r="4.5" fill="#2d3436"/><ellipse cx="50" cy="48" rx="6" ry="4" fill="#2d3436" /><path d="M 46 55 Q 50 51 54 55" stroke="#2d3436" stroke-width="2" fill="none" stroke-linecap="round"/></g>
+                            </g>
+                        </g>
+                    </svg>
+
+                    <!-- ================= 基礎模型 4：精靈鳥類型 (適用 4, 16, 17, 18) ================= -->
+                    <svg id="pet-elf" class="pet-svg" viewBox="0 0 100 100">
+                        <defs>
+                            <linearGradient id="grad_elf_1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#55efc4" /><stop offset="100%" stop-color="#00b894" /></linearGradient>
+                            <linearGradient id="grad_elf_2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ffeaa7" /><stop offset="100%" stop-color="#fdcb6e" /></linearGradient>
+                        </defs>
+                        <ellipse cx="50" cy="92" rx="28" ry="5" fill="black" class="anime-shadow" />
+                        <g class="anime-float" style="animation-duration: 2.8s;">
+                            <g class="anime-flutter" style="transform-origin: 50px 45px;">
+                                <g class="morph m-4"><path d="M 50 45 C 20 15 5 45 25 60 C 15 65 20 75 40 65 Z" fill="rgba(255,255,255,0.7)" /><path d="M 50 45 C 80 15 95 45 75 60 C 85 65 80 75 60 65 Z" fill="rgba(255,255,255,0.7)" /></g>
+                                <g class="morph m-16"><path d="M 30 50 Q 10 60 15 80 Z" fill="url(#grad_elf_1)"/><path d="M 70 50 Q 90 60 85 80 Z" fill="url(#grad_elf_1)"/></g>
+                                <g class="morph m-17 m-18"><path d="M 25 50 Q 5 60 15 65 Z" fill="url(#grad_elf_2)"/><path d="M 75 50 Q 95 60 85 65 Z" fill="url(#grad_elf_2)"/></g>
+                            </g>
+                            <ellipse cx="44" cy="80" rx="5" ry="3.5" fill="url(#grad_elf_2)" /><ellipse cx="56" cy="80" rx="5" ry="3.5" fill="url(#grad_elf_2)" />
+                            <g class="anime-breathe">
+                                <path d="M 45 68 L 45 80" stroke="url(#grad_elf_2)" stroke-width="4" stroke-linecap="round" /><path d="M 55 68 L 55 80" stroke="url(#grad_elf_2)" stroke-width="4" stroke-linecap="round" />
+                                <g class="morph m-4"><path d="M 43 45 L 57 45 L 64 70 Q 50 76 36 70 Z" fill="url(#grad_elf_1)" /><polygon points="43,45 57,45 50,53" fill="rgba(255,255,255,0.5)" /></g>
+                                <g class="morph m-16 m-17 m-18"><ellipse cx="50" cy="55" rx="26" ry="32" fill="url(#grad_elf_1)" /><ellipse class="morph m-16" cx="50" cy="60" rx="18" ry="24" fill="#fff" /><ellipse class="morph m-17" cx="50" cy="60" rx="16" ry="20" fill="rgba(255,255,255,0.5)" /><path class="morph m-17" d="M 24 60 L 30 50 L 38 60 L 50 48 L 62 60 L 70 50 L 76 60 Q 70 85 50 85 Q 30 85 24 60 Z" fill="#fff"/><ellipse class="morph m-18" cx="50" cy="60" rx="16" ry="20" fill="url(#grad_elf_2)" /></g>
+                                <g class="morph m-4"><circle cx="50" cy="38" r="21" fill="url(#grad_elf_2)" /><path d="M 29 38 Q 20 55 25 70 Q 35 60 32 45 Z" fill="url(#grad_elf_2)" /><path d="M 71 38 Q 80 55 75 70 Q 65 60 68 45 Z" fill="url(#grad_elf_2)" /><circle cx="50" cy="40" r="18" fill="url(#grad_elf_1)" /><path d="M 32 40 C 30 20 70 20 68 40 C 60 25 40 25 32 40 Z" fill="url(#grad_elf_2)" /><path d="M 50 22 L 45 35 L 50 28 L 55 35 Z" fill="url(#grad_elf_2)" /></g>
+                                <g class="morph m-16 m-17 m-18"><circle cx="50" cy="32" r="18" fill="url(#grad_elf_1)" /><polygon class="morph m-18" points="35,20 25,5 42,15" fill="url(#grad_elf_1)"/><polygon class="morph m-18" points="65,20 75,5 58,15" fill="url(#grad_elf_1)"/><circle class="morph m-18" cx="40" cy="30" r="10" fill="rgba(255,255,255,0.7)"/><circle class="morph m-18" cx="60" cy="30" r="10" fill="rgba(255,255,255,0.7)"/><path class="morph m-16" d="M 35 30 Q 35 20 45 20 Q 50 25 55 20 Q 65 20 65 30 Q 65 40 50 40 Q 35 40 35 30 Z" fill="#fff"/><path class="morph m-17" d="M 32 28 L 38 18 L 45 25 L 50 15 L 55 25 L 62 18 L 68 28 Q 65 5 50 5 Q 35 5 32 28 Z" fill="#fff"/></g>
+                                
+                                <g class="accessory acc-hat" transform="translate(0, -13)"><path d="M36,30 L64,30 L50,0 Z" fill="#a29bfe"/><rect x="33" y="30" width="34" height="4" fill="#6c5ce7"/></g>
+                                <g class="accessory acc-balloon"><path d="M 80 40 Q 70 55 55 65" stroke="#bdc3c7" stroke-width="1.5" fill="none"/><g class="anime-float" style="animation-duration: 2.5s; animation-delay: 0.5s;"><ellipse cx="80" cy="40" rx="10" ry="14" fill="#ff7675"/><polygon points="78,54 82,54 80,51" fill="#ff7675"/><ellipse cx="76" cy="35" rx="2.5" ry="5" fill="#fff" opacity="0.5" transform="rotate(-30 76 35)"/></g></g>
+                                <g class="accessory acc-clothes"><path d="M 35 53 L 20 68 Q 50 83 80 68 L 65 53 Q 50 63 35 53 Z" fill="rgba(162, 155, 254, 0.8)"/><path d="M 35 53 Q 50 63 65 53" stroke="#fdcb6e" stroke-width="2" fill="none"/><circle cx="50" cy="58" r="3" fill="#fdcb6e"/></g>
+                                <g class="accessory acc-bow" transform="translate(40, 50)"><polygon points="20,0 20,10 10,5" fill="#e74c3c"/><polygon points="0,0 0,10 10,5" fill="#e74c3c"/><circle cx="10" cy="5" r="3" fill="#c0392b"/></g>
+                                <g class="accessory acc-stars anime-spin" style="animation-duration: 6s; transform-origin: 50px 50px;"><polygon points="50,5 53,15 63,15 55,21 58,31 50,25 42,31 45,21 37,15 47,15" fill="#ffeb3b" transform="translate(-25, -15) scale(0.4)"/><polygon points="50,5 53,15 63,15 55,21 58,31 50,25 42,31 45,21 37,15 47,15" fill="#ffeb3b" transform="translate(30, 5) scale(0.5)"/><polygon points="50,5 53,15 63,15 55,21 58,31 50,25 42,31 45,21 37,15 47,15" fill="#ffeb3b" transform="translate(-15, 35) scale(0.4)"/></g>
+                                
+                                <g class="accessory acc-glasses">
+                                    <!-- 小精靈的墨鏡位置 -->
+                                    <g class="morph m-4" transform="translate(34, 36) scale(0.8)"><path d="M -2 5 L 42 5" stroke="#2d3436" stroke-width="2.5"/><path d="M 0 5 L 4 14 Q 9 17 14 14 L 18 5 Z" fill="#2d3436"/><path d="M 22 5 L 26 14 Q 31 17 36 14 L 40 5 Z" fill="#2d3436"/><path d="M 2 7 L 8 5" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/><path d="M 24 7 L 30 5" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/></g>
+                                    <!-- 企鵝/小雞/貓頭鷹的墨鏡位置 (移到上面對齊眼睛) -->
+                                    <g class="morph m-16 m-17 m-18" transform="translate(34, 25) scale(0.8)"><path d="M -2 5 L 42 5" stroke="#2d3436" stroke-width="2.5"/><path d="M 0 5 L 4 14 Q 9 17 14 14 L 18 5 Z" fill="#2d3436"/><path d="M 22 5 L 26 14 Q 31 17 36 14 L 40 5 Z" fill="#2d3436"/><path d="M 2 7 L 8 5" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/><path d="M 24 7 L 30 5" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/></g>
+                                </g>
+
+                                <g class="accessory acc-evo-aura anime-spin" style="animation-duration: 8s; transform-origin: 50px 55px;"><circle cx="50" cy="55" r="38" fill="none" stroke="#ffeaa7" stroke-width="3" stroke-dasharray="10 10"/><circle cx="50" cy="55" r="44" fill="none" stroke="#fdcb6e" stroke-width="1.5" stroke-dasharray="5 15"/></g>
+                                <g class="accessory acc-wand" transform="translate(25, 33)">
+                                    <g class="anime-wave" style="transform-origin: 5px 25px;">
+                                        <line x1="5" y1="25" x2="20" y2="5" stroke="#742a1a" stroke-width="3" stroke-linecap="round"/>
+                                        <line x1="5" y1="25" x2="20" y2="5" stroke="#e67e22" stroke-width="1.5" stroke-linecap="round"/>
+                                        <g class="anime-spin" style="animation-duration: 3s; transform-origin: 20px 5px;"><polygon points="20,-5 23,2 30,2 24,7 26,14 20,10 14,14 16,7 10,2 17,2" fill="#f1c40f"/><polygon points="20,-1 21,3 25,3 22,6 23,9 20,7 17,9 18,6 15,3 19,3" fill="#fff"/></g>
+                                        <circle cx="10" cy="0" r="1.5" fill="#ffeb3b" class="anime-blink"/><circle cx="28" cy="15" r="2" fill="#fff" class="anime-blink" style="animation-delay: 0.5s;"/>
+                                    </g>
+                                </g>
+
+                                <g class="mood-normal anime-blink">
+                                    <g class="morph m-4"><ellipse cx="43" cy="42" rx="3.5" ry="5.5" fill="#2d3436"/><circle cx="44.5" cy="40" r="1.5" fill="white"/><ellipse cx="57" cy="42" rx="3.5" ry="5.5" fill="#2d3436"/><circle cx="58.5" cy="40" r="1.5" fill="white"/><ellipse cx="38" cy="46" rx="3.5" ry="2" fill="#ff7675" opacity="0.5"/><ellipse cx="62" cy="46" rx="3.5" ry="2" fill="#ff7675" opacity="0.5"/><path d="M 48 48 Q 50 50 52 48" stroke="#2d3436" stroke-width="1.5" fill="none" stroke-linecap="round"/></g>
+                                    <g class="morph m-16 m-17 m-18"><circle cx="42" cy="30" r="3" fill="#2d3436"/><circle cx="58" cy="30" r="3" fill="#2d3436"/><polygon class="morph m-16" points="46,34 54,34 50,42" fill="#ff9f43"/><polygon class="morph m-17" points="47,33 53,33 50,38" fill="#ff9f43"/><polygon class="morph m-18" points="48,34 52,34 50,39" fill="#feca57"/></g>
+                                </g>
+                                <g class="mood-happy" style="display:none;">
+                                    <g class="morph m-4"><path d="M 40 42 Q 43 38 46 42" stroke="#2d3436" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M 54 42 Q 57 38 60 42" stroke="#2d3436" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M 46 47 Q 50 54 54 47 Z" fill="#ff7675" /><ellipse cx="38" cy="45" rx="3.5" ry="2.5" fill="#ff7675" opacity="0.8"/><ellipse cx="62" cy="45" rx="3.5" ry="2.5" fill="#ff7675" opacity="0.8"/></g>
+                                    <g class="morph m-16 m-17 m-18"><path d="M 39 30 Q 42 27 45 30" stroke="#2d3436" stroke-width="2" fill="none"/><path d="M 55 30 Q 58 27 61 30" stroke="#2d3436" stroke-width="2" fill="none"/><polygon class="morph m-16" points="46,34 54,34 50,42" fill="#ff9f43"/><polygon class="morph m-17" points="47,33 53,33 50,38" fill="#ff9f43"/><polygon class="morph m-18" points="48,34 52,34 50,39" fill="#feca57"/></g>
+                                </g>
+                                <g class="mood-sad" style="display:none;">
+                                    <g class="morph m-4"><ellipse cx="43" cy="43" rx="3.5" ry="5.5" fill="#2d3436"/><ellipse cx="57" cy="43" rx="3.5" ry="5.5" fill="#2d3436"/><path d="M 48 50 Q 50 48 52 50" stroke="#2d3436" stroke-width="1.5" fill="none" stroke-linecap="round"/><circle cx="43" cy="50" r="2" fill="#74b9ff" /><circle cx="57" cy="50" r="2" fill="#74b9ff" /></g>
+                                    <g class="morph m-16 m-17 m-18"><ellipse cx="42" cy="30" rx="3" ry="4" fill="#2d3436"/><ellipse cx="58" cy="30" rx="3" ry="4" fill="#2d3436"/><polygon class="morph m-16" points="46,36 54,36 50,44" fill="#ff9f43"/><polygon class="morph m-17" points="47,35 53,35 50,40" fill="#ff9f43"/><polygon class="morph m-18" points="48,36 52,36 50,41" fill="#feca57"/><path d="M 40 35 L 40 38" stroke="#74b9ff" stroke-width="1.5"/><path d="M 60 35 L 60 38" stroke="#74b9ff" stroke-width="1.5"/></g>
+                                </g>
+                            </g>
+                            
+                            <g class="anime-spin" style="animation-duration: 6s;">
+                                <circle cx="20" cy="20" r="2.5" fill="#ffeaa7"/><circle cx="80" cy="80" r="2" fill="#ffeaa7"/>
+                                <circle cx="85" cy="30" r="3" fill="#ffeaa7"/><circle cx="15" cy="70" r="2" fill="#ffeaa7"/>
+                            </g>
+                        </g>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- 狀態列與進度條區塊 -->
+            <div class="status-board">
+                <div class="status-item"><div class="status-label">😊 心情</div><div class="bar-bg"><div class="bar-fill" id="moodBar" style="background: #ff6b81;"></div></div></div>
+                <div class="status-item"><div class="status-label">🍖 飽食</div><div class="bar-bg"><div class="bar-fill" id="hungerBar" style="background: #feca57;"></div></div></div>
+                <div class="status-item"><div class="status-label">⚡ 活力 <button class="ai-btn" onclick="aiEnergyBoost()" title="✨ AI 活力充能">✨</button></div><div class="bar-bg"><div class="bar-fill" id="energyBar" style="background: #48dbfb;"></div></div></div>
+            </div>
+
+            <div class="exp-wrap">
+                <strong style="font-size: 1.2rem; display:block; margin-bottom: 5px;">🎯 成長進度 (滿100分升級)</strong>
+                <div class="exp-bar-bg">
+                    <div class="exp-bar-fill" id="expBar" style="width: 0%;"></div>
+                    <div class="exp-text" id="expText">0 / 100</div>
+                </div>
+                <div style="margin-top: 15px; font-size: 0.95rem; color: var(--ui-border); opacity: 0.75; font-weight: bold; text-align: center;">
+                    程式設計：鄭念慈老師
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側：中控台 -->
+        <div class="right-panel">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('actionTab')">🎮 班級動態</div>
+                <div class="tab" onclick="switchTab('taskTab')">📝 每日任務</div>
+                <div class="tab" onclick="switchTab('studentTab')">🏆 學生榜單</div>
+                <div class="tab" onclick="switchTab('settingTab')">🏆 寵物圖鑑</div>
+                <div class="tab" onclick="switchTab('dataTab')">💾 資料管理</div>
+            </div>
+
+            <!-- Tab 1: 班級動態 -->
+            <div id="actionTab" class="tab-content active">
+                <h3 class="section-title">
+                    <span>🌟 正向行為 (寵物開心長大)</span>
+                    <button class="sys-btn" style="font-size: 0.9rem; padding: 4px 10px; border-radius: 8px; width: auto; margin: 0; box-shadow: 0 2px 0 var(--ui-border);" onclick="toggleEditMode('pos')">✏️ 編輯</button>
+                </h3>
+                <div class="input-group" style="display: flex; gap: 5px; margin-bottom: 15px;">
+                    <button id="posIconBtn" class="icon-btn" onclick="openEmojiPicker(event, 'posIconBtn')">✨</button>
+                    <input type="text" id="posText" placeholder="新增正向行為..." style="flex: 1; padding: 10px; border: 3px solid var(--ui-border); border-radius: 10px; background: #e6d4b8; color: var(--ui-border); font-weight: bold;">
+                    <input type="number" id="posPts" value="5" min="1" max="50" style="width: 65px; padding: 10px; border: 3px solid var(--ui-border); border-radius: 10px; background: #e6d4b8; color: var(--ui-border); font-weight: bold; text-align: center;" title="分數">
+                    <button class="btn-green" style="border: 3px solid var(--ui-border); border-radius:10px; padding:0 15px; cursor:pointer; font-weight:bold; box-shadow: 0 3px 0 var(--ui-border);" onclick="addAction('pos')">新增</button>
+                </div>
+                <div class="action-grid" id="positiveGrid" style="margin-bottom: 20px;"></div>
+                
+                <h3 class="section-title" style="border-left-color: var(--danger); margin-top: 25px;">
+                    <span>⚠️ 需要加油 (寵物會難過喔)</span>
+                    <button class="sys-btn" style="font-size: 0.9rem; padding: 4px 10px; border-radius: 8px; width: auto; margin: 0; box-shadow: 0 2px 0 var(--ui-border);" onclick="toggleEditMode('neg')">✏️ 編輯</button>
+                </h3>
+                <div class="input-group" style="display: flex; gap: 5px; margin-bottom: 15px;">
+                    <button id="negIconBtn" class="icon-btn" onclick="openEmojiPicker(event, 'negIconBtn')">⚠️</button>
+                    <input type="text" id="negText" placeholder="新增需要加油事項..." style="flex: 1; padding: 10px; border: 3px solid var(--ui-border); border-radius: 10px; background: #e6d4b8; color: var(--ui-border); font-weight: bold;">
+                    <input type="number" id="negPts" value="2" min="1" max="50" style="width: 65px; padding: 10px; border: 3px solid var(--ui-border); border-radius: 10px; background: #e6d4b8; color: var(--ui-border); font-weight: bold; text-align: center;" title="扣分(不需填負號)">
+                    <button class="btn-red" style="border: 3px solid var(--ui-border); border-radius:10px; padding:0 15px; cursor:pointer; font-weight:bold; box-shadow: 0 3px 0 var(--ui-border);" onclick="addAction('neg')">新增</button>
+                </div>
+                <div class="action-grid" id="negativeGrid"></div>
+            </div>
+
+            <!-- Tab 2: 每日任務 -->
+            <div id="taskTab" class="tab-content">
+                <h3 class="section-title">
+                    <span>✅ 今日班級任務</span>
+                    <button class="sys-btn" style="font-size: 0.9rem; padding: 4px 10px; border-radius: 8px; width: auto; margin: 0; box-shadow: 0 2px 0 var(--ui-border);" onclick="toggleEditMode('task')">✏️ 編輯</button>
+                </h3>
+                <div class="input-group" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button id="taskIconBtn" class="icon-btn" onclick="openEmojiPicker(event, 'taskIconBtn')">📌</button>
+                    <input type="text" id="newTaskName" placeholder="輸入新任務名稱..." style="flex: 2; padding: 10px; border: 3px solid var(--ui-border); border-radius: 10px; font-size: 1rem; background: #e6d4b8; color: var(--ui-border); font-weight: bold;">
+                    <button class="sys-btn" style="background: linear-gradient(45deg, #a29bfe, #fd79a8); color:white; border: 3px solid var(--ui-border); border-radius:10px; padding:0 10px; font-weight:bold; box-shadow: 0 3px 0 var(--ui-border); margin:0; flex:none;" onclick="generateAiTask()" title="✨ 讓 AI 幫你想任務">✨ AI 靈感</button>
+                    <input type="number" id="newTaskPts" value="5" min="1" max="50" style="width: 70px; padding: 10px; border: 3px solid var(--ui-border); border-radius: 10px; font-size: 1rem; background: #e6d4b8; color: var(--ui-border); font-weight: bold;" title="分數">
+                    <button class="btn-green" style="border: 3px solid var(--ui-border); border-radius:10px; padding:0 15px; cursor:pointer; font-weight:bold; box-shadow: 0 3px 0 var(--ui-border);" onclick="addTask()">新增</button>
+                </div>
+                <div class="task-list" id="taskList"></div>
+                <br>
+                
+                <!-- 全等級解鎖清單 -->
+                <h3 class="section-title">🎁 目前進度解鎖</h3>
+                <div style="background: #fff0f2; padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px; color: var(--ui-border); font-weight: bold; font-size: 1rem; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
+                    <div style="display:flex; justify-content:space-between; border-bottom: 1px dashed #f5cdcd; padding-bottom: 4px;"><span>🎩 Lv.2 解鎖：魔法帽</span> <span id="unlock-2">🔒</span></div>
+                    <div style="display:flex; justify-content:space-between; border-bottom: 1px dashed #f5cdcd; padding-bottom: 4px;"><span>🎈 Lv.3 解鎖：歡樂氣球</span> <span id="unlock-3">🔒</span></div>
+                    <div style="display:flex; justify-content:space-between; border-bottom: 1px dashed #f5cdcd; padding-bottom: 4px;"><span>👕 Lv.4 解鎖：專屬新衣</span> <span id="unlock-4">🔒</span></div>
+                    <div style="display:flex; justify-content:space-between; border-bottom: 1px dashed #f5cdcd; padding-bottom: 4px;"><span>🎀 Lv.5 解鎖：俏皮領結</span> <span id="unlock-5">🔒</span></div>
+                    <div style="display:flex; justify-content:space-between; border-bottom: 1px dashed #f5cdcd; padding-bottom: 4px;"><span>✨ Lv.6 解鎖：閃耀星光</span> <span id="unlock-6">🔒</span></div>
+                    <div style="display:flex; justify-content:space-between; border-bottom: 1px dashed #f5cdcd; padding-bottom: 4px;"><span>🕶️ Lv.7 解鎖：酷炫墨鏡</span> <span id="unlock-7">🔒</span></div>
+                    <div style="display:flex; justify-content:space-between; border-bottom: 1px dashed #f5cdcd; padding-bottom: 4px;"><span>🐉 Lv.8 解鎖：成長進化</span> <span id="unlock-8">🔒</span></div>
+                    <div style="display:flex; justify-content:space-between; border-bottom: 1px dashed #f5cdcd; padding-bottom: 4px;"><span>🪄 Lv.9 解鎖：閃耀魔杖</span> <span id="unlock-9">🔒</span></div>
+                    <div style="display:flex; justify-content:space-between;"><span>🏅 Lv.10 解鎖：終極徽章與新寵物</span> <span id="unlock-10">🔒</span></div>
+                </div>
+            </div>
+
+            <!-- Tab 3: 學生榜單與小組 -->
+            <div id="studentTab" class="tab-content">
+                
+                <h3 class="section-title">
+                    <span>👥 小組加分與管理</span>
+                    <button class="sys-btn" style="font-size: 0.9rem; padding: 4px 10px; border-radius: 8px; width: auto; margin: 0; box-shadow: 0 2px 0 var(--ui-border);" onclick="toggleEditMode('grp')">✏️ 編輯</button>
+                </h3>
+
+                <!-- 新增：分數調整專區 -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; background: #fff0f2; padding: 10px 15px; border-radius: 12px; border: 3px dashed var(--primary); flex-wrap: wrap; gap: 8px;">
+                    <span style="font-weight:bold; color: var(--primary); font-size: 1.05rem;">🎯 點擊小組，全組成員同步加分：</span>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <button class="sys-btn" style="width: 36px; height: 36px; padding: 0; display:flex; justify-content:center; align-items:center; font-size:1.2rem; background: var(--danger); color: white; margin:0;" onclick="adjustGroupPts(-1)">-</button>
+                        <input type="number" id="groupPtsInput" value="5" onchange="renderGroups()" style="width: 60px; height: 36px; border: 3px solid var(--ui-border); border-radius: 8px; background: white; color: var(--ui-border); font-weight: bold; text-align: center; font-size: 1.1rem; margin:0; padding:0;">
+                        <button class="sys-btn" style="width: 36px; height: 36px; padding: 0; display:flex; justify-content:center; align-items:center; font-size:1.2rem; background: var(--success); color: white; margin:0;" onclick="adjustGroupPts(1)">+</button>
+                    </div>
+                </div>
+
+                <div class="input-group" style="display: flex; gap: 5px; margin-bottom: 15px;">
+                    <input type="text" id="newGroupName" placeholder="輸入新組別名稱..." style="flex: 1; padding: 10px; border: 3px solid var(--ui-border); border-radius: 10px; background: #e6d4b8; color: var(--ui-border); font-weight: bold;">
+                    <button class="btn-green" style="border: 3px solid var(--ui-border); border-radius:10px; padding:0 15px; cursor:pointer; font-weight:bold; box-shadow: 0 3px 0 var(--ui-border);" onclick="addGroup()">新增組別</button>
+                </div>
+                <div class="action-grid" id="groupGrid" style="margin-bottom: 25px;"></div>
+
+                <h3 class="section-title">
+                    <span>🧑‍🎓 學生個人貢獻</span>
+                    <button class="sys-btn" style="font-size: 0.9rem; padding: 4px 10px; border-radius: 8px; width: auto; margin: 0; box-shadow: 0 2px 0 var(--ui-border);" onclick="toggleEditMode('stu')">✏️ 編輯</button>
+                </h3>
+                <div class="add-student-box">
+                    <input type="text" id="newStudentName" placeholder="輸入學生姓名或座號...">
+                    <button class="btn-green" style="border:none; border-radius:10px; padding:0 15px; cursor:pointer;" onclick="addStudent()">新增</button>
+                </div>
+                <div class="student-list" id="studentList"></div>
+
+                <h3 class="section-title" style="margin-top: 30px; border-left-color: #ff9f43;">
+                    <span>🎁 兌換禮物庫管理</span>
+                    <button class="sys-btn" style="font-size: 0.9rem; padding: 4px 10px; border-radius: 8px; width: auto; margin: 0; box-shadow: 0 2px 0 var(--ui-border);" onclick="toggleEditMode('gift')">✏️ 編輯</button>
+                </h3>
+                <div class="input-group" style="display: flex; gap: 5px; margin-bottom: 15px;">
+                    <button id="giftIconBtn" class="icon-btn" onclick="openEmojiPicker(event, 'giftIconBtn')">🎫</button>
+                    <input type="text" id="newGiftName" placeholder="新增可兌換的禮物名稱..." style="flex: 1; padding: 10px; border: 3px solid var(--ui-border); border-radius: 10px; background: #e6d4b8; color: var(--ui-border); font-weight: bold;">
+                    <input type="number" id="newGiftPts" value="10" min="1" style="width: 65px; padding: 10px; border: 3px solid var(--ui-border); border-radius: 10px; background: #e6d4b8; color: var(--ui-border); font-weight: bold; text-align: center;" title="兌換所需點數">
+                    <button class="btn-yellow" style="border: 3px solid var(--ui-border); border-radius:10px; padding:0 15px; cursor:pointer; font-weight:bold; box-shadow: 0 3px 0 var(--ui-border);" onclick="addGift()">新增</button>
+                </div>
+                <div class="action-grid" id="giftGrid"></div>
+            </div>
+
+            <!-- Tab 4: 寵物圖鑑 -->
+            <div id="settingTab" class="tab-content">
+                <h3 class="section-title" style="color:var(--primary); font-size: 1.5rem;">🏆 班級寵物圖鑑</h3>
+                <p style="font-weight:bold; color:#777; margin-top:-10px;">將寵物養到 Lv.10 即可獲得徽章並解鎖下一隻喔！</p>
+                <div class="pet-grid" id="pokedexGrid">
+                    <!-- 圖鑑將由 JS 動態生成 -->
+                </div>
+            </div>
+
+            <!-- Tab 5: 資料管理 -->
+            <div id="dataTab" class="tab-content">
+                <h3 class="section-title" style="margin-top:0;">💾 資料管理 (防遺失)</h3>
+                <div class="sys-btn-group">
+                    <button class="sys-btn" style="background:#74b9ff; color:#fff;" onclick="exportData()" title="下載所有班級進度檔案">📥 匯出備份</button>
+                    <label class="sys-btn" style="background:#55efc4; color:#2d3436; cursor:pointer;" title="上傳備份檔案">
+                        📤 匯入進度<input type="file" id="importFile" style="display:none;" accept=".json" onchange="importData(event)">
+                    </label>
+                    <button class="sys-btn" style="background:#ff7675; color:#fff;" onclick="resetData()" title="清空目前班級分數">⚠️ 重置此班</button>
+                </div>
+
+                <div class="sys-btn-group" style="margin-top: 10px;">
+                    <button class="sys-btn" style="background: linear-gradient(45deg, #a29bfe, #fd79a8); color:#fff;" onclick="setApiKey()" title="設定 Gemini API Key">🔑 設定 AI API 金鑰</button>
+                </div>
+
+                <h3 class="section-title" style="margin-top:20px; display:flex; justify-content:space-between; align-items:center;">
+                    <span>📜 最近歷史紀錄</span>
+                    <button class="sys-btn" style="background: linear-gradient(45deg, #a29bfe, #fd79a8); color:#fff; font-size:0.9rem; padding:6px 12px; width:auto; flex:none; box-shadow: 0 3px 0 var(--ui-border); margin:0;" onclick="generateAiDiary()">✨ 讓寵物寫日記</button>
+                </h3>
+                <div class="history-list" id="historyList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 訊息彈出視窗 -->
+    <div class="modal-overlay" id="msgModal">
+        <div class="modal">
+            <h2 id="msgTitle">提示</h2>
+            <div id="msgIcon" style="display:none; margin: 20px 0;"></div>
+            <p id="msgDesc" style="font-size: 1.3rem; line-height:1.5;">內容</p>
+            <button class="modal-btn" onclick="closeModal('msgModal')">我知道了！</button>
+        </div>
+    </div>
+
+    <!-- 寵物命名彈出視窗 -->
+    <div class="modal-overlay" id="renameModal">
+        <div class="modal">
+            <h2 style="color: var(--warning); text-shadow: 2px 2px 0 var(--ui-border);">✏️ 為寵物取個名字！</h2>
+            <p style="font-size: 1.2rem; font-weight: bold; margin-bottom: 10px;">大家想幫這隻小寶貝取什麼名字呢？</p>
+            <input type="text" id="renameInput" placeholder="輸入寵物名稱..." style="width: 80%; padding: 15px; border: 4px solid var(--ui-border); border-radius: 12px; font-size: 1.3rem; font-weight: bold; margin: 15px 0; text-align: center; font-family: inherit;">
+            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 10px;">
+                <button class="modal-btn" style="background: var(--danger);" onclick="closeModal('renameModal')">取消</button>
+                <button class="modal-btn" onclick="savePetName()">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 重置確認彈出視窗 -->
+    <div class="modal-overlay" id="resetModal">
+        <div class="modal">
+            <h2 style="color: var(--danger); text-shadow: 2px 2px 0 var(--ui-border);">⚠️ 警告</h2>
+            <p style="font-size: 1.2rem; font-weight: bold; margin-bottom: 10px;">確定要重置這個班級的進度嗎？</p>
+            <p style="font-size: 1rem; color: #555; margin-bottom: 20px;">這將會把等級、分數、歷史紀錄與學生名單全部還原為初始狀態，<br><strong style="color:var(--danger)">無法復原喔！</strong></p>
+            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 10px;">
+                <button class="modal-btn" style="background: #a4b0be;" onclick="closeModal('resetModal')">取消</button>
+                <button class="modal-btn" style="background: var(--danger);" onclick="confirmResetData()">確定重置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 班級管理彈出視窗 -->
+    <div class="modal-overlay" id="classManagerModal">
+        <div class="modal" style="width: 600px; max-height: 90vh;">
+            <h2 style="color: var(--primary); text-shadow: 2px 2px 0 var(--ui-border);">🏫 班級管理</h2>
+            <p style="font-size: 1.1rem; font-weight: bold; margin-bottom: 20px;">科任老師的好幫手！為每個班級建立專屬的寵物與紀錄。</p>
+            
+            <div style="display:flex; gap: 10px; margin-bottom: 20px;">
+                <input type="text" id="newClassName" placeholder="輸入新班級名稱..." style="flex:1; padding: 10px; border: 3px solid var(--ui-border); border-radius: 10px; font-size: 1rem; background: #e6d4b8; color: var(--ui-border); font-weight: bold;">
+                <button class="btn-green" style="border: 3px solid var(--ui-border); border-radius:10px; padding:0 15px; cursor:pointer; font-weight:bold; box-shadow: 0 3px 0 var(--ui-border);" onclick="addNewClass()">新增班級</button>
+            </div>
+            
+            <div id="classList" style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; text-align: left;">
+                <!-- 班級清單由 JS 動態生成 -->
+            </div>
+            
+            <button class="modal-btn" style="margin-top: 20px; background: #a4b0be;" onclick="closeModal('classManagerModal')">完成</button>
+        </div>
+    </div>
+
+    <!-- 刪除班級確認彈出視窗 -->
+    <div class="modal-overlay" id="confirmDeleteClassModal" style="z-index: 101;">
+        <div class="modal">
+            <h2 style="color: var(--danger); text-shadow: 2px 2px 0 var(--ui-border);">⚠️ 刪除班級</h2>
+            <p style="font-size: 1.2rem; font-weight: bold; margin-bottom: 10px;">確定要刪除 <span id="deleteClassNameDisplay" style="color:var(--danger);"></span> 嗎？</p>
+            <p style="font-size: 1rem; color: #555; margin-bottom: 20px;">這個班級所有的寵物、分數與紀錄都會被清空，<strong style="color:var(--danger)">無法復原喔！</strong></p>
+            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 10px;">
+                <button class="modal-btn" style="background: #a4b0be;" onclick="closeModal('confirmDeleteClassModal')">取消</button>
+                <button class="modal-btn" style="background: var(--danger);" onclick="executeDeleteClass()">確定刪除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 兌換禮物彈出視窗 -->
+    <div class="modal-overlay" id="redeemModal">
+        <div class="modal" style="max-width: 500px;">
+            <h2 style="color: var(--warning); text-shadow: 2px 2px 0 var(--ui-border);">🎁 兌換禮物</h2>
+            <p id="redeemStudentInfo" style="font-size: 1.2rem; font-weight: bold; margin-bottom: 15px;"></p>
+            <div id="redeemGiftList" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 300px; overflow-y: auto; padding: 5px;">
+                <!-- 禮物選項由 JS 生成 -->
+            </div>
+            <button class="modal-btn" style="background: #a4b0be; margin-top: 20px;" onclick="closeModal('redeemModal')">取消</button>
+        </div>
+    </div>
+
+    <!-- 學生加扣分確認彈出視窗 -->
+    <div class="modal-overlay" id="studentScoreModal" style="z-index: 102;">
+        <div class="modal" style="max-width: 400px;">
+            <h2 id="studentScoreTitle" style="text-shadow: 2px 2px 0 var(--ui-border);">加分/扣分</h2>
+            <p id="studentScoreDesc" style="font-size: 1.1rem; font-weight: bold; margin-bottom: 10px;">請輸入要調整的分數：</p>
+            <input type="number" id="studentScoreInput" value="1" min="1" max="100" onkeydown="if(event.key==='Enter') confirmStudentScore()" style="width: 60%; padding: 15px; border: 4px solid var(--ui-border); border-radius: 12px; font-size: 1.8rem; font-weight: bold; margin: 10px 0; text-align: center; font-family: inherit; color: var(--ui-border);">
+            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 15px;">
+                <button class="modal-btn" style="background: #a4b0be;" onclick="closeModal('studentScoreModal')">取消</button>
+                <button class="modal-btn" id="studentScoreConfirmBtn" onclick="confirmStudentScore()">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= 音效與靜音系統 =================
+        let audioCtx;
+        let isMuted = localStorage.getItem('classPetMuted') === 'true';
+        
+        function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        
+        function toggleMute() {
+            isMuted = !isMuted;
+            localStorage.setItem('classPetMuted', isMuted);
+            document.getElementById('muteBtn').innerText = isMuted ? '🔇' : '🔊';
+        }
+
+        function playTone(freq, type, duration) {
+            if (!audioCtx || isMuted) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start();
+            gain.gain.setValueAtTime(1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+            osc.stop(audioCtx.currentTime + duration);
+        }
+        function playClick() { initAudio(); playTone(600, 'sine', 0.1); setTimeout(() => playTone(800, 'sine', 0.15), 50); }
+        function playBad() { initAudio(); playTone(300, 'triangle', 0.3); setTimeout(() => playTone(250, 'triangle', 0.4), 150); }
+        function playLevelUp() {
+            initAudio();
+            [440, 554, 659, 880].forEach((f, i) => setTimeout(() => playTone(f, 'square', 0.2), i * 150));
+        }
+
+        // ================= 20隻動物百科 =================
+        const PET_DEX = [
+            { id: 1, base: 'dino', name: '小恐龍', icon: '🦖', c1: '#55efc4', c2: '#00b894', e1: '#ffeaa7', e2: '#fdcb6e' },
+            { id: 2, base: 'cat', name: '小貓咪', icon: '🐱', c1: '#ffffff', c2: '#dfe6e9', e1: '#fab1a0', e2: '#ff7675' },
+            { id: 3, base: 'dog', name: '小柴犬', icon: '🐶', c1: '#ffeaa7', c2: '#fdcb6e', e1: '#fab1a0', e2: '#e17055' },
+            { id: 4, base: 'elf', name: '小精靈', icon: '🧚', c1: '#ff9a9e', c2: '#fecfef', e1: '#a29bfe', e2: '#6c5ce7' },
+            { id: 5, base: 'cat', name: '棕熊', icon: '🐻', c1: '#a0522d', c2: '#8b4513', e1: '#feca57', e2: '#ff9f43' },
+            { id: 6, base: 'dog', name: '小白兔', icon: '🐰', c1: '#ffffff', c2: '#f5f6fa', e1: '#ffcccc', e2: '#ffb8b8' },
+            { id: 7, base: 'cat', name: '小狐狸', icon: '🦊', c1: '#ff9f43', c2: '#ee5253', e1: '#222f3e', e2: '#222f3e' },
+            { id: 8, base: 'cat', name: '大貓熊', icon: '🐼', c1: '#ffffff', c2: '#f1f2f6', e1: '#2d3436', e2: '#2d3436' },
+            { id: 9, base: 'dino', name: '小青蛙', icon: '🐸', c1: '#7bed9f', c2: '#2ed573', e1: '#ffeb3b', e2: '#f1c40f' },
+            { id: 10, base: 'cat', name: '小老虎', icon: '🐯', c1: '#ffb142', c2: '#cc8e35', e1: '#ffffff', e2: '#f1f2f6' },
+            { id: 11, base: 'dog', name: '小獅子', icon: '🦁', c1: '#feca57', c2: '#ff9f43', e1: '#ff6b6b', e2: '#ee5253' },
+            { id: 12, base: 'cat', name: '小粉豬', icon: '🐷', c1: '#ffcccc', c2: '#ffb8b8', e1: '#ff9ff3', e2: '#f368e0' },
+            { id: 13, base: 'cat', name: '小老鼠', icon: '🐭', c1: '#a4b0be', c2: '#747d8c', e1: '#ffcccc', e2: '#ffb8b8' },
+            { id: 14, base: 'cat', name: '無尾熊', icon: '🐨', c1: '#747d8c', c2: '#57606f', e1: '#ffffff', e2: '#dfe6e9' },
+            { id: 15, base: 'cat', name: '小猴子', icon: '🐵', c1: '#cd6133', c2: '#84817a', e1: '#ffda79', e2: '#ccae62' },
+            { id: 16, base: 'elf', name: '小企鵝', icon: '🐧', c1: '#2f3542', c2: '#57606f', e1: '#ffffff', e2: '#f1f2f6' },
+            { id: 17, base: 'elf', name: '黃色小雞', icon: '🐥', c1: '#fff200', c2: '#eccc68', e1: '#ffb8b8', e2: '#ff9ff3' },
+            { id: 18, base: 'elf', name: '貓頭鷹', icon: '🦉', c1: '#8b4513', c2: '#a0522d', e1: '#feca57', e2: '#ff9f43' },
+            { id: 19, base: 'dog', name: '獨角獸', icon: '🦄', c1: '#f1f2f6', c2: '#ffffff', e1: '#a29bfe', e2: '#6c5ce7' },
+            { id: 20, base: 'dino', name: '噴火龍', icon: '🐉', c1: '#ff4757', c2: '#ff6b81', e1: '#feca57', e2: '#ff9f43' }
+        ];
+
+        const defaultPositiveActions = [
+            { id: 'pa1', text: '全班交齊作業', pts: 5, mood: 5, icon: '📖', colorClass: 'btn-green' },
+            { id: 'pa2', text: '全班互相幫助', pts: 5, mood: 5, icon: '🤝', colorClass: 'btn-green' },
+            { id: 'pa3', text: '全班上課專心', pts: 3, mood: 5, icon: '👀', colorClass: 'btn-green' },
+            { id: 'pa4', text: '踴躍舉手發言', pts: 3, mood: 4, icon: '🙋', colorClass: 'btn-green' },
+            { id: 'pa5', text: '打掃認真乾淨', pts: 3, mood: 4, icon: '🧹', colorClass: 'btn-green' },
+            { id: 'pa6', text: '排隊迅速安靜', pts: 3, mood: 3, icon: '🚶', colorClass: 'btn-green' },
+            { id: 'pa7', text: '桌面保持整潔', pts: 2, mood: 3, icon: '✨', colorClass: 'btn-green' }
+        ];
+
+        const defaultNegativeActions = [
+            { id: 'na1', text: '太吵鬧了', pts: -2, mood: -10, icon: '🤫', colorClass: 'btn-gray' },
+            { id: 'na2', text: '忘記作業', pts: -3, mood: -15, icon: '📝', colorClass: 'btn-gray' },
+            { id: 'na3', text: '座位髒亂', pts: -2, mood: -10, icon: '🗑️', colorClass: 'btn-gray' },
+            { id: 'na4', text: '發生爭吵', pts: -3, mood: -15, icon: '😠', colorClass: 'btn-gray' }
+        ];
+
+        const defaultGifts = [
+            { id: 'g1', name: '免寫作業一次', pts: 50, icon: '🎫' },
+            { id: 'g2', name: '挑選小貼紙', pts: 10, icon: '🌟' },
+            { id: 'g3', name: '跟好朋友坐', pts: 30, icon: '🪑' }
+        ];
+
+        // 產生初始狀態 (深拷貝避免參照污染)
+        function getInitialState() {
+            return {
+                lastDate: new Date().toLocaleDateString('zh-TW'),
+                currentPetId: 1,
+                unlockedMaxId: 1,
+                petStats: {
+                    1: { level: 1, exp: 0, mood: 50, hunger: 50, energy: 100, name: PET_DEX[0].name }
+                },
+                groups: [
+                    { id: 'grp_1', name: '第一組' },
+                    { id: 'grp_2', name: '第二組' },
+                    { id: 'grp_3', name: '第三組' },
+                    { id: 'grp_4', name: '第四組' },
+                    { id: 'grp_5', name: '第五組' },
+                    { id: 'grp_6', name: '第六組' }
+                ],
+                students: Array.from({length: 35}, (_, i) => ({ id: i + 1, name: `${i + 1}號`, pts: 0, groupId: null })),
+                positiveActions: JSON.parse(JSON.stringify(defaultPositiveActions)),
+                negativeActions: JSON.parse(JSON.stringify(defaultNegativeActions)),
+                tasks: [
+                    { id: 't1', text: '上課鐘響安靜排隊', done: false, pts: 10, icon: '📌' },
+                    { id: 't2', text: '全班準時交齊作業', done: false, pts: 10, icon: '📌' },
+                    { id: 't3', text: '座位周圍保持乾淨', done: false, pts: 5, icon: '📌' }
+                ],
+                gifts: JSON.parse(JSON.stringify(defaultGifts)),
+                history: []
+            };
+        }
+
+        let state = getInitialState();
+
+        const positiveQuotes = ["「大家今天好棒！✨」", "「我們一起加油吧！💪」", "「有你們真好！💖」", "「心情超好！🌸」"];
+        const sadQuotes = ["「寵物有點難過了...😢」", "「大家要乖乖的喔...」", "「希望大家可以做好...」"];
+        const pokeQuotes = ["「好癢喔！😆」", "「再摸一下嘛～🐾」", "「最喜歡大家了！💖」", "「嘿嘿嘿～」", "「精神百倍！⚡」", "「我們一起加油！✨」"];
+
+        let isPosEditMode = false;
+        let isNegEditMode = false;
+        let isGrpEditMode = false;
+        let isGiftEditMode = false;
+        let isStuEditMode = false;
+        let isTaskEditMode = false;
+
+        const emojiList = ['📌', '✨', '📖', '🤝', '👀', '🙋', '🧹', '🚶', '🤫', '📝', '🗑️', '😠', '⭐', '❤️', '🍖', '⚡', '🏆', '🎯', '🔥', '🎉', '🍎', '⚽', '🎨', '🎵', '💡', '💬', '💪', '🏃', '🌟', '😊'];
+        let currentEmojiTarget = null;
+        let currentScoreTarget = { id: null, type: 'add' }; // 新增：目前被點擊加扣分的學生目標
+
+        function toggleEditMode(type) {
+            playClick();
+            if(type === 'pos') {
+                isPosEditMode = !isPosEditMode;
+                const grid = document.getElementById('positiveGrid');
+                if(isPosEditMode) grid.classList.add('edit-mode');
+                else grid.classList.remove('edit-mode');
+            } else if (type === 'neg') {
+                isNegEditMode = !isNegEditMode;
+                const grid = document.getElementById('negativeGrid');
+                if(isNegEditMode) grid.classList.add('edit-mode');
+                else grid.classList.remove('edit-mode');
+            } else if (type === 'grp') {
+                isGrpEditMode = !isGrpEditMode;
+                const grid = document.getElementById('groupGrid');
+                if(isGrpEditMode) grid.classList.add('edit-mode');
+                else grid.classList.remove('edit-mode');
+            } else if (type === 'gift') {
+                isGiftEditMode = !isGiftEditMode;
+                const grid = document.getElementById('giftGrid');
+                if(isGiftEditMode) grid.classList.add('edit-mode');
+                else grid.classList.remove('edit-mode');
+            } else if (type === 'stu') {
+                isStuEditMode = !isStuEditMode;
+                const list = document.getElementById('studentList');
+                if(isStuEditMode) list.classList.add('edit-mode');
+                else list.classList.remove('edit-mode');
+            } else if (type === 'task') {
+                isTaskEditMode = !isTaskEditMode;
+                const list = document.getElementById('taskList');
+                if(isTaskEditMode) list.classList.add('edit-mode');
+                else list.classList.remove('edit-mode');
+            }
+        }
+
+        // ================= 多班級管理系統 (App Config) =================
+        const CONFIG_KEY = 'classPet_AppConfig_v1';
+        let appConfig = {
+            currentClassId: 'class_default',
+            classes: [{ id: 'class_default', name: '我的班級' }]
+        };
+
+        function initApp() {
+            const savedConfig = localStorage.getItem(CONFIG_KEY);
+            if (savedConfig) {
+                appConfig = JSON.parse(savedConfig);
+            }
+            renderClassSelect();
+            loadData();
+            initEmojiPicker();
+        }
+
+        function saveAppConfig() {
+            localStorage.setItem(CONFIG_KEY, JSON.stringify(appConfig));
+        }
+
+        function renderClassSelect() {
+            const selectEl = document.getElementById('classSelect');
+            selectEl.innerHTML = '';
+            appConfig.classes.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.innerText = c.name;
+                selectEl.appendChild(opt);
+            });
+            selectEl.value = appConfig.currentClassId;
+        }
+
+        function changeClass() {
+            playClick();
+            saveData(); // 切換前先存檔
+            const selectEl = document.getElementById('classSelect');
+            appConfig.currentClassId = selectEl.value;
+            saveAppConfig();
+            loadData(); // 載入新班級資料
+        }
+
+        // ================= 班級管理 Modal 邏輯 =================
+        function openClassManager() {
+            playClick();
+            renderClassManagerList();
+            document.getElementById('classManagerModal').classList.add('active');
+        }
+
+        function renderClassManagerList() {
+            const list = document.getElementById('classList');
+            list.innerHTML = '';
+            appConfig.classes.forEach(c => {
+                const isCurrent = c.id === appConfig.currentClassId;
+                const div = document.createElement('div');
+                div.id = `class-row-${c.id}`;
+                div.style = "display: flex; justify-content: space-between; align-items: center; background: #fff0f2; padding: 10px; border-radius: 8px; border: 2px solid var(--ui-border);";
+                div.innerHTML = `
+                    <span style="font-weight:bold; font-size:1.1rem; flex:1;">${c.name} ${isCurrent ? '<span style="color:var(--success); font-size:0.9rem;">(目前所在班級)</span>' : ''}</span>
+                    <div style="display:flex; gap: 5px;">
+                        <button class="sys-btn" style="padding: 5px 10px; font-size: 0.9rem; margin:0;" onclick="editClassName('${c.id}')">✏️ 重新命名</button>
+                        ${appConfig.classes.length > 1 ? `<button class="sys-btn" style="padding: 5px 10px; font-size: 0.9rem; margin:0; background: var(--danger); color: white;" onclick="promptDeleteClass('${c.id}', '${c.name}')">🗑️ 刪除</button>` : ''}
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function addNewClass() {
+            const input = document.getElementById('newClassName');
+            const name = input.value.trim();
+            if (name) {
+                const newId = 'class_' + Date.now();
+                appConfig.classes.push({ id: newId, name: name });
+                input.value = '';
+                saveAppConfig();
+                renderClassSelect();
+                renderClassManagerList();
+                playClick();
+            }
+        }
+
+        function editClassName(id) {
+            playClick();
+            const cls = appConfig.classes.find(c => c.id === id);
+            const row = document.getElementById(`class-row-${id}`);
+            row.innerHTML = `
+                <input type="text" id="rename-input-${id}" value="${cls.name}" style="flex:1; padding: 5px; border-radius: 5px; border: 2px solid var(--ui-border); font-weight:bold; font-family:inherit; font-size:1rem;">
+                <div style="display:flex; gap: 5px;">
+                    <button class="sys-btn" style="padding: 5px 10px; font-size: 0.9rem; margin:0; background: var(--success); color: white;" onclick="saveClassRename('${id}')">✅ 儲存</button>
+                    <button class="sys-btn" style="padding: 5px 10px; font-size: 0.9rem; margin:0;" onclick="renderClassManagerList()">❌ 取消</button>
+                </div>
+            `;
+        }
+
+        function saveClassRename(id) {
+            playClick();
+            const newName = document.getElementById(`rename-input-${id}`).value.trim();
+            if(newName) {
+                const cls = appConfig.classes.find(c => c.id === id);
+                if(cls) cls.name = newName;
+                saveAppConfig();
+                renderClassSelect();
+            }
+            renderClassManagerList();
+        }
+
+        let classToDelete = null;
+        function promptDeleteClass(id, name) {
+            playClick();
+            classToDelete = id;
+            document.getElementById('deleteClassNameDisplay').innerText = name;
+            document.getElementById('confirmDeleteClassModal').classList.add('active');
+        }
+
+        function executeDeleteClass() {
+            if(!classToDelete) return;
+            appConfig.classes = appConfig.classes.filter(c => c.id !== classToDelete);
+            localStorage.removeItem(`classPetData_${classToDelete}`);
+            
+            if (appConfig.currentClassId === classToDelete) {
+                appConfig.currentClassId = appConfig.classes[0].id;
+                saveAppConfig();
+                loadData();
+            } else {
+                saveAppConfig();
+                renderClassSelect();
+            }
+            renderClassManagerList();
+            closeModal('confirmDeleteClassModal');
+            classToDelete = null;
+        }
+
+        // ================= Gemini AI API 整合 =================
+        function getApiKey() {
+            let key = localStorage.getItem('gemini_api_key');
+            if (!key) {
+                key = prompt("請輸入您的 Gemini API 金鑰 (API Key) 以啟用 AI 功能：\n(金鑰只會儲存在您的瀏覽器中，不會外流)");
+                if (key) {
+                    localStorage.setItem('gemini_api_key', key.trim());
+                } else {
+                    return null;
+                }
+            }
+            return key;
+        }
+
+        function setApiKey() {
+            playClick();
+            let currentKey = localStorage.getItem('gemini_api_key') || "";
+            let newKey = prompt("請設定或更新您的 Gemini API 金鑰 (API Key)：\n(若要清除請留空並確定)", currentKey);
+            if (newKey !== null) {
+                if (newKey.trim() === "") {
+                    localStorage.removeItem('gemini_api_key');
+                    showModal("✅ 已清除", "API 金鑰已從瀏覽器中清除。");
+                } else {
+                    localStorage.setItem('gemini_api_key', newKey.trim());
+                    showModal("✅ 設定成功", "API 金鑰已儲存！您可以開始使用 AI 功能了。");
+                }
+            }
+        }
+        
+        async function callGemini(promptText, retries = 5) {
+            const currentApiKey = getApiKey();
+            if (!currentApiKey) throw new Error("缺少 API Key");
+
+            // 使用外部公開穩定的 gemini-1.5-flash 模型
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${currentApiKey}`;
+            const payload = { contents: [{ parts: [{ text: promptText }] }] };
+            
+            let delay = 1000;
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+                    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                    return await res.json();
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        async function aiEnergyBoost() {
+            playClick();
+            showModal("✨ AI 思考中...", "正在為全班準備專屬的 1 分鐘提神小活動，請稍候...");
+            
+            const prompt = "你是一個活潑可愛的班級寵物。請你想一個適合國小或國中生在教室座位旁進行的「1分鐘提神小活動」（例如：簡單的伸展、深呼吸、或是趣味小互動）。請直接回傳活動內容與引導語，語氣要充滿活力、鼓勵，篇幅大約 50 字左右。語言必須使用繁體中文。";
+            
+            try {
+                const response = await callGemini(prompt);
+                const activityText = response.candidates?.[0]?.content?.parts?.[0]?.text || "讓我們一起站起來，伸個大大的懶腰，深呼吸三次！";
+                
+                const actionHtml = `
+                    <div style="font-size: 1.2rem; line-height: 1.6; text-align: left; background: #fff0f2; padding: 15px; border-radius: 12px; border: 2px dashed #ff6b81; margin-bottom: 15px;">
+                        ${activityText.replace(/\n/g, '<br>')}
+                    </div>
+                    <button class="modal-btn" style="background:var(--success)" onclick="completeAiEnergy()">✅ 我們全班做完了！(活力+30)</button>
+                `;
+                showModal("✨ AI 活力充能活動", "", actionHtml);
+            } catch (error) {
+                showModal("❌ 發生錯誤", "AI 魔法暫時失效了，請檢查網路連線或稍後再試！");
+            }
+        }
+
+        function completeAiEnergy() {
+            closeModal('msgModal');
+            let stats = state.petStats[state.currentPetId];
+            stats.energy = Math.min(100, stats.energy + 30); // 正確更新當前寵物的活力
+            givePoints(5, 5, "✨ 成功完成 AI 活力充能");
+            updateUI(); petJump();
+        }
+
+        async function generateAiDiary() {
+            playClick();
+            if(state.history.length === 0) {
+                showModal("📝 紀錄太空囉", "今天還沒有任何班級動態紀錄，寵物不知道要寫什麼呢！去按幾個加分按鈕吧！");
+                return;
+            }
+            
+            showModal("✨ 寵物振筆疾書中...", "寵物正在回憶今天的點點滴滴，為全班寫專屬日記，請稍候...");
+            
+            const historyText = state.history.map(h => h.time + " " + h.event).join("\n");
+            const currentPetName = state.petStats[state.currentPetId]?.name || "班級寶貝";
+            
+            const prompt = `你是一隻名叫「${currentPetName}」的班級寵物。請根據以下「今天的班級歷史紀錄」，用第一人稱寫一篇簡短、可愛的「寵物日記」（約 100 到 150 字）。請大力讚美學生的好表現，有扣分行為也溫柔鼓勵。結尾要為全班加油打氣。語言必須使用繁體中文。\n\n【今日歷史紀錄】\n${historyText}`;
+
+            try {
+                const response = await callGemini(prompt);
+                const diaryText = response.candidates?.[0]?.content?.parts?.[0]?.text || "今天大家都很棒喔！繼續保持！";
+                
+                const actionHtml = `<div style="font-size: 1.1rem; line-height: 1.8; text-align: left; background: #fffaf0; padding: 20px; border-radius: 12px; border: 3px solid #feca57; margin-bottom: 15px; color: var(--text-dark);">${diaryText.replace(/\n/g, '<br>')}</div>`;
+                showModal("📖 寵物的 AI 專屬日記", "", actionHtml);
+            } catch (error) {
+                showModal("❌ 發生錯誤", "寵物寫日記寫到睡著了，請檢查網路連線或稍後再試！");
+            }
+        }
+
+        async function generateAiQuote() {
+            playClick();
+            const quoteEl = document.getElementById('quoteDisplay');
+            const originalText = quoteEl.innerText;
+            quoteEl.innerText = "「✨ 寵物思考中...」";
+            let stats = state.petStats[state.currentPetId];
+            const prompt = `你是一隻名叫「${stats.name}」的班級寵物。目前你的心情值是 ${stats.mood}/100，飽食度是 ${stats.hunger}/100。請根據這個狀態，對全班同學說一句超可愛、有創意的問候語或鼓勵的話。請直接回傳對話內容，加「」引號，字數在 20 字以內。繁體中文。`;
+            try {
+                const res = await callGemini(prompt);
+                quoteEl.innerText = res.candidates[0].content.parts[0].text.trim();
+            } catch (e) {
+                quoteEl.innerText = originalText;
+                showModal("❌ 發生錯誤", "寵物暫時不想說話，請檢查網路連線！");
+            }
+        }
+
+        async function generateAiTask() {
+            playClick();
+            const inputEl = document.getElementById('newTaskName');
+            inputEl.value = "✨ AI 正在幫你想任務...";
+            const prompt = "你是一個國小/國中班級的可愛寵物。請你想一個能在教室裡進行的「1分鐘趣味小任務」，能促進同學感情、提振精神或維持班級秩序（例如：全班對老師笑一個、把地上的垃圾撿起來、稱讚旁邊的同學）。只要回傳任務名稱就好，不要超過15個字，不要包含引號或其他說明。繁體中文。";
+            try {
+                const res = await callGemini(prompt);
+                let text = res.candidates[0].content.parts[0].text.trim();
+                text = text.replace(/["'「」]/g, ''); 
+                inputEl.value = text;
+            } catch (e) {
+                inputEl.value = "";
+                showModal("❌ 發生錯誤", "任務發想失敗，請檢查網路連線！");
+            }
+        }
+
+        async function generateStudentPraise(name, pts) {
+            playClick();
+            showModal("✨ 寵物正在準備卡片...", `正在為 ${name} 寫專屬的鼓勵小語，請稍候...`);
+            let stats = state.petStats[state.currentPetId];
+            const prompt = `你是一隻名叫「${stats.name}」的班級寵物。班上有一位學生叫做「${name}」，他目前累積了 ${pts} 分。請以寵物的可愛口吻，寫一段簡短、溫暖的鼓勵話語給他（約30-50字）。可以加上表情符號。繁體中文。`;
+            try {
+                const res = await callGemini(prompt);
+                const text = res.candidates[0].content.parts[0].text.trim();
+                const actionHtml = `<div style="font-size: 1.2rem; line-height: 1.6; text-align: left; background: #fff0f2; padding: 15px; border-radius: 12px; border: 2px dashed #ff6b81; margin-bottom: 15px;">${text.replace(/\n/g, '<br>')}</div>`;
+                showModal(`✨ 給 ${name} 的專屬鼓勵`, "", actionHtml);
+            } catch (e) {
+                showModal("❌ 發生錯誤", "鼓勵小語生成失敗，請檢查網路連線！");
+            }
+        }
+
+        // ================= 核心邏輯 =================
+        function loadData() {
+            document.getElementById('muteBtn').innerText = isMuted ? '🔇' : '🔊';
+            const dataKey = `classPetData_${appConfig.currentClassId}`;
+            let saved = localStorage.getItem(dataKey);
+            
+            // 無縫舊版轉換機制 (只在「我的班級」時嘗試轉換)
+            if (!saved && appConfig.currentClassId === 'class_default') {
+                const oldSaved = localStorage.getItem('classPetData_Anime_v6_3') || localStorage.getItem('classPetData_Anime_v6_2') || localStorage.getItem('classPetData_Anime_v6_1') || localStorage.getItem('classPetData_Anime_v7_Images') || localStorage.getItem('classPetData_Anime_v6');
+                if (oldSaved) {
+                    saved = oldSaved;
+                }
+            }
+
+            state = getInitialState();
+
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                Object.keys(parsed).forEach(k => {
+                    state[k] = parsed[k];
+                });
+            }
+
+            if(!state.petStats[state.currentPetId]) {
+                let baseName = PET_DEX.find(p => p.id === state.currentPetId).name;
+                state.petStats[state.currentPetId] = { level: 1, exp: 0, mood: 50, hunger: 50, energy: 100, name: baseName };
+            }
+
+            const todayStr = new Date().toLocaleDateString('zh-TW');
+            if (state.lastDate !== todayStr) {
+                if (state.tasks) {
+                    state.tasks.forEach(t => t.done = false);
+                }
+                state.lastDate = todayStr;
+                saveData(); 
+            }
+
+            // 確保舊版資料包含禮物清單與小組資料
+            if (!state.gifts) {
+                state.gifts = JSON.parse(JSON.stringify(defaultGifts));
+                saveData();
+            }
+            if (!state.groups) {
+                state.groups = [
+                    { id: 'grp_1', name: '第一組' },
+                    { id: 'grp_2', name: '第二組' },
+                    { id: 'grp_3', name: '第三組' },
+                    { id: 'grp_4', name: '第四組' },
+                    { id: 'grp_5', name: '第五組' },
+                    { id: 'grp_6', name: '第六組' }
+                ];
+                saveData();
+            }
+            state.students.forEach(s => {
+                if (s.groupId === undefined) s.groupId = null;
+            });
+
+            updateUI(); renderActions(); renderGroups(); renderTasks(); renderStudents(); renderGifts(); renderHistory(); renderPokedex();
+        }
+
+        function saveData() { 
+            if (!appConfig.currentClassId) return;
+            localStorage.setItem(`classPetData_${appConfig.currentClassId}`, JSON.stringify(state)); 
+        }
+
+        function exportData() {
+            playClick();
+            // 將 Config 和所有班級的資料打包匯出
+            const exportObj = {
+                appConfig: appConfig,
+                classData: {}
+            };
+            appConfig.classes.forEach(c => {
+                const d = localStorage.getItem(`classPetData_${c.id}`);
+                if(d) exportObj.classData[c.id] = JSON.parse(d);
+            });
+            const dataStr = JSON.stringify(exportObj);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const exportName = '班級寵物備份_全班級_' + new Date().toLocaleDateString('zh-TW').replace(/\//g, '') + '.json';
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri); linkElement.setAttribute('download', exportName); linkElement.click();
+            showModal("✅ 匯出成功", "已經將所有班級的進度下載為備份檔案囉！");
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        if(importedData.appConfig && importedData.classData) {
+                            appConfig = importedData.appConfig;
+                            saveAppConfig();
+                            Object.keys(importedData.classData).forEach(classId => {
+                                localStorage.setItem(`classPetData_${classId}`, JSON.stringify(importedData.classData[classId]));
+                            });
+                            renderClassSelect();
+                            loadData();
+                            playLevelUp();
+                            showModal("✅ 匯入成功", "已經成功載入所有班級的備份進度！");
+                        } else if (importedData.petStats) {
+                            // 舊版本單一備份匯入，套用到目前選擇的班級
+                            state = Object.assign(getInitialState(), importedData);
+                            saveData();
+                            loadData();
+                            playLevelUp();
+                            const cName = appConfig.classes.find(c => c.id === appConfig.currentClassId).name;
+                            showModal("✅ 匯入成功", `舊版資料已成功匯入至「${cName}」！`);
+                        } else { 
+                            showModal("❌ 匯入失敗", "檔案格式不正確喔！"); 
+                        }
+                    } catch(err) { showModal("❌ 匯入失敗", "讀取檔案時發生錯誤！"); }
+                };
+                reader.readAsText(file);
+            }
+            event.target.value = ''; 
+        }
+
+        function resetData() {
+            playBad();
+            document.getElementById('resetModal').classList.add('active');
+        }
+
+        function confirmResetData() {
+            state = getInitialState();
+            saveData();
+            closeModal('resetModal');
+            
+            updateUI(); renderActions(); renderGroups(); renderTasks(); renderStudents(); renderGifts(); renderHistory(); renderPokedex();
+            
+            setTimeout(() => {
+                showModal("✅ 重置成功", "目前班級的進度已無縫恢復為初始狀態！");
+            }, 300);
+        }
+
+        function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+
+        function addHistory(eventStr) {
+            const time = new Date().toLocaleTimeString('zh-TW', {hour: '2-digit', minute:'2-digit'});
+            state.history.unshift({ time, event: eventStr });
+            if(state.history.length > 20) state.history.pop();
+            renderHistory();
+        }
+
+        function givePoints(expChange, moodChange, reason, studentName = null) {
+            initAudio();
+            let stats = state.petStats[state.currentPetId];
+            stats.exp += expChange; stats.mood += moodChange;
+            
+            let floatText = expChange > 0 ? `+${expChange}` : `${expChange}`;
+            let color = expChange > 0 ? "#1dd1a1" : "#ff4757";
+
+            if (expChange > 0) { playClick(); petJump(); document.getElementById('quoteDisplay').innerText = positiveQuotes[Math.floor(Math.random() * positiveQuotes.length)]; } 
+            else { playBad(); document.getElementById('quoteDisplay').innerText = sadQuotes[Math.floor(Math.random() * sadQuotes.length)]; }
+
+            let logStr = studentName ? `[${studentName}] ${reason} (${floatText}分)` : `[全班] ${reason} (${floatText}分)`;
+            addHistory(logStr); showFloatingText(floatText, color);
+            checkLevelUp(); updateUI(); saveData();
+        }
+
+        // 新增：智慧判斷點擊還是反白複製 (避免反白時誤觸加分)
+        function safeGivePoints(expChange, moodChange, reason, studentName = null) {
+            if (window.getSelection().toString().trim().length > 0) return;
+            givePoints(expChange, moodChange, reason, studentName);
+        }
+
+        function feedPet() {
+            if (window.getSelection().toString().trim().length > 0) return;
+            initAudio(); playClick(); petJump();
+            let stats = state.petStats[state.currentPetId];
+            stats.hunger += 30; stats.mood += 5;
+            showFloatingText("🍖", "#feca57"); addHistory("[全班] 餵食寵物");
+            updateUI(); saveData();
+        }
+
+        function triggerAction(action, reason) { 
+            if(action === 'poke') { 
+                let stats = state.petStats[state.currentPetId];
+                stats.mood += 2; playClick(); petJump(); showFloatingText("❤️", "#ff6b81");
+                document.getElementById('quoteDisplay').innerText = pokeQuotes[Math.floor(Math.random() * pokeQuotes.length)];
+                updateUI(); 
+            }
+        }
+
+        function openRenameModal() {
+            playClick();
+            document.getElementById('renameInput').value = state.petStats[state.currentPetId].name;
+            document.getElementById('renameModal').classList.add('active');
+        }
+        function savePetName() {
+            const newName = document.getElementById('renameInput').value.trim();
+            if(newName !== '') {
+                state.petStats[state.currentPetId].name = newName;
+                document.getElementById('petNameText').innerText = newName;
+                saveData(); closeModal('renameModal'); renderPokedex();
+            }
+        }
+
+        function triggerGrandSurprise() {
+            const colors = ['#ff6b81', '#48dbfb', '#1dd1a1', '#feca57', '#ffeb3b', '#9b59b6'];
+            for(let i=0; i<150; i++) {
+                let conf = document.createElement('div');
+                conf.style.position = 'fixed';
+                conf.style.width = Math.random() * 10 + 5 + 'px';
+                conf.style.height = Math.random() * 10 + 5 + 'px';
+                conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                conf.style.top = '-20px';
+                conf.style.left = Math.random() * 100 + 'vw';
+                conf.style.opacity = Math.random();
+                conf.style.transform = `rotate(${Math.random() * 360}deg)`;
+                conf.style.zIndex = '9999';
+                conf.style.pointerEvents = 'none';
+                document.body.appendChild(conf);
+
+                let duration = Math.random() * 3 + 2;
+                conf.animate([
+                    { transform: `translate3d(0, 0, 0) rotate(0deg)`, opacity: 1 },
+                    { transform: `translate3d(${Math.random()*200 - 100}px, 100vh, 0) rotate(${Math.random()*720}deg)`, opacity: 0 }
+                ], { duration: duration * 1000, easing: 'cubic-bezier(.37,0,.63,1)', fill: 'forwards' });
+
+                setTimeout(() => conf.remove(), duration * 1000);
+            }
+            playLevelUp();
+            setTimeout(playLevelUp, 400);
+            setTimeout(playLevelUp, 800);
+            document.getElementById('quoteDisplay').innerHTML = '🏆 宇宙最強班級！所有寵物收集完畢！';
+        }
+
+        function checkLevelUp() {
+            let stats = state.petStats[state.currentPetId];
+            let leveledUp = false;
+
+            while (stats.exp >= 100) {
+                stats.level++; stats.exp -= 100;
+                stats.mood = 100; stats.hunger = 100; stats.energy = 100;
+                leveledUp = true;
+            }
+            if(stats.exp < 0) {
+                if(stats.level > 1) { stats.level--; stats.exp += 100; } 
+                else { stats.exp = 0; }
+            }
+
+            if (leveledUp) {
+                playLevelUp();
+                let msg = `太棒了！${stats.name}升到了 等級 ${stats.level}！\n`;
+                let iconHtml = "";
+                
+                if(stats.level === 2) { msg += "🎉 解鎖配件：魔法帽！"; }
+                else if(stats.level === 3) { msg += "🎉 解鎖配件：歡樂氣球！"; }
+                else if(stats.level === 4) { msg += "🎉 解鎖造型：專屬新衣！"; }
+                else if(stats.level === 5) { msg += "🎉 解鎖配件：俏皮領結！"; }
+                else if(stats.level === 6) { msg += "🎉 解鎖特效：閃耀星光！"; }
+                else if(stats.level === 7) { msg += "🎉 解鎖配件：酷炫墨鏡！"; }
+                else if(stats.level === 8) { msg += "🎉 寵物長大了！解鎖：成長進化與光環！"; }
+                else if(stats.level === 9) { msg += "🎉 解鎖配件：閃耀魔杖！"; }
+                else if(stats.level === 10) { 
+                    msg += `🏆 恭喜達成最高等級！\n獲得【終極寵物徽章 🏅】！\n`;
+                    if(state.currentPetId === 20 && state.unlockedMaxId === 20) {
+                        state.unlockedMaxId = 21; 
+                        triggerGrandSurprise();
+                        msg += `\n🎉 難以置信！全班成功收集完所有 20 隻寵物的終極徽章！\n獲得最高榮譽【🏆 宇宙最強班級】稱號！大家太厲害了！`;
+                        iconHtml = "<div class='chest-icon'>🏆</div>";
+                    }
+                    else if(state.currentPetId === state.unlockedMaxId && state.unlockedMaxId < 20) {
+                        state.unlockedMaxId++;
+                        let nextPet = PET_DEX.find(p => p.id === state.unlockedMaxId);
+                        msg += `\n✨ 已為您解鎖下一隻寵物：【${nextPet.icon} ${nextPet.name}】！\n趕快到「寵物圖鑑」看看吧！`;
+                        iconHtml = "<div class='chest-icon'>🏅</div>";
+                    } else { 
+                        msg += `\n(已解鎖極限，可以繼續升級累積點數喔！)`; 
+                        iconHtml = "<div class='chest-icon'>🏅</div>";
+                    }
+                }
+                else if(stats.level > 10) { msg += "🌟 寵物突破極限，全班繼續加油！"; }
+                
+                showModal("🎉 升級了！", msg, iconHtml);
+                renderPokedex();
+            }
+        }
+
+        function applyPetColors(petDef) {
+            const base = petDef.base;
+            const stop1 = document.querySelector(`#grad_${base}_1 stop:nth-child(1)`);
+            const stop2 = document.querySelector(`#grad_${base}_1 stop:nth-child(2)`);
+            const stop3 = document.querySelector(`#grad_${base}_2 stop:nth-child(1)`);
+            const stop4 = document.querySelector(`#grad_${base}_2 stop:nth-child(2)`);
+            if(stop1) stop1.setAttribute('stop-color', petDef.c1);
+            if(stop2) stop2.setAttribute('stop-color', petDef.c2);
+            if(stop3) stop3.setAttribute('stop-color', petDef.e1);
+            if(stop4) stop4.setAttribute('stop-color', petDef.e2);
+        }
+
+        function updateUI() {
+            let stats = state.petStats[state.currentPetId];
+            stats.mood = clamp(stats.mood, 0, 100); stats.hunger = clamp(stats.hunger, 0, 100); stats.energy = clamp(stats.energy, 0, 100);
+            
+            if(document.getElementById('levelDisplay')) document.getElementById('levelDisplay').innerText = `⭐ Lv. ${stats.level}`;
+            if(document.getElementById('expBar')) document.getElementById('expBar').style.width = `${stats.exp}%`;
+            if(document.getElementById('expText')) document.getElementById('expText').innerText = `${stats.exp} / 100`;
+            if(document.getElementById('moodBar')) document.getElementById('moodBar').style.width = `${stats.mood}%`;
+            if(document.getElementById('hungerBar')) document.getElementById('hungerBar').style.width = `${stats.hunger}%`;
+            if(document.getElementById('energyBar')) document.getElementById('energyBar').style.width = `${stats.energy}%`;
+            document.getElementById('petNameText').innerText = stats.name;
+
+            const petDef = PET_DEX.find(p => p.id === state.currentPetId);
+            const petContainer = document.getElementById('pet');
+            if(petContainer) petContainer.setAttribute('data-pet', state.currentPetId);
+
+            document.querySelectorAll('.pet-svg').forEach(svg => svg.classList.remove('active'));
+            let activePet = document.getElementById(`pet-${petDef.base}`);
+            if(activePet) { activePet.classList.add('active'); applyPetColors(petDef); }
+
+            const isHappy = stats.mood > 70; const isSad = stats.mood < 30;
+            document.querySelectorAll('.mood-happy').forEach(el => el.style.display = isHappy ? 'block' : 'none');
+            document.querySelectorAll('.mood-sad').forEach(el => el.style.display = isSad ? 'block' : 'none');
+            document.querySelectorAll('.mood-normal').forEach(el => el.style.display = (!isHappy && !isSad) ? 'block' : 'none');
+
+            const themes = [ { bg: 'var(--bg-theme1)' }, { bg: 'var(--bg-theme2)' }, { bg: 'var(--bg-theme3)' }, { bg: 'var(--bg-theme4)' } ];
+            const tIdx = Math.min(Math.floor((stats.level - 1) / 3), 3); 
+            if(document.getElementById('stage')) document.getElementById('stage').style.background = themes[tIdx].bg;
+
+            document.querySelectorAll('.acc-hat').forEach(el => el.style.display = stats.level >= 2 ? 'block' : 'none');
+            document.querySelectorAll('.acc-balloon').forEach(el => el.style.display = stats.level >= 3 ? 'block' : 'none');
+            document.querySelectorAll('.acc-clothes').forEach(el => el.style.display = stats.level >= 4 ? 'block' : 'none');
+            document.querySelectorAll('.acc-bow').forEach(el => el.style.display = stats.level >= 5 ? 'block' : 'none');
+            document.querySelectorAll('.acc-stars').forEach(el => el.style.display = stats.level >= 6 ? 'block' : 'none');
+            document.querySelectorAll('.acc-glasses').forEach(el => el.style.display = stats.level >= 7 ? 'block' : 'none');
+            document.querySelectorAll('.acc-evo-aura').forEach(el => el.style.display = stats.level >= 8 ? 'block' : 'none');
+            document.querySelectorAll('.acc-wand').forEach(el => el.style.display = stats.level >= 9 ? 'block' : 'none');
+            
+            document.querySelectorAll('.pet-svg').forEach(svg => {
+                if (stats.level >= 8) svg.classList.add('evolved');
+                else svg.classList.remove('evolved');
+            });
+
+            for(let i=2; i<=10; i++) {
+                const el = document.getElementById('unlock-' + i);
+                if(el) el.innerText = stats.level >= i ? "✅" : "🔒";
+            }
+        }
+
+        function renderPokedex() {
+            const grid = document.getElementById('pokedexGrid');
+            grid.innerHTML = '';
+            PET_DEX.forEach(pet => {
+                const isUnlocked = pet.id <= state.unlockedMaxId || (state.unlockedMaxId >= 21);
+                const petStats = state.petStats[pet.id];
+                const isMaxed = petStats && petStats.level >= 10;
+                const isSelected = pet.id === state.currentPetId;
+                const displayName = petStats ? petStats.name : pet.name;
+
+                const div = document.createElement('div');
+                div.className = `pet-card ${isSelected ? 'selected' : ''} ${!isUnlocked ? 'locked' : ''}`;
+                div.onclick = () => {
+                    if(isUnlocked) selectPet(pet.id);
+                    else { playBad(); showModal("🔒 尚未解鎖", "請將目前的寵物養到 Lv.10 才能解鎖下一隻喔！"); }
+                };
+
+                div.innerHTML = `
+                    <div style="font-size: 2.5rem; margin-bottom: 5px; position:relative;">
+                        ${isUnlocked ? pet.icon : '🔒'}
+                        ${isMaxed ? '<div class="pet-badge" title="已達成 Lv.10 終極徽章！">🏅</div>' : ''}
+                    </div>
+                    <div style="font-size:0.85rem; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${isUnlocked ? displayName : '???'}</div>
+                    ${isUnlocked ? `<div style="font-size:0.75rem; color:#888; margin-top:2px;">Lv.${petStats ? petStats.level : 1}</div>` : ''}
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+            playClick();
+        }
+
+        function selectPet(id) { 
+            state.currentPetId = id;
+            if(!state.petStats[id]) {
+                let baseName = PET_DEX.find(p => p.id === id).name;
+                state.petStats[id] = { level: 1, exp: 0, mood: 50, hunger: 50, energy: 100, name: baseName };
+            }
+            playClick(); updateUI(); renderPokedex(); saveData(); 
+        }
+
+        // ================= 小組管理邏輯 =================
+        function adjustGroupPts(delta) {
+            const input = document.getElementById('groupPtsInput');
+            let val = parseInt(input.value) || 0;
+            val += delta;
+            input.value = val;
+            playClick();
+            renderGroups();
+        }
+
+        function renderGroups() {
+            const grid = document.getElementById('groupGrid');
+            if(!grid) return;
+            grid.innerHTML = '';
+            const pts = parseInt(document.getElementById('groupPtsInput').value) || 0;
+            const ptsStr = pts > 0 ? `+${pts}` : `${pts}`;
+            state.groups.forEach(g => {
+                const div = document.createElement('div');
+                div.className = 'action-btn-wrapper';
+                div.innerHTML = `<button class="del-action-btn" onclick="deleteGroup('${g.id}', event)">✖</button>
+                                 <div class="btn btn-blue selectable-text" style="width: 100%; height: 100%;" onclick="if(!window.getSelection().toString().trim()) scoreGroup('${g.id}')">
+                                 <span>🎯</span>${g.name} <small>${ptsStr}分</small></div>`;
+                grid.appendChild(div);
+            });
+        }
+
+        function addGroup() {
+            const input = document.getElementById('newGroupName');
+            const name = input.value.trim();
+            if (name) {
+                state.groups.push({ id: 'grp_' + Date.now(), name: name });
+                input.value = '';
+                playClick();
+                renderGroups();
+                renderStudents(); 
+                saveData();
+            }
+        }
+
+        function deleteGroup(id, event) {
+            event.stopPropagation();
+            state.groups = state.groups.filter(g => g.id !== id);
+            state.students.forEach(s => {
+                if(s.groupId === id) s.groupId = null;
+            });
+            playClick();
+            renderGroups();
+            renderStudents();
+            saveData();
+        }
+
+        function updateStudentGroup(studentId, groupId) {
+            const student = state.students.find(s => s.id === studentId);
+            if (student) {
+                student.groupId = groupId || null;
+                saveData();
+                playClick();
+            }
+        }
+
+        function scoreGroup(groupId) {
+            const group = state.groups.find(g => g.id === groupId);
+            if(!group) return;
+            
+            const pts = parseInt(document.getElementById('groupPtsInput').value) || 0;
+            if(pts === 0) return; // 若為0則不執行
+
+            const groupStudents = state.students.filter(s => s.groupId === groupId);
+            
+            if(groupStudents.length === 0) {
+                showModal("⚠️ 小組沒人喔", `「${group.name}」目前沒有成員，請先在下方學生名單中將學生分配到此小組！`);
+                return;
+            }
+
+            // 同步為小組內所有學生加上指定的點數
+            groupStudents.forEach(s => {
+                s.pts += pts;
+            });
+
+            // 將小組加分也當作一次全班的正向事件 (為寵物增加經驗值)
+            const reason = pts > 0 ? '小組表現優良' : '小組需要提醒';
+            givePoints(pts, pts > 0 ? 5 : -5, reason, group.name);
+            
+            renderStudents();
+            saveData();
+        }
+
+        // ================= 行為管理邏輯 =================
+        function renderActions() {
+            const posGrid = document.getElementById('positiveGrid');
+            const negGrid = document.getElementById('negativeGrid');
+            
+            posGrid.innerHTML = '';
+            state.positiveActions.forEach(act => {
+                const div = document.createElement('div'); div.className = 'action-btn-wrapper';
+                div.innerHTML = `<button class="del-action-btn" onclick="deleteAction('pos', '${act.id}', event)">✖</button>
+                                 <div class="btn btn-green selectable-text" style="width: 100%; height: 100%;" onclick="safeGivePoints(${act.pts}, ${act.mood}, '${act.text}')">
+                                 <span>${act.icon}</span>${act.text} <small>+${act.pts}</small></div>`;
+                posGrid.appendChild(div);
+            });
+            const feedDiv = document.createElement('div'); feedDiv.className = 'action-btn-wrapper';
+            feedDiv.innerHTML = `<div class="btn btn-yellow selectable-text" style="width: 100%; height: 100%;" onclick="feedPet()"><span>🍖</span>餵食寵物 <small>飽食度UP</small></div>`;
+            posGrid.appendChild(feedDiv);
+
+            negGrid.innerHTML = '';
+            state.negativeActions.forEach(act => {
+                const div = document.createElement('div'); div.className = 'action-btn-wrapper';
+                div.innerHTML = `<button class="del-action-btn" onclick="deleteAction('neg', '${act.id}', event)">✖</button>
+                                 <div class="btn ${act.colorClass} selectable-text" style="width: 100%; height: 100%;" onclick="safeGivePoints(${act.pts}, ${act.mood}, '${act.text}')">
+                                 <span>${act.icon}</span>${act.text} <small>${act.pts}</small></div>`;
+                negGrid.appendChild(div);
+            });
+        }
+
+        function addAction(type) {
+            if(type === 'pos') {
+                const iconBtn = document.getElementById('posIconBtn'); const text = document.getElementById('posText').value.trim(); const pts = parseInt(document.getElementById('posPts').value) || 5;
+                if(text) {
+                    state.positiveActions.push({ id: 'pa_' + Date.now(), text, pts: Math.abs(pts), mood: Math.abs(pts) + 2, icon: iconBtn.innerText || '✨', colorClass: 'btn-green' });
+                    document.getElementById('posText').value = ''; iconBtn.innerText = '✨'; 
+                }
+            } else {
+                const iconBtn = document.getElementById('negIconBtn'); const text = document.getElementById('negText').value.trim(); const pts = parseInt(document.getElementById('negPts').value) || 2;
+                if(text) {
+                    state.negativeActions.push({ id: 'na_' + Date.now(), text, pts: -Math.abs(pts), mood: -Math.abs(pts) * 5, icon: iconBtn.innerText || '⚠️', colorClass: 'btn-gray' });
+                    document.getElementById('negText').value = ''; iconBtn.innerText = '⚠️'; 
+                }
+            }
+            playClick(); renderActions(); saveData();
+        }
+
+        function deleteAction(type, id, event) {
+            event.stopPropagation();
+            if(type === 'pos') state.positiveActions = state.positiveActions.filter(a => a.id !== id); 
+            else state.negativeActions = state.negativeActions.filter(a => a.id !== id);
+            playClick(); renderActions(); saveData();
+        }
+
+        function renderTasks() {
+            const list = document.getElementById('taskList');
+            list.innerHTML = '';
+            state.tasks.forEach(t => {
+                const div = document.createElement('div'); div.className = `task-item ${t.done ? 'done' : ''}`;
+                div.innerHTML = `
+                    <span style="flex:1; display:flex; align-items:center; gap:8px;">
+                        <span class="clickable-icon" ${!t.done ? `onclick="completeTask('${t.id}')" title="點擊完成任務"` : 'style="cursor:default;"'}>${t.done ? '✅' : (t.icon || '📌')}</span>
+                        <span class="task-text selectable-text">${t.text} (+${t.pts}分)</span>
+                    </span>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        ${!t.done ? `<button class="task-btn" onclick="completeTask('${t.id}')">完成</button>` : '<span style="color: var(--success); font-weight: bold; margin-right: 5px;">已達成</span>'}
+                        <button class="task-btn task-del-btn" onclick="deleteTask('${t.id}')">✖</button>
+                    </div>`;
+                list.appendChild(div);
+            });
+        }
+        
+        function addTask() {
+            const iconBtn = document.getElementById('taskIconBtn'); const nameInput = document.getElementById('newTaskName'); const ptsInput = document.getElementById('newTaskPts');
+            if (nameInput.value.trim() !== '') {
+                state.tasks.push({ id: 't_' + Date.now(), text: nameInput.value.trim(), done: false, pts: parseInt(ptsInput.value) || 5, icon: iconBtn.innerText });
+                nameInput.value = ''; ptsInput.value = '5'; iconBtn.innerText = '📌'; playClick(); renderTasks(); saveData();
+            }
+        }
+
+        function deleteTask(id) { state.tasks = state.tasks.filter(t => t.id !== id); playClick(); renderTasks(); saveData(); }
+        
+        function completeTask(id) { 
+            const t = state.tasks.find(x => x.id === id); 
+            if(t && !t.done) { 
+                t.done = true; 
+                let stats = state.petStats[state.currentPetId];
+                stats.energy = Math.min(100, stats.energy + 20); // 完成任務額外恢復 20 點活力
+                givePoints(t.pts, 5, `完成任務：${t.text}`); 
+                renderTasks(); 
+            } 
+        }
+
+        function renderStudents() {
+            const list = document.getElementById('studentList');
+            list.innerHTML = '';
+            state.students.forEach(s => {
+                const div = document.createElement('div'); div.className = 'student-item';
+                
+                let groupOptions = `<option value="">未分組</option>`;
+                state.groups.forEach(g => {
+                    groupOptions += `<option value="${g.id}" ${s.groupId === g.id ? 'selected' : ''}>${g.name}</option>`;
+                });
+
+                div.innerHTML = `
+                    <div style="flex: 1; display:flex; flex-direction:column; gap:4px; padding-right: 8px;">
+                        <span class="selectable-text" style="word-break: break-word; line-height: 1.3;" title="${s.name}">${s.name}</span>
+                        <select onchange="updateStudentGroup(${s.id}, this.value)" style="padding: 2px 4px; border-radius: 4px; border: 2px solid var(--ui-border); background: white; font-size: 0.85rem; font-family: inherit; font-weight: bold; color: var(--ui-border); width: fit-content; max-width: 100px;">
+                            ${groupOptions}
+                        </select>
+                    </div>
+                    <div class="student-actions">
+                        <span class="student-pts" style="margin-right: 4px;">${s.pts} 分</span>
+                        <button onclick="openRedeemModal(${s.id})" style="color:var(--warning); font-size: 1rem;" title="兌換禮物">🎁</button>
+                        <button onclick="generateStudentPraise('${s.name}', ${s.pts})" style="color:#a29bfe; font-size: 1rem;" title="✨ AI 專屬鼓勵卡">✨</button>
+                        <button onclick="openStudentScoreModal(${s.id}, 'add')" style="color:var(--success)" title="加分">+</button>
+                        <button onclick="openStudentScoreModal(${s.id}, 'sub')" style="color:var(--danger)" title="扣分">-</button>
+                        <button class="student-del-btn" onclick="deleteStudent(${s.id})" title="刪除學生">✖</button>
+                    </div>`;
+                list.appendChild(div);
+            });
+        }
+        
+        function addStudent() {
+            const input = document.getElementById('newStudentName');
+            if(input.value.trim() !== '') { state.students.push({ id: Date.now(), name: input.value.trim(), pts: 0, groupId: null }); input.value = ''; playClick(); renderStudents(); saveData(); }
+        }
+
+        function openStudentScoreModal(studentId, type) {
+            playClick();
+            const student = state.students.find(s => s.id === studentId);
+            if (!student) return;
+
+            currentScoreTarget = { id: studentId, type: type };
+            
+            const titleEl = document.getElementById('studentScoreTitle');
+            const confirmBtn = document.getElementById('studentScoreConfirmBtn');
+            const inputEl = document.getElementById('studentScoreInput');
+            
+            inputEl.value = '1'; // 預設帶入 1 分
+
+            if (type === 'add') {
+                titleEl.innerText = `➕ 為 ${student.name} 加分`;
+                titleEl.style.color = 'var(--success)';
+                confirmBtn.style.background = 'var(--success)';
+                confirmBtn.innerText = '確定加分';
+            } else {
+                titleEl.innerText = `➖ 為 ${student.name} 扣分`;
+                titleEl.style.color = 'var(--danger)';
+                confirmBtn.style.background = 'var(--danger)';
+                confirmBtn.innerText = '確定扣分';
+            }
+            
+            document.getElementById('studentScoreModal').classList.add('active');
+            // 自動選取輸入框文字，方便老師直接打數字覆蓋
+            setTimeout(() => { inputEl.focus(); inputEl.select(); }, 100);
+        }
+
+        function confirmStudentScore() {
+            const val = parseInt(document.getElementById('studentScoreInput').value);
+            if (isNaN(val) || val <= 0) {
+                showModal("⚠️ 輸入錯誤", "請輸入大於 0 的數字喔！");
+                return;
+            }
+
+            const s = state.students.find(x => x.id === currentScoreTarget.id);
+            if (s) {
+                const change = currentScoreTarget.type === 'add' ? val : -val;
+                s.pts += change;
+                
+                // 動態調整原因與心情浮動幅度
+                const reason = change > 0 ? '個人表現優良' : '個人需要提醒';
+                const moodChange = change > 0 ? Math.min(val, 5) : Math.max(-val, -5); 
+                
+                givePoints(change, moodChange, reason, s.name); 
+                renderStudents();
+                saveData();
+            }
+            closeModal('studentScoreModal');
+        }
+
+        function deleteStudent(id) { state.students = state.students.filter(s => s.id !== id); playClick(); renderStudents(); saveData(); }
+
+        // ================= 禮物兌換庫管理邏輯 =================
+        function renderGifts() {
+            const grid = document.getElementById('giftGrid');
+            grid.innerHTML = '';
+            state.gifts.forEach(g => {
+                const div = document.createElement('div'); div.className = 'action-btn-wrapper';
+                div.innerHTML = `<button class="del-action-btn" onclick="deleteGift('${g.id}', event)" style="display:flex;">✖</button>
+                                 <div class="btn btn-yellow selectable-text" style="width: 100%; height: 100%; cursor:auto;">
+                                 <span>${g.icon}</span>${g.name} <small>${g.pts} 點</small></div>`;
+                grid.appendChild(div);
+            });
+        }
+
+        function addGift() {
+            const iconBtn = document.getElementById('giftIconBtn'); 
+            const text = document.getElementById('newGiftName').value.trim(); 
+            const pts = parseInt(document.getElementById('newGiftPts').value) || 10;
+            if(text) {
+                state.gifts.push({ id: 'g_' + Date.now(), name: text, pts: Math.abs(pts), icon: iconBtn.innerText || '🎁' });
+                document.getElementById('newGiftName').value = ''; 
+                iconBtn.innerText = '🎫'; 
+                playClick(); renderGifts(); saveData();
+            }
+        }
+
+        function deleteGift(id, event) {
+            event.stopPropagation();
+            state.gifts = state.gifts.filter(g => g.id !== id);
+            playClick(); renderGifts(); saveData();
+        }
+
+        function openRedeemModal(studentId) {
+            playClick();
+            const student = state.students.find(s => s.id === studentId);
+            if (!student) return;
+            
+            document.getElementById('redeemStudentInfo').innerText = `🧑‍🎓 ${student.name} (目前點數：${student.pts}分)`;
+            const list = document.getElementById('redeemGiftList');
+            list.innerHTML = '';
+            
+            if (state.gifts.length === 0) {
+                list.innerHTML = '<div style="grid-column: span 2; color: #888;">目前沒有可以兌換的禮物，請老師先到下方新增喔！</div>';
+            } else {
+                state.gifts.forEach(g => {
+                    const canAfford = student.pts >= g.pts;
+                    const btnHtml = `<button class="btn ${canAfford ? 'btn-green' : 'btn-gray'}" 
+                                        style="padding: 10px; font-size: 1rem; opacity: ${canAfford ? '1' : '0.6'};" 
+                                        ${canAfford ? `onclick="confirmRedeem(${student.id}, '${g.id}')"` : 'disabled'}>
+                                        <span style="font-size: 1.5rem; margin-bottom: 2px;">${g.icon}</span>
+                                        ${g.name}<br><small>(-${g.pts}分)</small>
+                                     </button>`;
+                    list.innerHTML += btnHtml;
+                });
+            }
+            
+            document.getElementById('redeemModal').classList.add('active');
+        }
+
+        function confirmRedeem(studentId, giftId) {
+            const student = state.students.find(s => s.id === studentId);
+            const gift = state.gifts.find(g => g.id === giftId);
+            
+            if (student && gift && student.pts >= gift.pts) {
+                student.pts -= gift.pts;
+                closeModal('redeemModal');
+                
+                // 扣除點數不影響全班總分，純粹學生個人點數消耗
+                addHistory(`[${student.name}] 兌換了 ${gift.icon} ${gift.name} (-${gift.pts}分)`);
+                playLevelUp(); // 播放慶祝升級音效
+                
+                renderStudents();
+                saveData();
+                
+                setTimeout(() => {
+                    showModal("🎁 兌換成功！", `恭喜 ${student.name} 成功兌換了【${gift.icon} ${gift.name}】！`);
+                }, 300);
+            }
+        }
+
+        function renderHistory() { document.getElementById('historyList').innerHTML = state.history.map(h => `<div class="history-item"><span class="history-time">${h.time}</span> <span>${h.event}</span></div>`).join(''); }
+
+        function petJump() { const pet = document.getElementById('pet'); pet.classList.remove('jump'); void pet.offsetWidth; pet.classList.add('jump'); }
+
+        function showFloatingText(text, color) {
+            const stage = document.getElementById('stage'); if(!stage) return;
+            const floater = document.createElement('div'); floater.className = 'floating-text'; floater.innerText = text; floater.style.color = color;
+            floater.style.left = `calc(50% + ${Math.random()*60-30}px)`; floater.style.top = '80px';
+            stage.appendChild(floater); setTimeout(() => floater.remove(), 1000);
+        }
+
+        function showModal(title, desc, iconHtml = "") {
+            document.getElementById('msgTitle').innerText = title; document.getElementById('msgDesc').innerHTML = desc.replace(/\n/g, '<br>');
+            const iconDiv = document.getElementById('msgIcon'); if(iconHtml) { iconDiv.innerHTML = iconHtml; iconDiv.style.display = "block"; } else { iconDiv.style.display = "none"; }
+            document.getElementById('msgModal').classList.add('active');
+        }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); playClick(); }
+
+        setInterval(() => { let stats = state.petStats[state.currentPetId]; stats.hunger -= 1; stats.energy -= 1; updateUI(); saveData(); }, 60000);
+
+        function initEmojiPicker() {
+            const picker = document.createElement('div'); picker.className = 'emoji-picker'; picker.id = 'emojiPicker';
+            emojiList.forEach(emoji => {
+                const btn = document.createElement('button'); btn.innerText = emoji;
+                btn.onclick = (e) => { e.stopPropagation(); if (currentEmojiTarget) document.getElementById(currentEmojiTarget).innerText = emoji; picker.style.display = 'none'; playClick(); };
+                picker.appendChild(btn);
+            });
+            document.body.appendChild(picker);
+            document.addEventListener('click', (e) => { if (!e.target.closest('#emojiPicker') && !e.target.classList.contains('icon-btn')) { picker.style.display = 'none'; } });
+        }
+
+        function openEmojiPicker(event, targetId) {
+            event.stopPropagation(); currentEmojiTarget = targetId;
+            const picker = document.getElementById('emojiPicker'); const rect = event.target.getBoundingClientRect();
+            picker.style.display = 'grid'; picker.style.top = (rect.bottom + window.scrollY + 5) + 'px'; picker.style.left = (rect.left + window.scrollX) + 'px'; playClick();
+        }
+
+        window.addEventListener('beforeunload', () => { saveData(); });
+        window.onload = () => { initApp(); };
+    </script>
+</body>
+</html>
