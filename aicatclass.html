@@ -1381,7 +1381,7 @@
             let key = localStorage.getItem('gemini_api_key');
             if (!key) {
                 key = prompt("請輸入您的 Gemini API 金鑰 (API Key) 以啟用 AI 功能：\n(金鑰只會儲存在您的瀏覽器中，不會外流)");
-                if (key) {
+                if (key && key.trim() !== "") {
                     localStorage.setItem('gemini_api_key', key.trim());
                 } else {
                     return null;
@@ -1405,26 +1405,50 @@
             }
         }
         
-        async function callGemini(promptText, retries = 5) {
+        async function callGemini(promptText, retries = 3) {
             const currentApiKey = getApiKey();
-            if (!currentApiKey) throw new Error("缺少 API Key");
+            if (!currentApiKey) throw new Error("尚未設定 API 金鑰");
 
-            // 使用外部公開穩定的 gemini-1.5-flash 模型
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${currentApiKey}`;
+            // 針對學校教學現場設計的「自動備援機制」：依序嘗試最新且穩定的模型
+            const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest'];
             const payload = { contents: [{ parts: [{ text: promptText }] }] };
+            let lastError = null;
             
-            let delay = 1000;
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-                    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-                    return await res.json();
-                } catch (error) {
-                    if (i === retries - 1) throw error;
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2;
+            for (const model of modelsToTry) {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentApiKey}`;
+                let delay = 1000;
+                
+                for (let i = 0; i < retries; i++) {
+                    try {
+                        const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+                        const data = await res.json();
+                        
+                        if (res.ok) {
+                            return data; // 成功取得回應
+                        } else {
+                            lastError = new Error(data.error?.message || `HTTP error! status: ${res.status}`);
+                            // 如果是模型找不到的錯誤 (404)，換下一個模型試試看
+                            if (res.status === 404 || (data.error && data.error.message.includes('not found'))) {
+                                console.warn(`模型 ${model} 暫不支援，系統自動切換備援模型...`);
+                                break; // 跳出重試迴圈，進行下一個 model
+                            } else {
+                                // 若是金鑰無效等權限錯誤，直接拋出不浪費時間重試
+                                throw lastError;
+                            }
+                        }
+                    } catch (error) {
+                        lastError = error;
+                        // 如果是 API Key 填寫錯誤，直接報錯
+                        if (error.message.includes("API key") || error.message.includes("API_KEY")) {
+                            throw error;
+                        }
+                        if (i === retries - 1) break; // 若重試滿了，換下一個模型
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                    }
                 }
             }
+            throw lastError; // 所有模型都失效的話，拋出最後的錯誤
         }
 
         async function aiEnergyBoost() {
@@ -1445,7 +1469,7 @@
                 `;
                 showModal("✨ AI 活力充能活動", "", actionHtml);
             } catch (error) {
-                showModal("❌ 發生錯誤", "AI 魔法暫時失效了，請檢查網路連線或稍後再試！");
+                showModal("❌ 發生錯誤", "AI 魔法暫時失效了！\n原因：" + error.message);
             }
         }
 
@@ -1478,7 +1502,7 @@
                 const actionHtml = `<div style="font-size: 1.1rem; line-height: 1.8; text-align: left; background: #fffaf0; padding: 20px; border-radius: 12px; border: 3px solid #feca57; margin-bottom: 15px; color: var(--text-dark);">${diaryText.replace(/\n/g, '<br>')}</div>`;
                 showModal("📖 寵物的 AI 專屬日記", "", actionHtml);
             } catch (error) {
-                showModal("❌ 發生錯誤", "寵物寫日記寫到睡著了，請檢查網路連線或稍後再試！");
+                showModal("❌ 發生錯誤", "寵物寫日記失敗！\n原因：" + error.message);
             }
         }
 
@@ -1492,9 +1516,9 @@
             try {
                 const res = await callGemini(prompt);
                 quoteEl.innerText = res.candidates[0].content.parts[0].text.trim();
-            } catch (e) {
+            } catch (error) {
                 quoteEl.innerText = originalText;
-                showModal("❌ 發生錯誤", "寵物暫時不想說話，請檢查網路連線！");
+                showModal("❌ 發生錯誤", "寵物對話失敗！\n原因：" + error.message);
             }
         }
 
@@ -1508,9 +1532,9 @@
                 let text = res.candidates[0].content.parts[0].text.trim();
                 text = text.replace(/["'「」]/g, ''); 
                 inputEl.value = text;
-            } catch (e) {
+            } catch (error) {
                 inputEl.value = "";
-                showModal("❌ 發生錯誤", "任務發想失敗，請檢查網路連線！");
+                showModal("❌ 發生錯誤", "任務發想失敗！\n原因：" + error.message);
             }
         }
 
@@ -1524,8 +1548,8 @@
                 const text = res.candidates[0].content.parts[0].text.trim();
                 const actionHtml = `<div style="font-size: 1.2rem; line-height: 1.6; text-align: left; background: #fff0f2; padding: 15px; border-radius: 12px; border: 2px dashed #ff6b81; margin-bottom: 15px;">${text.replace(/\n/g, '<br>')}</div>`;
                 showModal(`✨ 給 ${name} 的專屬鼓勵`, "", actionHtml);
-            } catch (e) {
-                showModal("❌ 發生錯誤", "鼓勵小語生成失敗，請檢查網路連線！");
+            } catch (error) {
+                showModal("❌ 發生錯誤", "卡片產生失敗！\n原因：" + error.message);
             }
         }
 
