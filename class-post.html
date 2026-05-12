@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>班級事務看板</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* ================= 變數與基礎設定 ================= */
+        :root {
+            --bg-page: #f4f6f8;
+            --text-main: #333333;
+            --text-number: #e53e3e; /* 座號紅色 */
+            --text-gray: #718096;
+            
+            /* 打掃工作 (黃色系) */
+            --bg-yellow: #fffdf0;
+            --border-yellow-outer: #f6e0b5;
+            --border-yellow-inner: #fdf6e3;
+            --title-yellow: #d97706;
+
+            /* 簿本收回 (藍色系) */
+            --bg-blue: #f0f5ff;
+            --border-blue-outer: #c3d4ef;
+            --border-blue-inner: #e2e8f0;
+            --title-blue: #3182ce;
+
+            /* 午餐工作 (紫色系) */
+            --bg-purple: #f8f4ff;
+            --border-purple-outer: #d6bcfa;
+            --title-purple: #805ad5;
+
+            /* 小組加分 (綠色系) */
+            --bg-green: #f0fff4;
+            --border-green-outer: #9ae6b4;
+            --title-green: #2f855a;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+        }
+
+        /* ================= 頂部標題與功能列 ================= */
+        .dashboard-header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 5px;
+        }
+        .dashboard-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin: 0;
+        }
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .action-btn {
+            background-color: #edf2f7;
+            border: 1px solid #cbd5e0;
+            color: #4a5568;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .action-btn:hover {
+            background-color: #e2e8f0;
+            color: #2d3748;
+        }
+
+        /* ================= 系統提示 (Toast) ================= */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+        .toast {
+            background-color: #2d3748;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            font-size: 0.95rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s, transform 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ================= 佈局設定 ================= */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        @media (min-width: 1024px) {
+            .dashboard-container {
+                grid-template-columns: 2fr 1fr 1fr;
+            }
+        }
+
+        /* 主區塊共通樣式 */
+        .column-section {
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-header {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-top: 5px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        ul, ol {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #48bb78;
+            margin: 0;
+        }
+
+        /* 任務項目共通樣式 */
+        .task-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed rgba(0,0,0,0.1);
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+        .task-item:last-child {
+            border-bottom: none;
+        }
+
+        .task-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .task-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .student-id {
+            color: var(--text-number);
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .task-name {
+            transition: color 0.3s;
+        }
+
+        /* ================= 任務完成狀態 (含表情符號) ================= */
+        .task-item.completed .task-name {
+            color: #a0aec0; /* 文字變淡 (已移除刪除線) */
+        }
+        .task-item.completed .student-id {
+            color: #cbd5e0; /* 座號變淡 */
+        }
+        
+        /* 利用偽元素加上星星符號，並確保不受刪除線影響 */
+        .task-item.completed .task-name::after {
+            content: ' 🌟'; 
+            display: inline-block;
+            text-decoration: none !important; 
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* 刪除任務按鈕 */
+        .delete-btn {
+            background: transparent;
+            border: none;
+            color: #cbd5e0;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0 4px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .delete-btn:hover {
+            color: #e53e3e;
+            background-color: #fff5f5;
+        }
+
+        /* 新增工作區塊樣式 */
+        .add-task-item {
+            background-color: rgba(255, 255, 255, 0.4);
+            border: 1px dashed rgba(0,0,0,0.15);
+            border-radius: 6px;
+            padding: 6px 8px;
+            margin-top: 8px;
+        }
+        .add-btn {
+            background: #fff;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+            color: #718096;
+            cursor: pointer;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .add-btn:hover {
+            background: #48bb78;
+            color: white;
+            border-color: #48bb78;
+        }
+        .add-task-item input {
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            color: var(--text-main);
+            outline: none;
+            font-size: 0.9rem;
+        }
+        .new-task-name { width: 90px; }
+        .new-task-id { width: 45px; text-align: right; color: var(--text-number); }
+        .new-task-id::placeholder { color: #a0aec0; }
+
+        /* ================= 1. 打掃工作 (黃) ================= */
+        .cleaning-section {
+            background-color: var(--bg-yellow);
+            border: 2px dashed var(--border-yellow-outer);
+        }
+        .cleaning-section .section-header { color: var(--title-yellow); }
+
+        .cleaning-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        @media (min-width: 640px) {
+            .cleaning-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        .group-card {
+            border: 1px dashed var(--border-yellow-outer);
+            border-radius: 8px;
+            padding: 12px;
+            background-color: rgba(255, 255, 255, 0.6);
+        }
+
+        .group-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin: 0 0 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dot-gold::before { content: '🟡'; font-size: 0.9rem; }
+        .dot-green::before { content: '🟢'; font-size: 0.9rem; }
+        .dot-blue::before { content: '🔵'; font-size: 0.9rem; }
+        .dot-purple::before { content: '🟣'; font-size: 0.9rem; }
+
+        /* ================= 2. 簿本收回保管 (藍) ================= */
+        .books-section {
+            background-color: var(--bg-blue);
+            border: 2px dashed var(--border-blue-outer);
+        }
+        .books-section .section-header { color: var(--title-blue); }
+
+        .books-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex-grow: 1;
+        }
+
+        .book-item {
+            border: 1px dashed var(--border-blue-outer);
+            border-radius: 8px;
+            padding: 12px;
+            background-color: rgba(255, 255, 255, 0.4); /* 預設為淡色 */
+            opacity: 0.6; /* 預設半透明 */
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+
+        /* 勾選或有輸入文字時的正常色調狀態 */
+        .book-item.active {
+            background-color: rgba(255, 255, 255, 0.9);
+            opacity: 1;
+            border-style: solid;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .book-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .book-header h3 {
+            margin: 0;
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .book-header .dot-icon {
+            width: 12px;
+            height: 12px;
+            display: inline-block;
+            border-radius: 2px;
+        }
+        .icon-blue-light { background-color: #63b3ed; }
+        .icon-green-light { background-color: #68d391; }
+        .icon-blue-dark { background-color: #4299e1; }
+        .icon-red-light { background-color: #fc8181; }
+
+        .book-header input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            appearance: none;
+            border: 2px solid #48bb78;
+            outline: none;
+        }
+        .book-header input[type="checkbox"]:checked {
+            background-color: #48bb78;
+            position: relative;
+        }
+        .book-header input[type="checkbox"]:checked::after {
+            content: '✔';
+            color: white;
+            position: absolute;
+            font-size: 14px;
+            top: -2px;
+            left: 2px;
+        }
+
+        .book-item input[type="text"] {
+            border: none;
+            border-bottom: 1px dotted #a0aec0;
+            background: transparent;
+            padding: 4px 0;
+            font-size: 0.9rem;
+            color: var(--text-gray);
+            outline: none;
+            width: 100%;
+        }
+
+        .score-summary {
+            margin-top: 20px;
+            border: 1px solid var(--border-blue-outer);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+
+        .score-summary h4 { margin: 0 0 5px 0; font-size: 1rem; color: #4a5568; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        
+        /* 分數輸入框外層容器 */
+        .score-input-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 將總分改為輸入框樣式 */
+        .score-display { 
+            font-size: 1.8rem; 
+            font-weight: 700; 
+            color: #2d3748;
+            border: none;
+            background: transparent;
+            text-align: center;
+            width: 80px; /* 微調寬度留空間給按鈕 */
+            outline: none;
+            border-bottom: 2px solid transparent;
+            transition: border-color 0.3s;
+        }
+        .score-display:focus {
+            border-bottom: 2px solid #3182ce;
+        }
+        /* 隱藏數字輸入框的預設上下箭頭 */
+        .score-display::-webkit-outer-spin-button,
+        .score-display::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .score-display[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        /* 自訂上下調整按鈕 */
+        .score-controls {
+            display: flex;
+            flex-direction: column;
+            margin-left: 4px;
+        }
+        .score-btn {
+            background: transparent;
+            border: none;
+            color: #a0aec0;
+            font-size: 0.8rem;
+            cursor: pointer;
+            padding: 2px;
+            line-height: 1;
+            transition: color 0.2s, transform 0.1s;
+        }
+        .score-btn:hover {
+            color: #3182ce;
+            transform: scale(1.2);
+        }
+        .score-btn:active {
+            transform: scale(0.9);
+        }
+
+        /* ================= 3. 午餐工作 & 值日生 (紫) ================= */
+        .lunch-duty-section {
+            background-color: var(--bg-purple);
+            border: 2px dashed var(--border-purple-outer);
+            gap: 20px;
+        }
+        .lunch-duty-section .section-header { color: var(--title-purple); margin-bottom: 10px; }
+
+        .lunch-tasks, .daily-duty {
+            border-radius: 8px;
+        }
+
+        .lunch-list {
+            counter-reset: lunch-counter;
+        }
+        .lunch-list li {
+            position: relative;
+            padding: 8px 0 8px 24px;
+            border-bottom: 1px dotted var(--border-purple-outer);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+        }
+        .lunch-list li::before {
+            counter-increment: lunch-counter;
+            content: counter(lunch-counter) ".";
+            position: absolute;
+            left: 0;
+            color: #a0aec0;
+            font-size: 0.85rem;
+            top: 10px;
+        }
+
+        /* 午餐工作新增區塊樣式 */
+        .lunch-list li.add-lunch-item {
+            padding: 6px 8px;
+            background-color: rgba(255, 255, 255, 0.4);
+            border: 1px dashed rgba(0,0,0,0.15);
+            border-radius: 6px;
+            margin-top: 8px;
+        }
+        .lunch-list li.add-lunch-item::before {
+            content: none;
+            counter-increment: none;
+        }
+        .add-lunch-item input {
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            color: var(--text-main);
+            outline: none;
+            font-size: 0.9rem;
+        }
+        .new-lunch-name { width: 90px; }
+        .new-lunch-id { width: 45px; text-align: right; color: var(--text-number); }
+
+        /* 午餐工作座號輸入框 (隱藏邊框) */
+        input.lunch-id-input {
+            border: none;
+            border-bottom: 1px dotted transparent;
+            background: transparent;
+            font-family: inherit;
+            font-size: 0.95rem;
+            color: var(--text-number);
+            font-weight: 500;
+            text-align: right;
+            width: 80px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input.lunch-id-input:focus {
+            border-bottom: 1px dotted #a0aec0;
+        }
+
+        .daily-duty h3 {
+            color: var(--title-purple);
+            font-size: 1.1rem;
+            margin: 25px 0 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .duty-list {
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }
+        .duty-item {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            display: flex; /* 確保內部 input 滿版 */
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* 值日生文字輸入框 (隱藏邊框) */
+        .duty-item input {
+            border: none;
+            border-bottom: 1px dotted transparent;
+            background: transparent;
+            font-family: inherit;
+            font-size: 1.1rem;
+            color: var(--text-number); /* 設定為紅色 */
+            font-weight: 700; /* 設定為粗體 */
+            width: 100%;
+            outline: none;
+            padding: 0;
+            transition: border-color 0.3s;
+        }
+        .duty-item input::placeholder {
+            color: #a0aec0; /* 提示文字保持灰色 */
+            font-size: 0.95rem;
+            font-weight: normal;
+        }
+        .duty-item input:focus {
+            border-bottom: 1px dotted #a0aec0;
+        }
+
+        /* 新增值日生專屬區塊微調 */
+        .add-duty-item {
+            background-color: rgba(255, 255, 255, 0.4);
+            border: 1px dashed rgba(0,0,0,0.15);
+            border-radius: 6px;
+            padding: 6px 8px;
+            margin-top: 8px;
+        }
+
+        /* ================= 4. 小組加分區 (綠) ================= */
+        .scoring-section {
+            background-color: var(--bg-green);
+            border: 2px dashed var(--border-green-outer);
+            grid-column: 1 / -1; /* 讓此區塊橫跨所有直行，置於最下方 */
+        }
+        .scoring-section .section-header {
+            color: var(--title-green);
+            display: flex;
+            justify-content: space-between; /* 標題在左，選單在右 */
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .emoji-selector {
+            font-size: 0.95rem;
+            color: var(--text-main);
+            font-weight: normal;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .emoji-selector select {
+            padding: 4px 8px;
+            font-size: 1.1rem;
+            border-radius: 6px;
+            border: 1px solid #cbd5e0;
+            outline: none;
+            cursor: pointer;
+            background-color: white;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+
+        .scoring-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        @media (min-width: 768px) {
+            .scoring-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (min-width: 1024px) {
+            .scoring-grid { grid-template-columns: repeat(6, 1fr); }
+        }
+
+        .score-card {
+            border: 1px dashed var(--border-green-outer);
+            border-radius: 8px;
+            padding: 12px;
+            background-color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .score-card h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: var(--title-green);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .score-count {
+            font-size: 0.9rem;
+            color: #718096;
+            font-weight: 500;
+        }
+
+        .emoji-display {
+            min-height: 50px;
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            justify-content: center;
+            align-items: center;
+            border-radius: 6px;
+            background-color: rgba(255,255,255,0.6);
+            padding: 8px;
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+        .score-emoji-item {
+            font-size: 1.5rem;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            user-select: none;
+        }
+
+        .score-controls-group {
+            display: flex;
+            gap: 10px;
+            margin-top: auto; /* 讓按鈕對齊在最下方 */
+        }
+        .score-controls-group button {
+            background: #fff;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            color: #718096;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .score-controls-group button.add-emoji:hover {
+            background: #48bb78;
+            color: white;
+            border-color: #48bb78;
+            transform: translateY(-1px);
+        }
+        .score-controls-group button.remove-emoji:hover {
+            background: #f56565;
+            color: white;
+            border-color: #f56565;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard-container">
+
+    <!-- ================= 頂部功能列 ================= -->
+    <header class="dashboard-header">
+        <h1 class="dashboard-title">✨ 班級事務看板(創意來自：佳靜老師)</h1>
+        <div class="header-actions">
+            <button id="btn-export" class="action-btn" title="匯出紀錄到電腦">匯出紀錄 💾</button>
+            <button id="btn-import" class="action-btn" title="從電腦匯入紀錄">匯入紀錄 📂</button>
+            <input type="file" id="input-import" accept=".json" style="display: none;">
+        </div>
+    </header>
+
+    <!-- ================= 第一欄：打掃工作 ================= -->
+    <section class="column-section cleaning-section">
+        <div class="section-header">🧹 打掃工作</div>
+        <div class="cleaning-grid">
+            
+            <!-- 第一組 -->
+            <article class="group-card">
+                <h3 class="group-title dot-gold">第一組</h3>
+                <ul class="task-list">
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">餐桶梯</span></div>
+                        <div class="task-right"><span class="student-id">13</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">餐桶梯</span></div>
+                        <div class="task-right"><span class="student-id">9</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">餐桶梯</span></div>
+                        <div class="task-right"><span class="student-id">16</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">餐桶梯</span></div>
+                        <div class="task-right"><span class="student-id">20</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">檢查+支援</span></div>
+                        <div class="task-right"><span class="student-id">2</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item add-task-item">
+                        <div class="task-left">
+                            <button class="add-btn" title="新增工作">＋</button>
+                            <input type="text" class="new-task-name" placeholder="新增工作...">
+                        </div>
+                        <input type="text" class="new-task-id" placeholder="座號">
+                    </li>
+                </ul>
+            </article>
+
+            <!-- 第二組 -->
+            <article class="group-card">
+                <h3 class="group-title dot-green">第二組</h3>
+                <ul class="task-list">
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">廁所梯</span></div>
+                        <div class="task-right"><span class="student-id">15</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">廁所梯</span></div>
+                        <div class="task-right"><span class="student-id">17</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">廁所梯</span></div>
+                        <div class="task-right"><span class="student-id">1</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">廁所梯</span></div>
+                        <div class="task-right"><span class="student-id">19</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">檢查+支援</span></div>
+                        <div class="task-right"><span class="student-id">10</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item add-task-item">
+                        <div class="task-left">
+                            <button class="add-btn" title="新增工作">＋</button>
+                            <input type="text" class="new-task-name" placeholder="新增工作...">
+                        </div>
+                        <input type="text" class="new-task-id" placeholder="座號">
+                    </li>
+                </ul>
+            </article>
+
+            <!-- 第三組 -->
+            <article class="group-card">
+                <h3 class="group-title dot-blue">第三組</h3>
+                <ul class="task-list">
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">中間梯</span></div>
+                        <div class="task-right"><span class="student-id">11</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">中間梯</span></div>
+                        <div class="task-right"><span class="student-id">18</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">中間梯</span></div>
+                        <div class="task-right"><span class="student-id">14</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">中間梯</span></div>
+                        <div class="task-right"><span class="student-id">6</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">檢查+支援</span></div>
+                        <div class="task-right"><span class="student-id">4</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item add-task-item">
+                        <div class="task-left">
+                            <button class="add-btn" title="新增工作">＋</button>
+                            <input type="text" class="new-task-name" placeholder="新增工作...">
+                        </div>
+                        <input type="text" class="new-task-id" placeholder="座號">
+                    </li>
+                </ul>
+            </article>
+
+            <!-- 第四組 -->
+            <article class="group-card">
+                <h3 class="group-title dot-purple">第四組</h3>
+                <ul class="task-list">
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">旋轉梯</span></div>
+                        <div class="task-right"><span class="student-id">5</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">旋轉梯</span></div>
+                        <div class="task-right"><span class="student-id">3</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">旋轉梯</span></div>
+                        <div class="task-right"><span class="student-id">8</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-left"><input type="checkbox"> <span class="task-name">檢查+支援</span></div>
+                        <div class="task-right"><span class="student-id">7</span> <button class="delete-btn" title="移除工作">×</button></div>
+                    </li>
+                    <li class="task-item add-task-item">
+                        <div class="task-left">
+                            <button class="add-btn" title="新增工作">＋</button>
+                            <input type="text" class="new-task-name" placeholder="新增工作...">
+                        </div>
+                        <input type="text" class="new-task-id" placeholder="座號">
+                    </li>
+                </ul>
+            </article>
+
+        </div>
+    </section>
+
+    <!-- ================= 第二欄：簿本收回保管 ================= -->
+    <section class="column-section books-section">
+        <div class="section-header">📚 簿本收回保管</div>
+        
+        <div class="books-list">
+            <article class="book-item">
+                <div class="book-header">
+                    <h3><span class="dot-icon icon-blue-light"></span> 第一組</h3>
+                    <input type="checkbox" class="book-status-check">
+                </div>
+                <input type="text" placeholder="輸入筆記內容...">
+            </article>
+
+            <article class="book-item">
+                <div class="book-header">
+                    <h3><span class="dot-icon icon-green-light"></span> 第二組</h3>
+                    <input type="checkbox" class="book-status-check">
+                </div>
+                <input type="text" placeholder="輸入筆記內容...">
+            </article>
+
+            <article class="book-item">
+                <div class="book-header">
+                    <h3><span class="dot-icon icon-blue-dark"></span> 第三組</h3>
+                    <input type="checkbox" class="book-status-check">
+                </div>
+                <input type="text" placeholder="輸入筆記內容...">
+            </article>
+
+            <article class="book-item">
+                <div class="book-header">
+                    <h3><span class="dot-icon icon-red-light"></span> 第四組</h3>
+                    <input type="checkbox" class="book-status-check">
+                </div>
+                <input type="text" placeholder="輸入筆記內容...">
+            </article>
+        </div>
+
+        <div class="score-summary">
+            <h4>📊 全班總分</h4>
+            <div class="score-input-wrapper">
+                <input type="number" class="score-display" value="116">
+                <div class="score-controls">
+                    <button class="score-btn increase-score" title="加分">▲</button>
+                    <button class="score-btn decrease-score" title="扣分">▼</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= 第三欄：午餐工作 ================= -->
+    <section class="column-section lunch-duty-section">
+        
+        <div class="lunch-tasks">
+            <div class="section-header" style="justify-content: flex-start; font-size: 1.1rem;">🍱 午餐工作</div>
+            <ul class="lunch-list">
+                <li class="lunch-item">
+                    <span class="lunch-task-name">餐桶1+2</span> 
+                    <div class="task-right">
+                        <input type="text" class="lunch-id-input" value="1">
+                        <button class="delete-btn" title="移除">×</button>
+                    </div>
+                </li>
+                <li class="lunch-item">
+                    <span class="lunch-task-name">餐桶3+4</span> 
+                    <div class="task-right">
+                        <input type="text" class="lunch-id-input" value="1、2">
+                        <button class="delete-btn" title="移除">×</button>
+                    </div>
+                </li>
+                <li class="lunch-item">
+                    <span class="lunch-task-name">餐桶5+擦盤子</span> 
+                    <div class="task-right">
+                        <input type="text" class="lunch-id-input" value="20">
+                        <button class="delete-btn" title="移除">×</button>
+                    </div>
+                </li>
+                <li class="lunch-item">
+                    <span class="lunch-task-name">擦餐桌</span> 
+                    <div class="task-right">
+                        <input type="text" class="lunch-id-input" value="1">
+                        <button class="delete-btn" title="移除">×</button>
+                    </div>
+                </li>
+                <li class="lunch-item">
+                    <span class="lunch-task-name">拖地板</span> 
+                    <div class="task-right">
+                        <input type="text" class="lunch-id-input" value="1">
+                        <button class="delete-btn" title="移除">×</button>
+                    </div>
+                </li>
+                <li class="lunch-item add-lunch-item">
+                    <div class="task-left">
+                        <button class="add-btn add-lunch-btn" title="新增工作">＋</button>
+                        <input type="text" class="new-lunch-name" placeholder="新增工作...">
+                    </div>
+                    <input type="text" class="new-lunch-id" placeholder="座號">
+                </li>
+            </ul>
+        </div>
+
+        <div class="daily-duty">
+            <h3>👥 今日值日生</h3>
+            <div class="duty-list">
+                <div class="duty-item">
+                    <input type="text" value="20">
+                    <button class="delete-btn" title="移除">×</button>
+                </div>
+                <div class="duty-item">
+                    <input type="text" value="座號 2">
+                    <button class="delete-btn" title="移除">×</button>
+                </div>
+                <div class="duty-item">
+                    <input type="text" value="座號 3">
+                    <button class="delete-btn" title="移除">×</button>
+                </div>
+                <div class="duty-item">
+                    <input type="text" value="座號 4">
+                    <button class="delete-btn" title="移除">×</button>
+                </div>
+                <div class="duty-item add-duty-item">
+                    <button class="add-btn add-duty-btn" title="新增值日生" style="margin-right: 8px;">＋</button>
+                    <input type="text" class="new-duty-input" placeholder="新增值日生...">
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- ================= 第四欄：小組加分區 ================= -->
+    <section class="column-section scoring-section">
+        <div class="section-header">
+            <div>🏆 小組表現加分</div>
+            <div class="emoji-selector">
+                <label for="scoring-emoji">選擇加分圖形：</label>
+                <select id="scoring-emoji">
+                    <option value="🌟">🌟 星星</option>
+                    <option value="🍎">🍎 蘋果</option>
+                    <option value="🚀">🚀 火箭</option>
+                    <option value="👍">👍 讚</option>
+                    <option value="🌸">🌸 櫻花</option>
+                    <option value="👑">👑 皇冠</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="scoring-grid">
+            <!-- 加分組別 1~6 -->
+            <article class="score-card">
+                <h3>第一組 <span class="score-count">(0)</span></h3>
+                <div class="emoji-display"></div>
+                <div class="score-controls-group">
+                    <button class="add-emoji" title="加分">＋</button>
+                    <button class="remove-emoji" title="扣除最新">－</button>
+                </div>
+            </article>
+            <article class="score-card">
+                <h3>第二組 <span class="score-count">(0)</span></h3>
+                <div class="emoji-display"></div>
+                <div class="score-controls-group">
+                    <button class="add-emoji" title="加分">＋</button>
+                    <button class="remove-emoji" title="扣除最新">－</button>
+                </div>
+            </article>
+            <article class="score-card">
+                <h3>第三組 <span class="score-count">(0)</span></h3>
+                <div class="emoji-display"></div>
+                <div class="score-controls-group">
+                    <button class="add-emoji" title="加分">＋</button>
+                    <button class="remove-emoji" title="扣除最新">－</button>
+                </div>
+            </article>
+            <article class="score-card">
+                <h3>第四組 <span class="score-count">(0)</span></h3>
+                <div class="emoji-display"></div>
+                <div class="score-controls-group">
+                    <button class="add-emoji" title="加分">＋</button>
+                    <button class="remove-emoji" title="扣除最新">－</button>
+                </div>
+            </article>
+            <article class="score-card">
+                <h3>第五組 <span class="score-count">(0)</span></h3>
+                <div class="emoji-display"></div>
+                <div class="score-controls-group">
+                    <button class="add-emoji" title="加分">＋</button>
+                    <button class="remove-emoji" title="扣除最新">－</button>
+                </div>
+            </article>
+            <article class="score-card">
+                <h3>第六組 <span class="score-count">(0)</span></h3>
+                <div class="emoji-display"></div>
+                <div class="score-controls-group">
+                    <button class="add-emoji" title="加分">＋</button>
+                    <button class="remove-emoji" title="扣除最新">－</button>
+                </div>
+            </article>
+        </div>
+    </section>
+
+</div>
+
+<!-- 系統提示容器 -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+    let saveTimeout = null;
+    const container = document.querySelector('.dashboard-container');
+
+    // ================= 1. 從 localStorage 讀取資料 =================
+    function loadState() {
+        const savedData = localStorage.getItem('classDashboardState');
+        if (savedData) {
+            try {
+                const data = JSON.parse(savedData);
+                if (data.cleaningHTML) document.querySelector('.cleaning-grid').innerHTML = data.cleaningHTML;
+                if (data.booksHTML) document.querySelector('.books-list').innerHTML = data.booksHTML;
+                if (data.lunchHTML) document.querySelector('.lunch-list').innerHTML = data.lunchHTML;
+                if (data.dutyHTML) document.querySelector('.duty-list').innerHTML = data.dutyHTML;
+                if (data.scoringHTML) document.querySelector('.scoring-grid').innerHTML = data.scoringHTML;
+                if (data.score !== undefined) document.querySelector('.score-display').value = data.score;
+                if (data.selectedEmoji !== undefined) document.getElementById('scoring-emoji').value = data.selectedEmoji;
+            } catch (e) {
+                console.error("載入本地資料失敗:", e);
+            }
+        }
+    }
+
+    // ================= 2. 儲存資料到 localStorage =================
+    function saveState() {
+        // 將文字輸入框的值同步到 HTML 屬性上，確保儲存 HTML 時有包含最新文字
+        document.querySelectorAll('input[type="text"]').forEach(el => el.setAttribute('value', el.value));
+        const scoreDisplay = document.querySelector('.score-display');
+        if(scoreDisplay) scoreDisplay.setAttribute('value', scoreDisplay.value);
+        
+        clearTimeout(saveTimeout);
+        // 稍微延遲儲存，避免打字時頻繁觸發
+        saveTimeout = setTimeout(() => {
+            const state = {
+                cleaningHTML: document.querySelector('.cleaning-grid').innerHTML,
+                booksHTML: document.querySelector('.books-list').innerHTML,
+                lunchHTML: document.querySelector('.lunch-list').innerHTML,
+                dutyHTML: document.querySelector('.duty-list').innerHTML,
+                scoringHTML: document.querySelector('.scoring-grid').innerHTML,
+                score: document.querySelector('.score-display').value,
+                selectedEmoji: document.getElementById('scoring-emoji').value
+            };
+            localStorage.setItem('classDashboardState', JSON.stringify(state));
+        }, 300); // 縮短儲存延遲，讓本地儲存反應更即時
+    }
+
+    // 網頁初始化時載入本地紀錄
+    loadState();
+
+    // ================= 系統提示功能 (Toast) =================
+    function showToast(message, icon = 'ℹ️') {
+        const toastContainer = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+        toastContainer.appendChild(toast);
+        
+        // 觸發動畫
+        setTimeout(() => toast.classList.add('show'), 10);
+        
+        // 3秒後移除
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // ================= 匯出與匯入功能 =================
+    const btnExport = document.getElementById('btn-export');
+    const btnImport = document.getElementById('btn-import');
+    const inputImport = document.getElementById('input-import');
+
+    // 匯出功能
+    btnExport.addEventListener('click', () => {
+        saveState(); // 確保最新狀態已儲存
+        const data = localStorage.getItem('classDashboardState');
+        if (!data) {
+            showToast('目前沒有資料可以匯出', '⚠️');
+            return;
+        }
+        
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        
+        // 檔名自動加上今日日期 (YYYYMMDD)
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}${(today.getMonth()+1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
+        
+        a.href = url;
+        a.download = `班級事務紀錄_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showToast('已成功匯出紀錄', '✅');
+    });
+
+    // 匯入按鈕觸發檔案選擇
+    btnImport.addEventListener('click', () => {
+        inputImport.click();
+    });
+
+    // 處理匯入檔案
+    inputImport.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                const importedData = JSON.parse(event.target.result);
+                // 簡單驗證資料格式，確認是否為我們的系統存檔
+                if (importedData.cleaningHTML !== undefined || importedData.score !== undefined) {
+                    localStorage.setItem('classDashboardState', JSON.stringify(importedData));
+                    loadState(); // 重新載入畫面內容
+                    
+                    // 重新檢查並套用簿本區塊狀態
+                    document.querySelectorAll('.book-item').forEach(updateBookItemState);
+                    
+                    showToast('紀錄匯入成功！', '🎉');
+                } else {
+                    showToast('檔案格式不正確，無法匯入', '❌');
+                }
+            } catch (err) {
+                showToast('讀取檔案失敗', '❌');
+            }
+            // 清空 input 讓下次選同一個檔案也能再次觸發 change 事件
+            inputImport.value = '';
+        };
+        reader.readAsText(file);
+    });
+
+    // 簿本區塊狀態更新邏輯
+    function updateBookItemState(bookItem) {
+        if (!bookItem) return;
+        const checkbox = bookItem.querySelector('.book-status-check');
+        const textInput = bookItem.querySelector('input[type="text"]');
+        
+        const isChecked = checkbox && checkbox.checked;
+        const hasText = textInput && textInput.value.trim() !== '';
+
+        // 只要有勾選或是有輸入文字，就加上 active 變成正常色調
+        if (isChecked || hasText) {
+            bookItem.classList.add('active');
+        } else {
+            bookItem.classList.remove('active');
+        }
+    }
+    
+    // 初始化檢查一次所有的簿本區塊狀態
+    document.querySelectorAll('.book-item').forEach(updateBookItemState);
+
+    // 小組加分計數更新
+    function updateScoreCount(card) {
+        const display = card.querySelector('.emoji-display');
+        const countSpan = card.querySelector('.score-count');
+        countSpan.textContent = `(${display.children.length})`;
+    }
+
+    // ================= 3. 事件委派 (取代原有的綁定方式) =================
+    // 勾選框與下拉選單事件
+    container.addEventListener('change', function(e) {
+        if (e.target.matches('.task-item input[type="checkbox"]')) {
+            const listItem = e.target.closest('.task-item');
+            if (e.target.checked) {
+                e.target.setAttribute('checked', 'checked');
+                listItem.classList.add('completed');
+            } else {
+                e.target.removeAttribute('checked');
+                listItem.classList.remove('completed');
+            }
+            saveState();
+        } 
+        else if (e.target.matches('.book-status-check')) {
+            const cardItem = e.target.closest('.book-item');
+            if (e.target.checked) {
+                e.target.setAttribute('checked', 'checked');
+            } else {
+                e.target.removeAttribute('checked');
+            }
+            updateBookItemState(cardItem); // 觸發樣式更新
+            saveState();
+        }
+        else if (e.target.id === 'scoring-emoji') {
+            // 當選擇了不同的表情符號時，觸發儲存以記錄偏好
+            saveState();
+        }
+    });
+
+    // 點擊事件 (刪除、新增、加分按鈕)
+    container.addEventListener('click', function(e) {
+        if (e.target.matches('.delete-btn')) {
+            const listItem = e.target.closest('.task-item, .lunch-item, .duty-item');
+            if (listItem) {
+                listItem.remove();
+                saveState();
+            }
+        }
+        else if (e.target.matches('.add-btn:not(.add-lunch-btn):not(.add-duty-btn)')) {
+            const addContainer = e.target.closest('.add-task-item');
+            if (addContainer) addNewTask(addContainer);
+        }
+        else if (e.target.matches('.add-lunch-btn')) {
+            const addContainer = e.target.closest('.add-lunch-item');
+            if (addContainer) addNewLunch(addContainer);
+        }
+        else if (e.target.matches('.add-duty-btn')) {
+            const addContainer = e.target.closest('.add-duty-item');
+            if (addContainer) addNewDuty(addContainer);
+        }
+        // 處理全班總分加分
+        else if (e.target.matches('.increase-score')) {
+            const input = e.target.closest('.score-input-wrapper').querySelector('.score-display');
+            input.value = parseInt(input.value || 0) + 1;
+            input.setAttribute('value', input.value);
+            saveState();
+        }
+        // 處理全班總分扣分
+        else if (e.target.matches('.decrease-score')) {
+            const input = e.target.closest('.score-input-wrapper').querySelector('.score-display');
+            input.value = parseInt(input.value || 0) - 1;
+            input.setAttribute('value', input.value);
+            saveState();
+        }
+        // 處理小組加分 (增加表情符號)
+        else if (e.target.matches('.add-emoji')) {
+            const card = e.target.closest('.score-card');
+            const display = card.querySelector('.emoji-display');
+            const selectedEmoji = document.getElementById('scoring-emoji').value;
+            
+            const span = document.createElement('span');
+            span.className = 'score-emoji-item';
+            span.textContent = selectedEmoji;
+            display.appendChild(span);
+            
+            updateScoreCount(card);
+            saveState();
+        }
+        // 處理小組扣分 (移除最新表情符號)
+        else if (e.target.matches('.remove-emoji')) {
+            const card = e.target.closest('.score-card');
+            const display = card.querySelector('.emoji-display');
+            
+            if (display.lastChild) {
+                display.removeChild(display.lastChild);
+                updateScoreCount(card);
+                saveState();
+            }
+        }
+    });
+
+    // 輸入事件 (文字框筆記、總分)
+    container.addEventListener('input', function(e) {
+        if (e.target.matches('input[type="text"], input[type="number"]')) {
+            e.target.setAttribute('value', e.target.value);
+            
+            // 若輸入的是簿本筆記，即時檢查是否需要改變色調
+            if (e.target.closest('.book-item')) {
+                updateBookItemState(e.target.closest('.book-item'));
+            }
+            
+            saveState();
+        }
+    });
+
+    // Enter 鍵新增工作
+    container.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            if (e.target.matches('.add-task-item input')) {
+                const addContainer = e.target.closest('.add-task-item');
+                addNewTask(addContainer);
+            } else if (e.target.matches('.add-lunch-item input')) {
+                const addContainer = e.target.closest('.add-lunch-item');
+                addNewLunch(addContainer);
+            } else if (e.target.matches('.add-duty-item input')) {
+                const addContainer = e.target.closest('.add-duty-item');
+                addNewDuty(addContainer);
+            }
+        }
+    });
+
+    // 新增工作邏輯
+    function addNewTask(container) {
+        const nameInput = container.querySelector('.new-task-name');
+        const idInput = container.querySelector('.new-task-id');
+        const taskName = nameInput.value.trim();
+        const studentId = idInput.value.trim();
+
+        if (taskName) {
+            const ul = container.closest('.task-list');
+            const newLi = document.createElement('li');
+            newLi.className = 'task-item';
+            newLi.innerHTML = `
+                <div class="task-left">
+                    <input type="checkbox"> 
+                    <span class="task-name">${taskName}</span>
+                </div>
+                <div class="task-right">
+                    <span class="student-id">${studentId}</span>
+                    <button class="delete-btn" title="移除工作">×</button>
+                </div>
+            `;
+            ul.insertBefore(newLi, container);
+
+            // 清空輸入框
+            nameInput.value = '';
+            idInput.value = '';
+            nameInput.setAttribute('value', '');
+            idInput.setAttribute('value', '');
+            nameInput.focus();
+            
+            saveState();
+        }
+    }
+
+    // 新增午餐工作邏輯
+    function addNewLunch(container) {
+        const nameInput = container.querySelector('.new-lunch-name');
+        const idInput = container.querySelector('.new-lunch-id');
+        const taskName = nameInput.value.trim();
+        const studentId = idInput.value.trim();
+
+        if (taskName) {
+            const ul = container.closest('.lunch-list');
+            const newLi = document.createElement('li');
+            newLi.className = 'lunch-item';
+            newLi.innerHTML = `
+                <span class="lunch-task-name">${taskName}</span>
+                <div class="task-right">
+                    <input type="text" class="lunch-id-input" value="${studentId}">
+                    <button class="delete-btn" title="移除">×</button>
+                </div>
+            `;
+            ul.insertBefore(newLi, container);
+
+            // 清空輸入框
+            nameInput.value = '';
+            idInput.value = '';
+            nameInput.setAttribute('value', '');
+            idInput.setAttribute('value', '');
+            nameInput.focus();
+            
+            saveState();
+        }
+    }
+
+    // 新增值日生邏輯
+    function addNewDuty(container) {
+        const input = container.querySelector('.new-duty-input');
+        const dutyText = input.value.trim();
+
+        if (dutyText) {
+            const list = container.closest('.duty-list');
+            const newDiv = document.createElement('div');
+            newDiv.className = 'duty-item';
+            newDiv.innerHTML = `
+                <input type="text" value="${dutyText}">
+                <button class="delete-btn" title="移除">×</button>
+            `;
+            list.insertBefore(newDiv, container);
+
+            // 清空輸入框
+            input.value = '';
+            input.setAttribute('value', '');
+            input.focus();
+            
+            saveState();
+        }
+    }
+</script>
+
+</body>
+</html>
