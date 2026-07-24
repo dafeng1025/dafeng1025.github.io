@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>歡樂幾何拼接 - 平板觸控最佳化版 (六年級：圓與扇形)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: #f8fafc;
+            touch-action: manipulation;
+        }
+        /* Canvas 網格背景風格 */
+        .canvas-container {
+            background-size: 24px 24px;
+            background-image: 
+                linear-gradient(to right, rgba(203, 213, 225, 0.5) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(203, 213, 225, 0.5) 1px, transparent 1px);
+        }
+        .canvas-container.dot-grid {
+            background-size: 24px 24px;
+            background-image: radial-gradient(circle, #94a3b8 2px, transparent 2px);
+        }
+        .canvas-container.no-grid {
+            background-image: none;
+            background-color: #ffffff;
+        }
+        canvas {
+            touch-action: none; /* 阻止 iOS/Android 平板拖曳時滑動網頁 */
+        }
+        .tool-btn.active {
+            background-color: #2563eb;
+            color: #ffffff;
+            border-color: #1d4ed8;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
+        }
+        /* 抽屜過渡動畫 */
+        .drawer-transition {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        /* 自訂滾動條 */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col font-sans overflow-hidden text-slate-800 select-none">
+
+    <!-- 1. 頂部快速狀態列 (Header, 高度 52px, 平板大觸控) -->
+    <header class="bg-white border-b border-slate-200 px-3 py-2 flex items-center justify-between shadow-sm z-30 shrink-0 h-[52px]">
+        <div class="flex items-center space-x-2">
+            <div class="bg-blue-600 text-white w-9 h-9 rounded-xl shadow flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-shapes text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-bold text-slate-800 flex items-center gap-1.5 leading-tight">
+                    歡樂幾何拼接
+                    <span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-medium hidden sm:inline-block">平板教學版</span>
+                </h1>
+            </div>
+        </div>
+
+        <!-- 中間快速設定：網格/磁吸/圓周率 -->
+        <div class="flex items-center bg-slate-100 p-1 rounded-xl gap-1 border border-slate-200 text-xs">
+            <!-- 網格選擇 -->
+            <div class="flex items-center px-1.5">
+                <select id="gridTypeSelect" class="bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 h-8">
+                    <option value="line">網格: 方格</option>
+                    <option value="dot">網格: 點陣</option>
+                    <option value="none">網格: 關閉</option>
+                </select>
+            </div>
+
+            <div class="h-5 w-px bg-slate-300"></div>
+
+            <!-- 自動磁吸 Toggle -->
+            <button id="snapToggleBtn" class="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-50 text-blue-700 font-semibold border border-blue-200 h-8 active:scale-95 transition">
+                <i class="fa-solid fa-magnet text-blue-600"></i>
+                <span id="snapText" class="hidden md:inline">磁吸 [開]</span>
+            </button>
+
+            <div class="h-5 w-px bg-slate-300"></div>
+
+            <!-- 圓周率切換器 -->
+            <button id="piToggleBtn" class="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 rounded-lg shadow-sm text-xs font-bold active:scale-95 transition h-8 flex items-center gap-1">
+                <i class="fa-solid fa-calculator text-xs"></i>
+                <span id="piLabel">π = 3.14</span>
+            </button>
+        </div>
+
+        <!-- 右側功能：經典題型與清空 -->
+        <div class="flex items-center space-x-2">
+            <!-- 經典題型快選按鈕 -->
+            <div class="relative">
+                <button id="templateMenuBtn" class="bg-emerald-600 active:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm h-8 transition">
+                    <i class="fa-solid fa-book-bookmark"></i>
+                    <span>經典題型</span>
+                    <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                </button>
+                <!-- 題型下拉式選單 -->
+                <div id="templateMenu" class="hidden absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50 text-xs text-slate-700">
+                    <div class="px-3 py-1 font-bold text-slate-400 text-[10px] uppercase tracking-wider border-b border-slate-100 mb-1">小六幾何單元經典範本</div>
+                    <button data-template="leaf" class="template-item w-full text-left px-3 py-2.5 hover:bg-emerald-50 active:bg-emerald-100 flex items-center gap-2 border-b border-slate-50">
+                        <span class="bg-emerald-100 text-emerald-800 font-bold w-5 h-5 rounded-full flex items-center justify-center text-[10px]">1</span> 葉片形 (兩四分之一圓重疊)
+                    </button>
+                    <button data-template="square-circle" class="template-item w-full text-left px-3 py-2.5 hover:bg-emerald-50 active:bg-emerald-100 flex items-center gap-2 border-b border-slate-50">
+                        <span class="bg-emerald-100 text-emerald-800 font-bold w-5 h-5 rounded-full flex items-center justify-center text-[10px]">2</span> 外方內圓與外圓內方
+                    </button>
+                    <button data-template="track" class="template-item w-full text-left px-3 py-2.5 hover:bg-emerald-50 active:bg-emerald-100 flex items-center gap-2 border-b border-slate-50">
+                        <span class="bg-emerald-100 text-emerald-800 font-bold w-5 h-5 rounded-full flex items-center justify-center text-[10px]">3</span> 操場跑道形 (矩形+雙半圓)
+                    </button>
+                    <button data-template="arch" class="template-item w-full text-left px-3 py-2.5 hover:bg-emerald-50 active:bg-emerald-100 flex items-center gap-2 border-b border-slate-50">
+                        <span class="bg-emerald-100 text-emerald-800 font-bold w-5 h-5 rounded-full flex items-center justify-center text-[10px]">4</span> 拱門/四角雕花形
+                    </button>
+                    <button data-template="taichi" class="template-item w-full text-left px-3 py-2.5 hover:bg-emerald-50 active:bg-emerald-100 flex items-center gap-2">
+                        <span class="bg-emerald-100 text-emerald-800 font-bold w-5 h-5 rounded-full flex items-center justify-center text-[10px]">5</span> 太極與雙半圓拼接
+                    </button>
+                </div>
+            </div>
+
+            <!-- 清空 -->
+            <button id="clearBtn" class="bg-slate-100 active:bg-red-50 hover:text-red-600 text-slate-600 text-xs font-medium w-8 h-8 rounded-xl border border-slate-200 transition flex items-center justify-center" title="清空畫布">
+                <i class="fa-solid fa-trash-can"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- 2. 主要畫布與雙側工具區 -->
+    <div class="flex-1 flex relative overflow-hidden">
+
+        <!-- ▌ 左側窄版工具條 (Left Tool Strip - 寬度 60px) -->
+        <aside class="w-[60px] bg-white border-r border-slate-200 flex flex-col items-center py-3 gap-3 shadow-sm z-20 shrink-0">
+            <!-- ➕ 快選新增圖形 Popover 按鈕 -->
+            <button id="addShapeMenuBtn" class="w-11 h-11 bg-blue-600 text-white rounded-2xl shadow-md active:scale-95 transition flex flex-col items-center justify-center text-xs gap-0.5">
+                <i class="fa-solid fa-plus text-base"></i>
+                <span class="text-[9px]">圖形</span>
+            </button>
+
+            <div class="w-8 h-px bg-slate-200 my-0.5"></div>
+
+            <!-- 操作工具 (48x48px 觸控友善按鈕) -->
+            <button id="toolSelect" class="tool-btn active w-11 h-11 border border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-0.5 text-slate-700 transition" title="選取移動">
+                <i class="fa-solid fa-arrow-pointer text-sm"></i>
+                <span class="text-[9px]">選取</span>
+            </button>
+
+            <button id="toolPen" class="tool-btn w-11 h-11 border border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-0.5 text-slate-700 transition" title="自由畫筆">
+                <i class="fa-solid fa-pen-nib text-sm"></i>
+                <span class="text-[9px]">畫筆</span>
+            </button>
+
+            <button id="toolText" class="tool-btn w-11 h-11 border border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-0.5 text-slate-700 transition" title="文字標註">
+                <i class="fa-solid fa-font text-sm"></i>
+                <span class="text-[9px]">標註</span>
+            </button>
+
+            <button id="toolEraser" class="tool-btn w-11 h-11 border border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-0.5 text-slate-700 transition" title="筆畫擦除">
+                <i class="fa-solid fa-eraser text-sm"></i>
+                <span class="text-[9px]">橡皮擦</span>
+            </button>
+
+            <!-- 右下角縮放/收折屬性面板按鈕 -->
+            <button id="toggleDrawerBtn" class="mt-auto w-11 h-11 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-2xl flex flex-col items-center justify-center gap-0.5 active:scale-95 transition" title="切換屬性與公式面板">
+                <i id="toggleDrawerIcon" class="fa-solid fa-sidebar text-sm"></i>
+                <span class="text-[9px]">面板</span>
+            </button>
+        </aside>
+
+        <!-- 圖形新增彈出面板 (Popover Modal) -->
+        <div id="shapePopover" class="hidden absolute left-[68px] top-3 bg-white border border-slate-200 rounded-2xl shadow-2xl p-3 z-40 w-64">
+            <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+                <span class="text-xs font-bold text-slate-700 flex items-center gap-1">
+                    <i class="fa-solid fa-shapes text-blue-500"></i> 點擊加入幾何圖形
+                </span>
+                <button id="closePopoverBtn" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <button data-add="circle" class="add-shape-btn bg-slate-50 hover:bg-blue-50 border border-slate-200 p-2.5 rounded-xl flex flex-col items-center gap-1 transition">
+                    <div class="w-7 h-7 rounded-full border-2 border-blue-500 bg-blue-100"></div>
+                    <span class="text-xs font-medium text-slate-700">完整圓形</span>
+                </button>
+
+                <button data-add="quarter" class="add-shape-btn bg-slate-50 hover:bg-blue-50 border border-slate-200 p-2.5 rounded-xl flex flex-col items-center gap-1 transition">
+                    <div class="w-7 h-7 border-2 border-amber-500 bg-amber-100 rounded-tl-full"></div>
+                    <span class="text-xs font-medium text-slate-700">1/4 扇形 (90°)</span>
+                </button>
+
+                <button data-add="semicircle" class="add-shape-btn bg-slate-50 hover:bg-blue-50 border border-slate-200 p-2.5 rounded-xl flex flex-col items-center gap-1 transition">
+                    <div class="w-7 h-3.5 border-2 border-purple-500 bg-purple-100 rounded-t-full mt-2"></div>
+                    <span class="text-xs font-medium text-slate-700">半圓 (180°)</span>
+                </button>
+
+                <button data-add="sector-60" class="add-shape-btn bg-slate-50 hover:bg-blue-50 border border-slate-200 p-2.5 rounded-xl flex flex-col items-center gap-1 transition">
+                    <div class="w-7 h-7 border-2 border-rose-500 bg-rose-100 text-[9px] font-bold text-rose-600 flex items-center justify-center" style="clip-path: polygon(100% 0, 0 0, 50% 100%);">60°</div>
+                    <span class="text-xs font-medium text-slate-700">扇形 (60°)</span>
+                </button>
+
+                <button data-add="square" class="add-shape-btn bg-slate-50 hover:bg-blue-50 border border-slate-200 p-2.5 rounded-xl flex flex-col items-center gap-1 transition">
+                    <div class="w-7 h-7 border-2 border-emerald-500 bg-emerald-100 rounded"></div>
+                    <span class="text-xs font-medium text-slate-700">正方形</span>
+                </button>
+
+                <button data-add="rect" class="add-shape-btn bg-slate-50 hover:bg-blue-50 border border-slate-200 p-2.5 rounded-xl flex flex-col items-center gap-1 transition">
+                    <div class="w-8 h-5 border-2 border-cyan-500 bg-cyan-100 rounded mt-1"></div>
+                    <span class="text-xs font-medium text-slate-700">長方形</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 畫筆/橡皮擦 浮動設定條 -->
+        <div id="drawingOptions" class="hidden absolute left-[68px] bottom-4 bg-white border border-slate-200 p-3 rounded-2xl shadow-xl z-30 flex items-center gap-3 text-xs">
+            <div class="flex items-center gap-1">
+                <span class="text-slate-500">筆色:</span>
+                <input type="color" id="penColor" value="#ef4444" class="w-7 h-7 rounded-lg cursor-pointer border-0">
+            </div>
+            <div class="flex items-center gap-1">
+                <span class="text-slate-500">粗細:</span>
+                <input type="range" id="penWidth" min="1" max="12" value="3" class="w-20 accent-blue-600">
+            </div>
+        </div>
+
+        <!-- ▌ 中央大畫布 (Canvas Container - 極大化區域) -->
+        <main class="flex-1 relative overflow-hidden bg-white">
+            <div id="canvasContainer" class="canvas-container relative w-full h-full">
+                <canvas id="mainCanvas" class="w-full h-full block"></canvas>
+
+                <!-- 磁吸輔助視覺紅點提示 -->
+                <div id="snapIndicator" class="hidden absolute w-5 h-5 rounded-full border-2 border-red-500 bg-red-300/40 -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-all duration-75 z-20 flex items-center justify-center">
+                    <div class="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
+                </div>
+
+                <!-- 底部簡要數據浮條 (Bottom Floating Card, 平板收折時仍可快速檢視) -->
+                <div id="bottomBar" class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white backdrop-blur px-4 py-2 rounded-2xl shadow-xl z-20 flex items-center gap-4 text-xs transition-all duration-300">
+                    <div class="flex items-center gap-2">
+                        <span id="bottomShapeTag" class="bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full font-medium">點擊圖形</span>
+                        <span id="bottomMetrics" class="font-mono text-amber-300">半徑: -- | 角度: --</span>
+                    </div>
+                    <button id="openFormulaDrawerBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1">
+                        詳解看板 <i class="fa-solid fa-chevron-right text-[9px]"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- ▌ 右側可折疊屬性與公式抽屜 (Collapsible Inspector Drawer - 寬度 310px) -->
+        <aside id="rightDrawer" class="w-[310px] bg-white border-l border-slate-200 flex flex-col p-3 gap-3 shadow-xl z-30 shrink-0 drawer-transition h-full overflow-y-auto">
+            
+            <!-- Drawer 頂部標題與關閉鈕 -->
+            <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+                <h2 class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-sliders text-indigo-600"></i> 圖形屬性與動態推導
+                </h2>
+                <button id="closeDrawerBtn" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <!-- 1. 圖層控制 (48x48 觸控按鈕) -->
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2.5">
+                <div class="text-[11px] font-bold text-slate-500 mb-1.5 flex items-center gap-1">
+                    <i class="fa-solid fa-layer-group text-blue-500"></i> 圖層順序調序
+                </div>
+                <div class="grid grid-cols-4 gap-1.5">
+                    <button id="layerFront" class="bg-white active:bg-blue-50 border border-slate-200 p-2 rounded-xl text-xs font-medium flex flex-col items-center justify-center gap-1 transition" title="置頂">
+                        <i class="fa-solid fa-angle-up text-blue-600 text-sm"></i>
+                        <span class="text-[10px]">置頂</span>
+                    </button>
+                    <button id="layerUp" class="bg-white active:bg-blue-50 border border-slate-200 p-2 rounded-xl text-xs font-medium flex flex-col items-center justify-center gap-1 transition" title="上移">
+                        <i class="fa-solid fa-chevron-up text-blue-600 text-xs"></i>
+                        <span class="text-[10px]">上移</span>
+                    </button>
+                    <button id="layerDown" class="bg-white active:bg-blue-50 border border-slate-200 p-2 rounded-xl text-xs font-medium flex flex-col items-center justify-center gap-1 transition" title="下移">
+                        <i class="fa-solid fa-chevron-down text-blue-600 text-xs"></i>
+                        <span class="text-[10px]">下移</span>
+                    </button>
+                    <button id="layerBack" class="bg-white active:bg-blue-50 border border-slate-200 p-2 rounded-xl text-xs font-medium flex flex-col items-center justify-center gap-1 transition" title="置底">
+                        <i class="fa-solid fa-angle-down text-blue-600 text-sm"></i>
+                        <span class="text-[10px]">置底</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. 外觀與旋轉微調 -->
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2.5 space-y-2.5">
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                        <label class="text-slate-500 mb-1 block text-[11px]">填滿顏色</label>
+                        <div class="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200">
+                            <input type="color" id="fillColor" value="#3b82f6" class="w-7 h-7 rounded-lg border-0 cursor-pointer">
+                            <span id="fillColorText" class="text-[10px] font-mono text-slate-600">#3b82f6</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-slate-500 mb-1 block text-[11px]">邊框顏色</label>
+                        <div class="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200">
+                            <input type="color" id="strokeColor" value="#1d4ed8" class="w-7 h-7 rounded-lg border-0 cursor-pointer">
+                            <span id="strokeColorText" class="text-[10px] font-mono text-slate-600">#1d4ed8</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 不透明度 Slider -->
+                <div class="space-y-1 text-xs">
+                    <div class="flex justify-between text-slate-600 text-[11px]">
+                        <span>透明度</span>
+                        <span id="opacityVal" class="font-bold text-blue-600">70%</span>
+                    </div>
+                    <input type="range" id="opacityRange" min="10" max="100" value="70" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                </div>
+
+                <!-- 旋轉角度 Slider -->
+                <div class="space-y-1 text-xs">
+                    <div class="flex justify-between text-slate-600 text-[11px]">
+                        <span>旋轉角度</span>
+                        <span id="angleVal" class="font-bold text-blue-600">0°</span>
+                    </div>
+                    <input type="range" id="angleRange" min="0" max="360" value="0" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                </div>
+
+                <!-- 翻轉 -->
+                <div class="flex gap-2 pt-1">
+                    <button id="flipHBtn" class="flex-1 bg-white border border-slate-200 py-1.5 rounded-xl text-xs font-medium text-slate-700 flex items-center justify-center gap-1 active:bg-slate-100">
+                        <i class="fa-solid fa-arrows-left-right text-xs"></i> 水平翻轉
+                    </button>
+                    <button id="flipVBtn" class="flex-1 bg-white border border-slate-200 py-1.5 rounded-xl text-xs font-medium text-slate-700 flex items-center justify-center gap-1 active:bg-slate-100">
+                        <i class="fa-solid fa-arrows-up-down text-xs"></i> 垂直翻轉
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. 幾何公式實時動態推導看板 -->
+            <div class="flex-1 bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-2xl p-3.5 shadow-xl border border-indigo-900 flex flex-col justify-between space-y-2">
+                <div>
+                    <div class="flex items-center justify-between border-b border-indigo-800/80 pb-2 mb-2">
+                        <span class="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-calculator text-amber-400"></i> 幾何公式實時看板
+                        </span>
+                        <span id="shapeTypeBadge" class="bg-indigo-800 text-indigo-200 text-[10px] px-2 py-0.5 rounded-full font-mono">未選取</span>
+                    </div>
+
+                    <!-- 數據卡 -->
+                    <div class="grid grid-cols-2 gap-2 text-xs mb-2">
+                        <div class="bg-indigo-900/50 border border-indigo-800/60 p-2 rounded-xl">
+                            <span class="text-indigo-300 text-[10px] block">半徑/寬 (r/W)</span>
+                            <span id="metricRadius" class="text-base font-bold font-mono text-amber-300">0 <span class="text-xs text-slate-400">px</span></span>
+                        </div>
+                        <div class="bg-indigo-900/50 border border-indigo-800/60 p-2 rounded-xl">
+                            <span class="text-indigo-300 text-[10px] block">圓心角 (θ)</span>
+                            <span id="metricAngle" class="text-base font-bold font-mono text-amber-300">0°</span>
+                        </div>
+                    </div>
+
+                    <!-- 公式推導展示 -->
+                    <div class="space-y-2 text-xs">
+                        <!-- 弧長/周長 -->
+                        <div class="bg-slate-800/80 border border-slate-700 p-2.5 rounded-xl">
+                            <div class="text-indigo-300 text-[11px] font-bold mb-1 flex items-center gap-1">
+                                <i class="fa-solid fa-ruler-horizontal text-cyan-400"></i> 弧長 / 周長 (L) 推導
+                            </div>
+                            <div id="arcFormula" class="font-mono text-[11px] text-slate-200 leading-relaxed">
+                                點擊圖形檢視弧長步驟
+                            </div>
+                        </div>
+
+                        <!-- 面積 -->
+                        <div class="bg-slate-800/80 border border-slate-700 p-2.5 rounded-xl">
+                            <div class="text-indigo-300 text-[11px] font-bold mb-1 flex items-center gap-1">
+                                <i class="fa-solid fa-chart-pie text-emerald-400"></i> 面積 (A) 推導
+                            </div>
+                            <div id="areaFormula" class="font-mono text-[11px] text-emerald-300 leading-relaxed">
+                                點擊圖形檢視面積步驟
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-[10px] text-indigo-300/70 text-center border-t border-indigo-900/50 pt-2">
+                    💡 提示：點擊右上角「π 切換」可變更 3.14 / π 算式
+                </div>
+            </div>
+
+        </aside>
+    </div>
+
+    <!-- 3. JavaScript 核心邏輯 -->
+    <script>
+        // --- 狀態庫 ---
+        const state = {
+            shapes: [],
+            selectedShape: null,
+            tool: 'select', // 'select', 'pen', 'text', 'eraser'
+            gridType: 'line', // 'line', 'dot', 'none'
+            snapEnabled: true,
+            usePiValue: true, // true: 3.14, false: 'π'
+            piVal: 3.14,
+            isDragging: false,
+            dragTarget: null,
+            dragOffset: { x: 0, y: 0 },
+            isDrawerOpen: true,
+            // 繪圖與文字
+            strokes: [],
+            currentStroke: null,
+            texts: []
+        };
+
+        // DOM 元素引用
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const snapIndicator = document.getElementById('snapIndicator');
+
+        // 選單與切換器
+        const gridTypeSelect = document.getElementById('gridTypeSelect');
+        const snapToggleBtn = document.getElementById('snapToggleBtn');
+        const snapText = document.getElementById('snapText');
+        const piToggleBtn = document.getElementById('piToggleBtn');
+        const piLabel = document.getElementById('piLabel');
+        const templateMenuBtn = document.getElementById('templateMenuBtn');
+        const templateMenu = document.getElementById('templateMenu');
+        const clearBtn = document.getElementById('clearBtn');
+
+        // Popover 與 Drawer
+        const addShapeMenuBtn = document.getElementById('addShapeMenuBtn');
+        const shapePopover = document.getElementById('shapePopover');
+        const closePopoverBtn = document.getElementById('closePopoverBtn');
+        const rightDrawer = document.getElementById('rightDrawer');
+        const toggleDrawerBtn = document.getElementById('toggleDrawerBtn');
+        const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+        const openFormulaDrawerBtn = document.getElementById('openFormulaDrawerBtn');
+
+        // 工具控制
+        const toolSelect = document.getElementById('toolSelect');
+        const toolPen = document.getElementById('toolPen');
+        const toolText = document.getElementById('toolText');
+        const toolEraser = document.getElementById('toolEraser');
+        const drawingOptions = document.getElementById('drawingOptions');
+        const penColor = document.getElementById('penColor');
+        const penWidth = document.getElementById('penWidth');
+
+        // 圖層與屬性
+        const layerFront = document.getElementById('layerFront');
+        const layerUp = document.getElementById('layerUp');
+        const layerDown = document.getElementById('layerDown');
+        const layerBack = document.getElementById('layerBack');
+        const fillColor = document.getElementById('fillColor');
+        const strokeColor = document.getElementById('strokeColor');
+        const opacityRange = document.getElementById('opacityRange');
+        const opacityVal = document.getElementById('opacityVal');
+        const angleRange = document.getElementById('angleRange');
+        const angleVal = document.getElementById('angleVal');
+        const flipHBtn = document.getElementById('flipHBtn');
+        const flipVBtn = document.getElementById('flipVBtn');
+
+        // 公式與簡要卡 DOM
+        const shapeTypeBadge = document.getElementById('shapeTypeBadge');
+        const metricRadius = document.getElementById('metricRadius');
+        const metricAngle = document.getElementById('metricAngle');
+        const arcFormula = document.getElementById('arcFormula');
+        const areaFormula = document.getElementById('areaFormula');
+        const bottomShapeTag = document.getElementById('bottomShapeTag');
+        const bottomMetrics = document.getElementById('bottomMetrics');
+
+        // --- Canvas 響應式調整 ---
+        function resizeCanvas() {
+            const rect = canvasContainer.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            render();
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- 幾何圖形類別 (Shape Class) ---
+        class Shape {
+            constructor(type, x, y, options = {}) {
+                this.id = 'shape_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+                this.type = type; // 'circle', 'quarter', 'semicircle', 'sector-60', 'square', 'rect'
+                this.x = x;
+                this.y = y;
+                this.radius = options.radius || 80;
+                this.width = options.width || (type === 'rect' ? 160 : 120);
+                this.height = options.height || 120;
+                this.angle = options.angle || 0;
+                this.sectorAngle = options.sectorAngle || (type === 'quarter' ? 90 : type === 'semicircle' ? 180 : type === 'sector-60' ? 60 : 360);
+                this.fillColor = options.fillColor || '#3b82f6';
+                this.strokeColor = options.strokeColor || '#1d4ed8';
+                this.strokeWidth = options.strokeWidth || 2;
+                this.opacity = options.opacity !== undefined ? options.opacity : 0.7;
+                this.flipH = false;
+                this.flipV = false;
+                this.zIndex = state.shapes.length;
+            }
+
+            // 取得用於磁吸的關鍵錨點 (圓心與頂點)
+            getSnapPoints() {
+                const points = [{ x: this.x, y: this.y, label: '圓心/中心' }];
+                if (this.type === 'square' || this.type === 'rect') {
+                    const w = this.width / 2;
+                    const h = this.height / 2;
+                    points.push(
+                        { x: this.x - w, y: this.y - h },
+                        { x: this.x + w, y: this.y - h },
+                        { x: this.x + w, y: this.y + h },
+                        { x: this.x - w, y: this.y + h }
+                    );
+                } else {
+                    const r = this.radius;
+                    points.push(
+                        { x: this.x + r, y: this.y },
+                        { x: this.x - r, y: this.y },
+                        { x: this.x, y: this.y + r },
+                        { x: this.x, y: this.y - r }
+                    );
+                }
+                return points;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate((this.angle * Math.PI) / 180);
+                ctx.scale(this.flipH ? -1 : 1, this.flipV ? -1 : 1);
+
+                ctx.globalAlpha = this.opacity;
+                ctx.fillStyle = this.fillColor;
+                ctx.strokeStyle = this.strokeColor;
+                ctx.lineWidth = this.strokeWidth;
+
+                ctx.beginPath();
+                if (this.type === 'circle') {
+                    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                } else if (this.type === 'square' || this.type === 'rect') {
+                    ctx.rect(-this.width / 2, -this.height / 2, this.width, this.height);
+                } else {
+                    const startRad = 0;
+                    const endRad = (this.sectorAngle * Math.PI) / 180;
+                    ctx.moveTo(0, 0);
+                    ctx.arc(0, 0, this.radius, startRad, endRad);
+                    ctx.closePath();
+                }
+
+                ctx.fill();
+                ctx.stroke();
+
+                // 若為選取狀態，繪製醒目選取框與圓心
+                if (state.selectedShape && state.selectedShape.id === this.id) {
+                    ctx.restore();
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.strokeStyle = '#ef4444';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+
+                    const b = this.getBounds();
+                    ctx.strokeRect(-b.w/2 - 6, -b.h/2 - 6, b.w + 12, b.h + 12);
+
+                    // 圓心紅點
+                    ctx.fillStyle = '#ef4444';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
+
+            getBounds() {
+                if (this.type === 'square' || this.type === 'rect') {
+                    return { w: this.width, h: this.height };
+                }
+                return { w: this.radius * 2, h: this.radius * 2 };
+            }
+
+            containsPoint(px, py) {
+                const dx = px - this.x;
+                const dy = py - this.y;
+                if (this.type === 'square' || this.type === 'rect') {
+                    return Math.abs(dx) <= this.width / 2 && Math.abs(dy) <= this.height / 2;
+                }
+                return (dx * dx + dy * dy) <= (this.radius * this.radius);
+            }
+        }
+
+        // --- STREAMING_CHUNK:Adding classic geometry templates loading methods... ---
+        // 載入經典範本
+        function loadTemplate(name) {
+            state.shapes = [];
+            state.strokes = [];
+            state.texts = [];
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+
+            if (name === 'leaf') {
+                const s = 160;
+                const sq = new Shape('square', cx, cy, { width: s, height: s, fillColor: '#e2e8f0', strokeColor: '#64748b', opacity: 0.5 });
+                const q1 = new Shape('quarter', cx - s/2, cy - s/2, { radius: s, fillColor: '#3b82f6', opacity: 0.5, angle: 0 });
+                const q2 = new Shape('quarter', cx + s/2, cy + s/2, { radius: s, fillColor: '#3b82f6', opacity: 0.5, angle: 180 });
+                state.shapes.push(sq, q1, q2);
+            } else if (name === 'square-circle') {
+                const r = 90;
+                const sq = new Shape('square', cx, cy, { width: r*2, height: r*2, fillColor: '#fef08a', strokeColor: '#ca8a04', opacity: 0.6 });
+                const cir = new Shape('circle', cx, cy, { radius: r, fillColor: '#60a5fa', strokeColor: '#1d4ed8', opacity: 0.6 });
+                state.shapes.push(sq, cir);
+            } else if (name === 'track') {
+                const w = 160, h = 100, r = h / 2;
+                const rect = new Shape('rect', cx, cy, { width: w, height: h, fillColor: '#fed7aa', strokeColor: '#ea580c', opacity: 0.6 });
+                const semi1 = new Shape('semicircle', cx - w/2, cy, { radius: r, fillColor: '#f43f5e', opacity: 0.5, angle: 90 });
+                const semi2 = new Shape('semicircle', cx + w/2, cy, { radius: r, fillColor: '#f43f5e', opacity: 0.5, angle: 270 });
+                state.shapes.push(rect, semi1, semi2);
+            } else if (name === 'arch') {
+                const s = 180, r = s / 2;
+                const sq = new Shape('square', cx, cy, { width: s, height: s, fillColor: '#e0e7ff', strokeColor: '#4338ca', opacity: 0.5 });
+                const q1 = new Shape('quarter', cx - s/2, cy - s/2, { radius: r, fillColor: '#ffffff', strokeColor: '#4338ca', opacity: 0.9, angle: 0 });
+                const q2 = new Shape('quarter', cx + s/2, cy - s/2, { radius: r, fillColor: '#ffffff', strokeColor: '#4338ca', opacity: 0.9, angle: 90 });
+                const q3 = new Shape('quarter', cx + s/2, cy + s/2, { radius: r, fillColor: '#ffffff', strokeColor: '#4338ca', opacity: 0.9, angle: 180 });
+                const q4 = new Shape('quarter', cx - s/2, cy + s/2, { radius: r, fillColor: '#ffffff', strokeColor: '#4338ca', opacity: 0.9, angle: 270 });
+                state.shapes.push(sq, q1, q2, q3, q4);
+            } else if (name === 'taichi') {
+                const R = 100, r = R / 2;
+                const bigCircle = new Shape('circle', cx, cy, { radius: R, fillColor: '#f1f5f9', strokeColor: '#0f172a', opacity: 1 });
+                const semiLeft = new Shape('semicircle', cx, cy, { radius: R, fillColor: '#0f172a', strokeColor: '#0f172a', opacity: 1, angle: 90 });
+                const s1 = new Shape('circle', cx, cy - r, { radius: r, fillColor: '#0f172a', strokeColor: '#0f172a', opacity: 1 });
+                const s2 = new Shape('circle', cx, cy + r, { radius: r, fillColor: '#ffffff', strokeColor: '#0f172a', opacity: 1 });
+                state.shapes.push(bigCircle, semiLeft, s1, s2);
+            }
+
+            state.selectedShape = state.shapes[0] || null;
+            updateInspector();
+            render();
+        }
+
+        // --- 自動磁吸計算 ---
+        function checkSnap(x, y, currentShape) {
+            if (!state.snapEnabled) return { x, y, snapped: false };
+
+            const SNAP_THRESHOLD = 14;
+            let snappedX = x;
+            let snappedY = y;
+            let minDistance = Infinity;
+            let bestPoint = null;
+
+            let targetPoints = [];
+
+            // 1. 網格磁吸
+            if (state.gridType === 'line' || state.gridType === 'dot') {
+                const gridSize = 24;
+                const gx = Math.round(x / gridSize) * gridSize;
+                const gy = Math.round(y / gridSize) * gridSize;
+                targetPoints.push({ x: gx, y: gy });
+            }
+
+            // 2. 其他圖形錨點磁吸
+            state.shapes.forEach(shape => {
+                if (currentShape && shape.id === currentShape.id) return;
+                targetPoints.push(...shape.getSnapPoints());
+            });
+
+            targetPoints.forEach(pt => {
+                const dist = Math.hypot(pt.x - x, pt.y - y);
+                if (dist < SNAP_THRESHOLD && dist < minDistance) {
+                    minDistance = dist;
+                    snappedX = pt.x;
+                    snappedY = pt.y;
+                    bestPoint = pt;
+                }
+            });
+
+            if (bestPoint) {
+                snapIndicator.style.left = `${bestPoint.x}px`;
+                snapIndicator.style.top = `${bestPoint.y}px`;
+                snapIndicator.classList.remove('hidden');
+            } else {
+                snapIndicator.classList.add('hidden');
+            }
+
+            return { x: snappedX, y: snappedY, snapped: !!bestPoint };
+        }
+
+        // --- STREAMING_CHUNK:Updating inspector formulas and math metrics dynamically... ---
+        // 實時更新屬性與公式推導看板
+        function updateInspector() {
+            const shape = state.selectedShape;
+
+            if (!shape) {
+                shapeTypeBadge.textContent = '未選取圖形';
+                metricRadius.innerHTML = `0 <span class="text-xs text-slate-400">px</span>`;
+                metricAngle.textContent = `0°`;
+                arcFormula.textContent = '請點擊畫布上的圖形檢視公式步驟';
+                areaFormula.textContent = '請點擊畫布上的圖形檢視公式步驟';
+                bottomShapeTag.textContent = '點擊圖形';
+                bottomMetrics.textContent = '半徑: -- | 角度: --';
+                return;
+            }
+
+            // 同步介面控制項目
+            fillColor.value = shape.fillColor;
+            strokeColor.value = shape.strokeColor;
+            opacityRange.value = shape.opacity * 100;
+            opacityVal.textContent = `${Math.round(shape.opacity * 100)}%`;
+            angleRange.value = shape.angle;
+            angleVal.textContent = `${shape.angle}°`;
+
+            const piText = state.usePiValue ? '3.14' : 'π';
+
+            if (shape.type === 'circle') {
+                shapeTypeBadge.textContent = '完整圓形';
+                const r = shape.radius;
+                metricRadius.innerHTML = `${r} <span class="text-xs text-slate-400">px</span>`;
+                metricAngle.textContent = `360°`;
+
+                const C = state.usePiValue ? (2 * 3.14 * r).toFixed(1) : `${2 * r}π`;
+                arcFormula.innerHTML = `周長 $C = 2 \\times \\pi \\times r$<br>$= 2 \\times ${piText} \\times ${r} = \\mathbf{${C}}$`;
+
+                const A = state.usePiValue ? (3.14 * r * r).toFixed(1) : `${r * r}π`;
+                areaFormula.innerHTML = `面積 $A = \\pi \\times r^2$<br>$= ${piText} \\times ${r}^2 = \\mathbf{${A}}$`;
+
+                bottomShapeTag.textContent = '圓形';
+                bottomMetrics.textContent = `r=${r}px | 周長:${C} | 面積:${A}`;
+
+            } else if (shape.type === 'square' || shape.type === 'rect') {
+                shapeTypeBadge.textContent = shape.type === 'square' ? '正方形' : '長方形';
+                const w = shape.width;
+                const h = shape.height;
+                metricRadius.innerHTML = `${w} × ${h}`;
+                metricAngle.textContent = `90°`;
+
+                const P = 2 * (w + h);
+                arcFormula.innerHTML = `周長 $P = 2 \\times (${w} + ${h}) = \\mathbf{${P}}$`;
+
+                const A = w * h;
+                areaFormula.innerHTML = `面積 $A = ${w} \\times ${h} = \\mathbf{${A}}$`;
+
+                bottomShapeTag.textContent = shape.type === 'square' ? '正方形' : '長方形';
+                bottomMetrics.textContent = `W:${w} H:${h} | 周長:${P} | 面積:${A}`;
+
+            } else {
+                shapeTypeBadge.textContent = `扇形 (${shape.sectorAngle}°)`;
+                const r = shape.radius;
+                const theta = shape.sectorAngle;
+
+                metricRadius.innerHTML = `${r} <span class="text-xs text-slate-400">px</span>`;
+                metricAngle.textContent = `${theta}°`;
+
+                const arcVal = state.usePiValue 
+                    ? (2 * 3.14 * r * (theta / 360)).toFixed(1) 
+                    : `${(2 * r * theta / 360).toFixed(1)}π`;
+                arcFormula.innerHTML = `弧長 $L = 2 \\times \\pi \\times r \\times \\frac{${theta}}{360}$<br>$= 2 \\times ${piText} \\times ${r} \\times \\frac{${theta}}{360} = \\mathbf{${arcVal}}$`;
+
+                const areaVal = state.usePiValue 
+                    ? (3.14 * r * r * (theta / 360)).toFixed(1) 
+                    : `${(r * r * theta / 360).toFixed(1)}π`;
+                areaFormula.innerHTML = `面積 $A = \\pi \\times r^2 \\times \\frac{${theta}}{360}$<br>$= ${piText} \\times ${r}^2 \\times \\frac{${theta}}{360} = \\mathbf{${areaVal}}$`;
+
+                bottomShapeTag.textContent = `扇形 ${theta}°`;
+                bottomMetrics.textContent = `r=${r}px | 弧長:${arcVal} | 面積:${areaVal}`;
+            }
+        }
+
+        // --- 繪製畫布循環 ---
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 依 zIndex 排序
+            state.shapes.sort((a, b) => a.zIndex - b.zIndex);
+            state.shapes.forEach(shape => shape.draw(ctx));
+
+            // 手繪筆跡
+            state.strokes.forEach(stroke => {
+                ctx.save();
+                ctx.strokeStyle = stroke.color;
+                ctx.lineWidth = stroke.width;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.beginPath();
+                stroke.points.forEach((pt, idx) => {
+                    if (idx === 0) ctx.moveTo(pt.x, pt.y);
+                    else ctx.lineTo(pt.x, pt.y);
+                });
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            // 文字標註
+            state.texts.forEach(txt => {
+                ctx.save();
+                ctx.font = '16px sans-serif';
+                ctx.fillStyle = '#0f172a';
+                ctx.fillText(txt.text, txt.x, txt.y);
+                ctx.restore();
+            });
+        }
+
+        // --- STREAMING_CHUNK:Binding user interface interactions and event handlers... ---
+        // Popover 切換
+        addShapeMenuBtn.addEventListener('click', () => {
+            shapePopover.classList.toggle('hidden');
+        });
+        closePopoverBtn.addEventListener('click', () => {
+            shapePopover.classList.add('hidden');
+        });
+
+        // 新增圖形
+        document.querySelectorAll('.add-shape-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const type = btn.getAttribute('data-add');
+                const cx = canvas.width / 2 + (Math.random() * 30 - 15);
+                const cy = canvas.height / 2 + (Math.random() * 30 - 15);
+
+                const newShape = new Shape(type, cx, cy);
+                state.shapes.push(newShape);
+                state.selectedShape = newShape;
+
+                shapePopover.classList.add('hidden');
+                updateInspector();
+                render();
+            });
+        });
+
+        // 工具切換
+        toolSelect.addEventListener('click', () => setTool('select'));
+        toolPen.addEventListener('click', () => setTool('pen'));
+        toolText.addEventListener('click', () => setTool('text'));
+        toolEraser.addEventListener('click', () => setTool('eraser'));
+
+        function setTool(toolName) {
+            state.tool = toolName;
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            if (toolName === 'select') toolSelect.classList.add('active');
+            if (toolName === 'pen') toolPen.classList.add('active');
+            if (toolName === 'text') toolText.classList.add('active');
+            if (toolName === 'eraser') toolEraser.classList.add('active');
+
+            drawingOptions.classList.toggle('hidden', toolName !== 'pen' && toolName !== 'eraser');
+        }
+
+        // Drawer 收折控制
+        function toggleDrawer(open) {
+            state.isDrawerOpen = open !== undefined ? open : !state.isDrawerOpen;
+            if (state.isDrawerOpen) {
+                rightDrawer.classList.remove('hidden');
+            } else {
+                rightDrawer.classList.add('hidden');
+            }
+            resizeCanvas();
+        }
+        toggleDrawerBtn.addEventListener('click', () => toggleDrawer());
+        closeDrawerBtn.addEventListener('click', () => toggleDrawer(false));
+        openFormulaDrawerBtn.addEventListener('click', () => toggleDrawer(true));
+
+        // 網格與磁吸切換
+        gridTypeSelect.addEventListener('change', (e) => {
+            state.gridType = e.target.value;
+            canvasContainer.className = `canvas-container relative w-full h-full ${
+                state.gridType === 'dot' ? 'dot-grid' : state.gridType === 'none' ? 'no-grid' : ''
+            }`;
+        });
+
+        snapToggleBtn.addEventListener('click', () => {
+            state.snapEnabled = !state.snapEnabled;
+            snapText.textContent = state.snapEnabled ? '磁吸 [開]' : '磁吸 [關]';
+            snapToggleBtn.classList.toggle('bg-blue-50', state.snapEnabled);
+            snapToggleBtn.classList.toggle('bg-slate-100', !state.snapEnabled);
+        });
+
+        piToggleBtn.addEventListener('click', () => {
+            state.usePiValue = !state.usePiValue;
+            piLabel.textContent = state.usePiValue ? 'π = 3.14' : '符號 π';
+            updateInspector();
+        });
+
+        // 範本選單
+        templateMenuBtn.addEventListener('click', () => {
+            templateMenu.classList.toggle('hidden');
+        });
+        document.querySelectorAll('.template-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const tmpl = e.currentTarget.getAttribute('data-template');
+                loadTemplate(tmpl);
+                templateMenu.classList.add('hidden');
+            });
+        });
+
+        clearBtn.addEventListener('click', () => {
+            if (confirm('確定要清空畫布嗎？')) {
+                state.shapes = [];
+                state.strokes = [];
+                state.texts = [];
+                state.selectedShape = null;
+                updateInspector();
+                render();
+            }
+        });
+
+        // 圖層調序
+        layerFront.addEventListener('click', () => {
+            if (!state.selectedShape) return;
+            const maxZ = Math.max(...state.shapes.map(s => s.zIndex), 0);
+            state.selectedShape.zIndex = maxZ + 1;
+            render();
+        });
+        layerBack.addEventListener('click', () => {
+            if (!state.selectedShape) return;
+            const minZ = Math.min(...state.shapes.map(s => s.zIndex), 0);
+            state.selectedShape.zIndex = minZ - 1;
+            render();
+        });
+        layerUp.addEventListener('click', () => {
+            if (!state.selectedShape) return;
+            state.selectedShape.zIndex += 1.5;
+            render();
+        });
+        layerDown.addEventListener('click', () => {
+            if (!state.selectedShape) return;
+            state.selectedShape.zIndex -= 1.5;
+            render();
+        });
+
+        // 屬性面板動態變更
+        fillColor.addEventListener('input', (e) => {
+            if (state.selectedShape) {
+                state.selectedShape.fillColor = e.target.value;
+                document.getElementById('fillColorText').textContent = e.target.value;
+                render();
+            }
+        });
+        strokeColor.addEventListener('input', (e) => {
+            if (state.selectedShape) {
+                state.selectedShape.strokeColor = e.target.value;
+                document.getElementById('strokeColorText').textContent = e.target.value;
+                render();
+            }
+        });
+        opacityRange.addEventListener('input', (e) => {
+            if (state.selectedShape) {
+                state.selectedShape.opacity = e.target.value / 100;
+                opacityVal.textContent = `${e.target.value}%`;
+                render();
+            }
+        });
+        angleRange.addEventListener('input', (e) => {
+            if (state.selectedShape) {
+                state.selectedShape.angle = parseInt(e.target.value);
+                angleVal.textContent = `${e.target.value}°`;
+                render();
+            }
+        });
+        flipHBtn.addEventListener('click', () => {
+            if (state.selectedShape) {
+                state.selectedShape.flipH = !state.selectedShape.flipH;
+                render();
+            }
+        });
+        flipVBtn.addEventListener('click', () => {
+            if (state.selectedShape) {
+                state.selectedShape.flipV = !state.selectedShape.flipV;
+                render();
+            }
+        });
+
+        // 統一座標取得
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function handlePointerDown(e) {
+            const pos = getPos(e);
+
+            if (state.tool === 'select') {
+                const hitShape = [...state.shapes].sort((a,b) => b.zIndex - a.zIndex).find(s => s.containsPoint(pos.x, pos.y));
+                if (hitShape) {
+                    state.selectedShape = hitShape;
+                    state.isDragging = true;
+                    state.dragTarget = hitShape;
+                    state.dragOffset = { x: pos.x - hitShape.x, y: pos.y - hitShape.y };
+                } else {
+                    state.selectedShape = null;
+                }
+                updateInspector();
+                render();
+
+            } else if (state.tool === 'pen') {
+                state.isDragging = true;
+                state.currentStroke = {
+                    color: penColor.value,
+                    width: parseInt(penWidth.value),
+                    points: [{ x: pos.x, y: pos.y }]
+                };
+                state.strokes.push(state.currentStroke);
+
+            } else if (state.tool === 'text') {
+                const inputTxt = prompt('請輸入要標註的文字/長度度量：', '10 cm');
+                if (inputTxt) {
+                    state.texts.push({ x: pos.x, y: pos.y, text: inputTxt });
+                    render();
+                }
+            } else if (state.tool === 'eraser') {
+                state.isDragging = true;
+                eraseStrokeAt(pos.x, pos.y);
+            }
+        }
+
+        function handlePointerMove(e) {
+            if (!state.isDragging) return;
+            const pos = getPos(e);
+
+            if (state.tool === 'select' && state.dragTarget) {
+                const targetX = pos.x - state.dragOffset.x;
+                const targetY = pos.y - state.dragOffset.y;
+
+                const snapResult = checkSnap(targetX, targetY, state.dragTarget);
+                state.dragTarget.x = snapResult.x;
+                state.dragTarget.y = snapResult.y;
+
+                render();
+            } else if (state.tool === 'pen' && state.currentStroke) {
+                state.currentStroke.points.push({ x: pos.x, y: pos.y });
+                render();
+            } else if (state.tool === 'eraser') {
+                eraseStrokeAt(pos.x, pos.y);
+            }
+        }
+
+        function handlePointerUp() {
+            state.isDragging = false;
+            state.dragTarget = null;
+            state.currentStroke = null;
+            snapIndicator.classList.add('hidden');
+        }
+
+        function eraseStrokeAt(x, y) {
+            const r = 18;
+            state.strokes = state.strokes.filter(stroke => {
+                return !stroke.points.some(pt => Math.hypot(pt.x - x, pt.y - y) < r);
+            });
+            render();
+        }
+
+        // 滑鼠與觸控事件綁定
+        canvas.addEventListener('mousedown', handlePointerDown);
+        canvas.addEventListener('mousemove', handlePointerMove);
+        canvas.addEventListener('mouseup', handlePointerUp);
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handlePointerDown(e);
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            handlePointerMove(e);
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', handlePointerUp);
+
+        // 初始化
+        resizeCanvas();
+        loadTemplate('leaf');
+    </script>
+</body>
+</html>
