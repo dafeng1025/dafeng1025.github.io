@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>正宗「胡搞小瑪莉」大型街機娛樂版</title>
+  <!-- Tailwind CSS for base utilities -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: VT323 for retro digital feel -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --wood-dark: #3a1c09;
+      --wood-light: #8b4513;
+      --wood-gold: #c5a059;
+      --led-red: #ff0033;
+      --led-off: #33000a;
+      --arcade-gold: #ffd700;
+      --screen-bg: #80c0f8;
+    }
+
+    body {
+      background-color: #0b0813;
+      background-image: radial-gradient(circle at center, #221538 0%, #080510 100%);
+      font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+      touch-action: manipulation;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      padding: 10px;
+      color: #fff;
+    }
+
+    /* Windows XP style Retro Cabinet Window Header */
+    .retro-window-bar {
+      background: linear-gradient(to right, #0058ee, #3a93ff, #0058ee);
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      padding: 4px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
+      font-size: 14px;
+      color: white;
+      text-shadow: 1px 1px 2px #000;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+    }
+
+    /* Arcade Cabinet Container */
+    .arcade-cabinet {
+      background: linear-gradient(135deg, #703816 0%, #3e1b07 50%, #633213 100%);
+      border: 8px solid #a46d38;
+      border-radius: 16px;
+      box-shadow: 0 0 35px rgba(0, 0, 0, 0.9), 0 0 15px rgba(255, 215, 0, 0.2);
+      width: 100%;
+      max-width: 480px;
+      padding: 12px;
+      position: relative;
+    }
+
+    /* Cabinet Screws Decoration */
+    .screw {
+      width: 12px;
+      height: 12px;
+      background: radial-gradient(circle at 30% 30%, #e0e0e0, #707070);
+      border-radius: 50%;
+      position: absolute;
+      box-shadow: inset -1px -1px 2px rgba(0,0,0,0.8), 1px 1px 2px rgba(0,0,0,0.5);
+    }
+    .screw::after {
+      content: '';
+      position: absolute;
+      top: 5px; left: 2px; width: 8px; height: 2px;
+      background: #444;
+      transform: rotate(45deg);
+    }
+
+    /* 7-Segment Digital Red LED Display */
+    .led-display-panel {
+      background: #110003;
+      border: 3px solid #441118;
+      border-radius: 6px;
+      padding: 4px 8px;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: inset 0 0 10px #000;
+    }
+
+    .led-digits {
+      font-family: 'VT323', monospace;
+      font-size: 28px;
+      color: var(--led-red);
+      text-shadow: 0 0 8px #ff0033, 0 0 15px #ff0000;
+      letter-spacing: 3px;
+      line-height: 1;
+    }
+
+    /* 24-Grid Matrix Outer Board */
+    .board-matrix {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      grid-template-rows: repeat(7, 1fr);
+      gap: 3px;
+      background: #1a0802;
+      border: 4px solid #8b4513;
+      border-radius: 10px;
+      padding: 4px;
+      position: relative;
+      aspect-ratio: 1 / 1;
+    }
+
+    /* Grid Cell Item */
+    .grid-cell {
+      background: #fff;
+      border: 1px solid #333;
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      font-weight: bold;
+      color: #000;
+      font-size: 11px;
+      padding: 1px;
+      overflow: hidden;
+    }
+
+    /* Active Running Light Glow */
+    .grid-cell.active-light {
+      background: #ffffaa;
+      box-shadow: 0 0 15px #ff0000, inset 0 0 10px #ff0000;
+      border: 2px solid #ff0000;
+    }
+
+    /* The Red LED Bulb Overlay on Each Grid Cell */
+    .led-bulb {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      background: var(--led-off);
+      border: 1px solid #111;
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      box-shadow: inset 0 0 2px #000;
+    }
+
+    .grid-cell.active-light .led-bulb {
+      background: var(--led-red);
+      box-shadow: 0 0 8px #ff0000, 0 0 15px #ff0000;
+    }
+
+    /* Central Graphic & JP Area */
+    .center-canvas-area {
+      grid-column: 2 / 7;
+      grid-row: 2 / 7;
+      background: var(--screen-bg);
+      border: 3px solid #ffcc00;
+      border-radius: 6px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* 8 Betting Odds Columns Row */
+    .bet-columns-container {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 3px;
+      background: #2a1105;
+      padding: 6px 4px;
+      border-radius: 8px;
+      border: 2px solid #8b4513;
+      margin-top: 8px;
+    }
+
+    .bet-column-item {
+      background: #fff;
+      border-radius: 4px;
+      border: 1px solid #666;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2px 1px;
+      position: relative;
+    }
+
+    .multiplier-badge {
+      background: #e67e22;
+      color: #fff;
+      font-weight: bold;
+      font-size: 11px;
+      width: 100%;
+      text-align: center;
+      border-radius: 2px 2px 0 0;
+      padding: 1px 0;
+    }
+
+    /* Arcade Physical Push Buttons */
+    .arcade-btn {
+      background: linear-gradient(to bottom, #ffffff 0%, #e0e0e0 50%, #888888 100%);
+      border: 2px solid #fff;
+      border-radius: 8px;
+      box-shadow: 0 6px 0 #333, 0 8px 10px rgba(0,0,0,0.5);
+      color: #000;
+      font-weight: bold;
+      font-size: 12px;
+      padding: 8px 2px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.05s ease;
+      position: relative;
+      user-select: none;
+    }
+
+    .arcade-btn:active, .arcade-btn.btn-pressed {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #222, 0 3px 5px rgba(0,0,0,0.5);
+    }
+
+    .arcade-btn.btn-start {
+      background: linear-gradient(to bottom, #00d2ff 0%, #0088cc 100%);
+      color: #fff;
+      text-shadow: 0 1px 2px #000;
+    }
+
+    .arcade-btn.btn-exit {
+      background: linear-gradient(to bottom, #f39c12 0%, #d35400 100%);
+      color: #fff;
+    }
+
+    .arcade-btn.btn-win-credit {
+      background: linear-gradient(to bottom, #e67e22 0%, #b95b10 100%);
+      color: #fff;
+    }
+
+    .arcade-btn.btn-double {
+      background: linear-gradient(to bottom, #2ecc71 0%, #27ae60 100%);
+      color: #fff;
+    }
+
+    /* Modal dialog */
+    .modal-overlay {
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(4px);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="w-full max-w-lg">
+    
+    <!-- Retro Window Frame -->
+    <div class="retro-window-bar">
+      <span>🎰 胡搞小瑪莉 (HU GAO LITTLE MARY)</span>
+      <div class="flex gap-1">
+        <button id="helpBtn" class="bg-yellow-500 hover:bg-yellow-600 text-black px-2 py-0.5 text-xs rounded font-bold">說明</button>
+        <button id="resetScoreBtn" class="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 text-xs rounded font-bold">重置</button>
+      </div>
+    </div>
+
+    <!-- Main Arcade Cabinet Frame -->
+    <div class="arcade-cabinet">
+      
+      <!-- Screw Decorations -->
+      <div class="screw" style="top: 8px; left: 8px;"></div>
+      <div class="screw" style="top: 8px; right: 8px;"></div>
+      <div class="screw" style="bottom: 8px; left: 8px;"></div>
+      <div class="screw" style="bottom: 8px; right: 8px;"></div>
+
+      <!-- Top LED Status Bar: WIN & CREDIT -->
+      <div class="flex justify-around items-center mb-2 bg-black/60 p-2 rounded-lg border border-amber-900">
+        
+        <!-- WIN LED -->
+        <div class="led-display-panel">
+          <span class="text-xs text-amber-400 font-bold tracking-widest mb-0.5">WIN (本次得分)</span>
+          <div id="winDisplay" class="led-digits">0000</div>
+        </div>
+
+        <!-- Speaker Grill Decoration -->
+        <div class="flex flex-col gap-1 items-center opacity-70">
+          <div class="w-12 h-1 bg-amber-900/80 rounded-full"></div>
+          <div class="w-12 h-1 bg-amber-900/80 rounded-full"></div>
+          <div class="w-12 h-1 bg-amber-900/80 rounded-full"></div>
+          <div class="w-12 h-1 bg-amber-900/80 rounded-full"></div>
+        </div>
+
+        <!-- CREDIT LED -->
+        <div class="led-display-panel">
+          <span class="text-xs text-amber-400 font-bold tracking-widest mb-0.5">CREDIT (總點數)</span>
+          <div id="creditDisplay" class="led-digits">0050</div>
+        </div>
+
+      </div>
+
+      <!-- 24-Grid Outer Ring Light Matrix -->
+      <div id="boardMatrix" class="board-matrix">
+        <!-- 24 Grid Cells dynamically rendered + Center Canvas -->
+        <div id="centerArea" class="center-canvas-area">
+          <canvas id="maryCanvas" width="280" height="210" class="w-full h-full object-cover"></canvas>
+          
+          <!-- Central JP & Double-Up LED Indicator -->
+          <div class="absolute inset-0 flex flex-col justify-between items-center p-2 pointer-events-none">
+            
+            <!-- JP Title Banner -->
+            <div class="bg-red-600/90 text-yellow-300 font-black px-3 py-0.5 rounded border border-yellow-300 text-sm shadow-md animate-pulse">
+              胡搞小瑪莉 JP
+            </div>
+
+            <!-- Double-up Gamble LED digit (1-9) -->
+            <div class="bg-black/80 border-2 border-red-600 rounded px-3 py-1 shadow-inner flex flex-col items-center">
+              <span class="text-[9px] text-yellow-400 font-bold">比大小 1-9</span>
+              <div id="gambleDigit" class="led-digits text-2xl">0</div>
+            </div>
+
+            <!-- Message Notification Bar -->
+            <div id="statusMessage" class="bg-black/90 text-yellow-300 text-xs px-2 py-0.5 rounded border border-amber-500 font-bold text-center w-full truncate">
+              請按下【投幣/押注】後按【開始】!
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- 8 Betting Columns (Odds, Icons, LED Bet Amount) -->
+      <div id="betColumns" class="bet-columns-container">
+        <!-- Dynamically injected 8 fruit betting columns -->
+      </div>
+
+      <!-- Arcade Push Button Control Panel -->
+      <div class="mt-3 bg-black/90 p-3 rounded-lg border-2 border-amber-600 flex flex-col gap-2">
+        
+        <!-- Function Buttons Row (Top) -->
+        <div class="grid grid-cols-6 gap-1.5">
+          <button id="btnExit" class="arcade-btn btn-exit">離開<br><span class="text-[9px]">(清空)</span></button>
+          <button id="btnWinToCredit" class="arcade-btn btn-win-credit">WIN↔CREDIT<br><span class="text-[9px]">(洗分)</span></button>
+          <button id="btnSmall" class="arcade-btn">小<br><span class="text-[10px] text-red-600 font-black">1-4</span></button>
+          <button id="btnDoubleBet" class="arcade-btn btn-double">DOUBLE<br><span class="text-[9px]">(雙倍)</span></button>
+          <button id="btnBig" class="arcade-btn">大<br><span class="text-[10px] text-red-600 font-black">6-9</span></button>
+          <button id="btnStart" class="arcade-btn btn-start">開始<br><span class="text-[9px]">(START)</span></button>
+        </div>
+
+        <!-- Fruit Push Buttons Row (Bottom 8 Buttons) -->
+        <div id="fruitButtonsRow" class="grid grid-cols-8 gap-1">
+          <!-- Dynamically generated 8 fruit push buttons -->
+        </div>
+
+      </div>
+
+      <!-- Keyboard Shortcut Helper Bar -->
+      <div class="text-[10px] text-amber-200/70 text-center mt-2 flex justify-between px-1">
+        <span>鍵盤: [1-8]押注 | [Space]開始 | [C]洗分 | [A/D]大小</span>
+        <button id="coinBtn" class="bg-yellow-500 hover:bg-yellow-400 text-black px-1.5 rounded font-bold">🪙 投幣(+10)</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Help & Rule Modal -->
+  <div id="helpModal" class="hidden fixed inset-0 z-50 modal-overlay flex justify-center items-center p-4">
+    <div class="bg-amber-950 border-4 border-amber-500 rounded-xl max-w-md w-full p-5 text-white shadow-2xl relative">
+      <h3 class="text-xl font-bold text-yellow-400 mb-3 text-center border-b border-amber-700 pb-2">🎰 胡搞小瑪莉 規則說明</h3>
+      <ul class="text-sm space-y-2 text-amber-100 list-disc pl-5">
+        <li><b>押注</b>：點擊下方水果按鈕或按數字鍵 1-8 進行投幣押注。</li>
+        <li><b>開始旋轉</b>：點擊【開始】或按【空白鍵】，跑馬燈燈亮進行順時針旋轉。</li>
+        <li><b>勝負結算</b>：跑燈停在押注水果上，獲得 (押注點數 × 倍率) 得分！</li>
+        <li><b>特別獎 (ONCE MORE)</b>：停在 ONCE MORE 時，自動觸發額外送燈 1~3 次！</li>
+        <li><b>JP 大獎 (BAR)</b>：停在 BAR 時可得 50 倍高額獎金並觸發狂暴閃光！</li>
+        <li><b>比大小翻倍 (Gamble)</b>：中獎後可押【小 1-4】或【大 6-9】，猜中得分翻倍！猜錯得分歸零！</li>
+        <li><b>洗分</b>：按【WIN ↔ CREDIT】將贏得分數儲存入總點數。</li>
+      </ul>
+      <div class="mt-5 text-center">
+        <button id="closeHelpBtn" class="bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-6 py-2 rounded-lg">我知道了，開始玩！</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Implementation -->
+  <script>
+    
+    // ----------------------------------------------------
+    // 1. Web Audio API Arcade Sound Engine (Zero external files)
+    // ----------------------------------------------------
+    class ArcadeSoundEngine {
+      constructor() {
+        this.ctx = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioCtx();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      // Coin In Sound
+      playCoin() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(987.77, now); // B5
+        osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+
+      // Running Light Tick Sound
+      playTick(pitchShift = 1) {
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(300 * pitchShift, now);
+        osc.frequency.exponentialRampToValueAtTime(100 * pitchShift, now + 0.04);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.04);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.04);
+      }
+
+      // Button Press Click
+      playButton() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.05);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.05);
+      }
+
+      // Win Chime Melody
+      playWinFanfare() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C5, E5, G5, C6, E6
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+          gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.08 + 0.15);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.08);
+          osc.stop(now + idx * 0.08 + 0.15);
+        });
+      }
+
+      // JP Jackpot Super Fanfare
+      playJackpot() {
+        this.init();
+        const now = this.ctx.currentTime;
+        for (let i = 0; i < 12; i++) {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          const freq = 400 + (i % 4) * 200 + i * 30;
+          osc.frequency.setValueAtTime(freq, now + i * 0.06);
+          gain.gain.setValueAtTime(0.25, now + i * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.06 + 0.1);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.06);
+          osc.stop(now + i * 0.06 + 0.1);
+        }
+      }
+
+      // Gamble Digit Jumping Beep
+      playGambleBeep() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800 + Math.random() * 400, now);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.03);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.03);
+      }
+
+      // Lose Sound
+      playLose() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.linearRampToValueAtTime(80, now + 0.35);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      }
+    }
+
+    const soundEngine = new ArcadeSoundEngine();
+
+
+    // ----------------------------------------------------
+    // 2. 8 Fruit Categories and Multipliers
+    // ----------------------------------------------------
+    const FRUIT_ITEMS = [
+      { id: 'apple',      name: '蘋果', icon: '🍎', payout: 5,  color: '#ff3333' },
+      { id: 'watermelon', name: '西瓜', icon: '🍉', payout: 20, color: '#00cc44' },
+      { id: 'star',       name: '雙星', icon: '⭐', payout: 30, color: '#ffcc00' },
+      { id: 'seven',      name: '77',   icon: '7️⃣', payout: 40, color: '#ff0055' },
+      { id: 'bar',        name: 'BAR',  icon: '🍫', payout: 50, color: '#d4af37' },
+      { id: 'bell',       name: '鈴鐺', icon: '🔔', payout: 20, color: '#f39c12' },
+      { id: 'orange',     name: '橙子', icon: '🍊', payout: 15, color: '#ff6600' },
+      { id: 'cherry',     name: '櫻桃', icon: '🍒', payout: 2,  color: '#e74c3c' }
+    ];
+
+    // ----------------------------------------------------
+    // 3. 24 Outer Ring Light Matrix Map (Clockwise 0 ~ 23)
+    // ----------------------------------------------------
+    const RING_LAYOUT = [
+      // Top Row (0..6)
+      { id: 0,  fruit: 'orange',     name: '橙子', icon: '🍊' },
+      { id: 1,  fruit: 'bell',       name: '鈴鐺', icon: '🔔' },
+      { id: 2,  fruit: 'cherry',     name: '櫻桃', icon: '🍒' },
+      { id: 3,  fruit: 'bar',        name: 'BAR',  icon: '🍫' },
+      { id: 4,  fruit: 'apple',      name: '蘋果', icon: '🍎' },
+      { id: 5,  fruit: 'cherry',     name: '櫻桃', icon: '🍒' },
+      { id: 6,  fruit: 'watermelon', name: '西瓜', icon: '🍉' },
+      // Right Column (7..11)
+      { id: 7,  fruit: 'cherry',     name: '櫻桃', icon: '🍒' },
+      { id: 8,  fruit: 'once_more',  name: '送燈', icon: '🔄' },
+      { id: 9,  fruit: 'apple',      name: '蘋果', icon: '🍎' },
+      { id: 10, fruit: 'cherry',     name: '櫻桃', icon: '🍒' },
+      { id: 11, fruit: 'orange',     name: '橙子', icon: '🍊' },
+      // Bottom Row (12..18)
+      { id: 12, fruit: 'bell',       name: '鈴鐺', icon: '🔔' },
+      { id: 13, fruit: 'cherry',     name: '櫻桃', icon: '🍒' },
+      { id: 14, fruit: 'seven',      name: '77',   icon: '7️⃣' },
+      { id: 15, fruit: 'apple',      name: '蘋果', icon: '🍎' },
+      { id: 16, fruit: 'watermelon', name: '西瓜', icon: '🍉' },
+      { id: 17, fruit: 'cherry',     name: '櫻桃', icon: '🍒' },
+      { id: 18, fruit: 'apple',      name: '蘋果', icon: '🍎' },
+      // Left Column (19..23)
+      { id: 19, fruit: 'star',       name: '雙星', icon: '⭐' },
+      { id: 20, fruit: 'once_more',  name: '送燈', icon: '🔄' },
+      { id: 21, fruit: 'apple',      name: '蘋果', icon: '🍎' },
+      { id: 22, fruit: 'cherry',     name: '櫻桃', icon: '🍒' },
+      { id: 23, fruit: 'watermelon', name: '西瓜', icon: '🍉' }
+    ];
+
+
+    // ----------------------------------------------------
+    // 4. Game Global State Variables
+    // ----------------------------------------------------
+    let gameState = {
+      credit: 50,
+      win: 0,
+      currentLightIndex: 0,
+      isSpinning: false,
+      isGambling: false,
+      bets: {
+        apple: 0, watermelon: 0, star: 0, seven: 0,
+        bar: 0, bell: 0, orange: 0, cherry: 0
+      }
+    };
+
+    // Load LocalStorage High Credit
+    const savedCredit = localStorage.getItem('hu_gao_mary_credit');
+    if (savedCredit !== null) {
+      gameState.credit = parseInt(savedCredit, 10) || 50;
+    }
+
+    // ----------------------------------------------------
+    // 5. Render Central Parody Canvas Art
+    // ----------------------------------------------------
+    function drawCenterCanvas() {
+      const canvas = document.getElementById('maryCanvas');
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+
+      // Sky Background
+      ctx.fillStyle = '#68b0f8';
+      ctx.fillRect(0, 0, w, h);
+
+      // Clouds
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(40, 30, 18, 0, Math.PI * 2);
+      ctx.arc(60, 25, 22, 0, Math.PI * 2);
+      ctx.arc(80, 30, 18, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Green Warp Pipe (Bottom Right)
+      ctx.fillStyle = '#00aa00';
+      ctx.fillRect(w - 70, h - 60, 50, 60);
+      ctx.fillStyle = '#00dd00';
+      ctx.fillRect(w - 75, h - 75, 60, 18);
+      ctx.strokeStyle = '#004400';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(w - 75, h - 75, 60, 18);
+
+      // Parody Mario Character (Right)
+      ctx.fillStyle = '#d35400'; // Overalls
+      ctx.fillRect(w - 130, h - 110, 35, 50);
+      ctx.fillStyle = '#f39c12'; // Shirt
+      ctx.fillRect(w - 135, h - 125, 45, 20);
+      // Face
+      ctx.fillStyle = '#ffcc99';
+      ctx.beginPath();
+      ctx.arc(w - 110, h - 140, 18, 0, Math.PI * 2);
+      ctx.fill();
+      // Nose & Mustache
+      ctx.fillStyle = '#d35400';
+      ctx.beginPath();
+      ctx.arc(w - 120, h - 138, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#331100';
+      ctx.fillRect(w - 128, h - 134, 20, 6);
+      // Red Cap
+      ctx.fillStyle = '#e74c3c';
+      ctx.fillRect(w - 130, h - 162, 35, 14);
+
+      // Flying Turtle / Koopa Parody (Left)
+      ctx.fillStyle = '#f1c40f';
+      ctx.beginPath();
+      ctx.arc(70, h - 110, 20, 0, Math.PI * 2);
+      ctx.fill();
+      // Green Shell
+      ctx.fillStyle = '#2ecc71';
+      ctx.beginPath();
+      ctx.arc(55, h - 110, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#27ae60';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Fireballs
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.arc(120, 70, 10, 0, Math.PI * 2);
+      ctx.arc(140, 50, 8, 0, Math.PI * 2);
+      ctx.arc(160, 65, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f1c40f';
+      ctx.beginPath();
+      ctx.arc(120, 70, 5, 0, Math.PI * 2);
+      ctx.arc(140, 50, 4, 0, Math.PI * 2);
+      ctx.arc(160, 65, 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+
+    // ----------------------------------------------------
+    // 6. UI Rendering & Matrix Grid Setup
+    // ----------------------------------------------------
+    function initMatrixBoard() {
+      const board = document.getElementById('boardMatrix');
+      const centerArea = document.getElementById('centerArea');
+      board.innerHTML = '';
+      board.appendChild(centerArea);
+
+      // Map 24 Ring items to 7x7 Grid Positions
+      // Top Row (Row 1): Cols 1 to 7 -> Indices 0..6
+      // Right Col (Col 7): Rows 2 to 6 -> Indices 7..11
+      // Bottom Row (Row 7): Cols 6 to 1 -> Indices 12..18
+      // Left Col (Col 1): Rows 6 to 2 -> Indices 19..23
+      const gridCoords = [
+        { r: 1, c: 1 }, { r: 1, c: 2 }, { r: 1, c: 3 }, { r: 1, c: 4 }, { r: 1, c: 5 }, { r: 1, c: 6 }, { r: 1, c: 7 },
+        { r: 2, c: 7 }, { r: 3, c: 7 }, { r: 4, c: 7 }, { r: 5, c: 7 }, { r: 6, c: 7 },
+        { r: 7, c: 7 }, { r: 7, c: 6 }, { r: 7, c: 5 }, { r: 7, c: 4 }, { r: 7, c: 3 }, { r: 7, c: 2 }, { r: 7, c: 1 },
+        { r: 6, c: 1 }, { r: 5, c: 1 }, { r: 4, c: 1 }, { r: 3, c: 1 }, { r: 2, c: 1 }
+      ];
+
+      RING_LAYOUT.forEach((item, idx) => {
+        const coord = gridCoords[idx];
+        const cell = document.createElement('div');
+        cell.className = 'grid-cell';
+        cell.id = `grid-cell-${idx}`;
+        cell.style.gridRow = coord.r;
+        cell.style.gridColumn = coord.c;
+
+        cell.innerHTML = `
+          <div class="led-bulb"></div>
+          <span class="text-base leading-none">${item.icon}</span>
+          <span class="text-[9px] scale-90 font-bold">${item.name}</span>
+        `;
+        board.appendChild(cell);
+      });
+
+      updateActiveLight(0);
+    }
+
+    // ----------------------------------------------------
+    // 7. Render 8 Fruit Betting Columns & Buttons
+    // ----------------------------------------------------
+    function initBettingSection() {
+      const betColumns = document.getElementById('betColumns');
+      const fruitButtonsRow = document.getElementById('fruitButtonsRow');
+      betColumns.innerHTML = '';
+      fruitButtonsRow.innerHTML = '';
+
+      FRUIT_ITEMS.forEach((fruit, idx) => {
+        // Upper Column Display (Multiplier, Icon, LED Bet Display)
+        const col = document.createElement('div');
+        col.className = 'bet-column-item';
+        col.innerHTML = `
+          <div class="multiplier-badge">${fruit.payout}</div>
+          <div class="text-lg my-0.5">${fruit.icon}</div>
+          <div class="led-display-panel w-full py-0.5 px-0 text-center">
+            <div id="bet-led-${fruit.id}" class="led-digits text-sm">00</div>
+          </div>
+        `;
+        betColumns.appendChild(col);
+
+        // Lower Physical Push Button
+        const btn = document.createElement('button');
+        btn.className = 'arcade-btn flex flex-col items-center justify-center p-1';
+        btn.innerHTML = `
+          <span class="text-base">${fruit.icon}</span>
+          <span class="text-[9px] font-bold">${fruit.name}</span>
+          <span class="text-[8px] text-gray-500">[${idx+1}]</span>
+        `;
+        btn.onclick = () => addBet(fruit.id);
+        fruitButtonsRow.appendChild(btn);
+      });
+    }
+
+    // Update active ring light display
+    function updateActiveLight(index) {
+      document.querySelectorAll('.grid-cell').forEach(c => c.classList.remove('active-light'));
+      const activeCell = document.getElementById(`grid-cell-${index}`);
+      if (activeCell) {
+        activeCell.classList.add('active-light');
+      }
+      gameState.currentLightIndex = index;
+    }
+
+    // Update LED Displays (WIN, CREDIT, Bets)
+    function updateDisplays() {
+      document.getElementById('creditDisplay').textContent = String(gameState.credit).padStart(4, '0');
+      document.getElementById('winDisplay').textContent = String(gameState.win).padStart(4, '0');
+
+      FRUIT_ITEMS.forEach(f => {
+        const betLed = document.getElementById(`bet-led-${f.id}`);
+        if (betLed) {
+          betLed.textContent = String(gameState.bets[f.id]).padStart(2, '0');
+        }
+      });
+
+      // Save credit
+      localStorage.setItem('hu_gao_mary_credit', gameState.credit);
+    }
+
+    // Message Display
+    function showMessage(msg) {
+      document.getElementById('statusMessage').textContent = msg;
+    }
+
+
+    // Add Bet to fruit
+    function addBet(fruitId) {
+      if (gameState.isSpinning || gameState.isGambling) return;
+      if (gameState.credit <= 0) {
+        showMessage('點數不足！請點擊【投幣】獲得點數！');
+        soundEngine.playLose();
+        return;
+      }
+
+      gameState.credit--;
+      gameState.bets[fruitId]++;
+      soundEngine.playCoin();
+      updateDisplays();
+      showMessage(`押注 【${FRUIT_ITEMS.find(f=>f.id===fruitId).name}】 +1`);
+    }
+
+    // Double Bet on all current bets
+    function doubleBets() {
+      if (gameState.isSpinning || gameState.isGambling) return;
+      let totalCurrentBet = Object.values(gameState.bets).reduce((a, b) => a + b, 0);
+      if (totalCurrentBet === 0) {
+        showMessage('請先下注後再使用雙倍！');
+        return;
+      }
+      if (gameState.credit < totalCurrentBet) {
+        showMessage('點數不足以進行全額雙倍押注！');
+        soundEngine.playLose();
+        return;
+      }
+
+      for (let f in gameState.bets) {
+        gameState.credit -= gameState.bets[f];
+        gameState.bets[f] *= 2;
+      }
+      soundEngine.playCoin();
+      updateDisplays();
+      showMessage('所有押注點數已翻倍！');
+    }
+
+    // Clear Bets
+    function clearBets() {
+      if (gameState.isSpinning || gameState.isGambling) return;
+      let totalBet = Object.values(gameState.bets).reduce((a, b) => a + b, 0);
+      gameState.credit += totalBet;
+      for (let f in gameState.bets) {
+        gameState.bets[f] = 0;
+      }
+      soundEngine.playButton();
+      updateDisplays();
+      showMessage('押注已清空，點數退還。');
+    }
+
+    // Win to Credit (洗分/轉存得分)
+    function winToCredit() {
+      if (gameState.isSpinning) return;
+      if (gameState.win > 0) {
+        gameState.credit += gameState.win;
+        showMessage(`洗分成功！轉存 +${gameState.win} 點入 CREDIT！`);
+        gameState.win = 0;
+        soundEngine.playWinFanfare();
+        updateDisplays();
+      } else {
+        showMessage('目前沒有贏得分數可轉存。');
+      }
+    }
+
+    // ----------------------------------------------------
+    // 8. Main Spin Logic & Deceleration Physics
+    // ----------------------------------------------------
+    function startSpin() {
+      if (gameState.isSpinning) return;
+
+      const totalBet = Object.values(gameState.bets).reduce((a, b) => a + b, 0);
+      if (totalBet === 0) {
+        showMessage('請先下注水果項目！');
+        soundEngine.playLose();
+        return;
+      }
+
+      gameState.isSpinning = true;
+      gameState.isGambling = false;
+      document.getElementById('gambleDigit').textContent = '0';
+      showMessage('跑燈高速旋轉中... 祝您大獎！');
+
+      // Random target index (24 positions)
+      const targetIndex = Math.floor(Math.random() * 24);
+      let currentIndex = gameState.currentLightIndex;
+
+      // Calculate total steps (at least 3 full loops = 72 steps + remainder)
+      const totalSteps = 72 + ((targetIndex - currentIndex + 24) % 24);
+      let stepCount = 0;
+      let delay = 30; // Start fast
+
+      function step() {
+        currentIndex = (currentIndex + 1) % 24;
+        updateActiveLight(currentIndex);
+        stepCount++;
+
+        // Pitch shift sound as it spins
+        const pitch = 1 + (stepCount / totalSteps) * 0.5;
+        soundEngine.playTick(pitch);
+
+        if (stepCount < totalSteps) {
+          // Easing deceleration curve
+          if (stepCount > totalSteps - 15) {
+            delay += 25; // Slow down drastically near the end
+          } else if (stepCount > totalSteps - 30) {
+            delay += 10;
+          }
+          setTimeout(step, delay);
+        } else {
+          // Stopped at target
+          handleSpinResult(targetIndex);
+        }
+      }
+
+      step();
+    }
+
+    // ----------------------------------------------------
+    // 9. Handle Spin Result & Special Bonus (ONCE MORE / JP)
+    // ----------------------------------------------------
+    function handleSpinResult(hitIndex) {
+      gameState.isSpinning = false;
+      const hitGrid = RING_LAYOUT[hitIndex];
+
+      if (hitGrid.fruit === 'once_more') {
+        // Special ONCE MORE Bonus (Send lights!)
+        showMessage('🎁 恭喜中【ONCE MORE】！免費加送燈！');
+        soundEngine.playWinFanfare();
+
+        setTimeout(() => {
+          triggerBonusSpin();
+        }, 1200);
+        return;
+      }
+
+      // Check Fruit Win
+      const fruitConfig = FRUIT_ITEMS.find(f => f.id === hitGrid.fruit);
+      const betAmount = gameState.bets[hitGrid.fruit] || 0;
+
+      if (betAmount > 0) {
+        const wonScore = betAmount * fruitConfig.payout;
+        gameState.win += wonScore;
+
+        if (hitGrid.fruit === 'bar') {
+          showMessage(`🔥 爆款大獎！中 BAR 獲得 ${wonScore} 分！`);
+          soundEngine.playJackpot();
+        } else {
+          showMessage(`🎉 恭喜中【${fruitConfig.name}】！贏得 ${wonScore} 分！`);
+          soundEngine.playWinFanfare();
+        }
+      } else {
+        showMessage(`停在【${hitGrid.name}】，可惜沒押注中。`);
+        soundEngine.playLose();
+      }
+
+      updateDisplays();
+    }
+
+    // Bonus Free Spin for ONCE MORE
+    function triggerBonusSpin() {
+      const extraHits = Math.floor(Math.random() * 2) + 1; // 1 ~ 2 extra random hits
+      let hitCount = 0;
+
+      function doExtraHit() {
+        const bonusIndex = Math.floor(Math.random() * 24);
+        updateActiveLight(bonusIndex);
+        soundEngine.playWinFanfare();
+
+        const hitGrid = RING_LAYOUT[bonusIndex];
+        const fruitConfig = FRUIT_ITEMS.find(f => f.id === hitGrid.fruit);
+        if (fruitConfig && gameState.bets[fruitConfig.id] > 0) {
+          const wonScore = gameState.bets[fruitConfig.id] * fruitConfig.payout;
+          gameState.win += wonScore;
+          showMessage(`🎁 送燈停在【${fruitConfig.name}】！加贏 ${wonScore} 分！`);
+        }
+
+        updateDisplays();
+        hitCount++;
+        if (hitCount < extraHits) {
+          setTimeout(doExtraHit, 1000);
+        }
+      }
+
+      doExtraHit();
+    }
+
+
+    // ----------------------------------------------------
+    // 10. Double-Up Gamble Mode (比大小 1-4 小 / 6-9 大)
+    // ----------------------------------------------------
+    function gamble(choice) { // 'small' (1-4) or 'big' (6-9)
+      if (gameState.isSpinning || gameState.isGambling) return;
+      if (gameState.win <= 0) {
+        showMessage('必須有 WIN 分數才能進行比大小！');
+        soundEngine.playLose();
+        return;
+      }
+
+      gameState.isGambling = true;
+      showMessage(`比大小開啟！已押【${choice === 'small' ? '小 1-4' : '大 6-9'}】...`);
+
+      let jumps = 0;
+      const totalJumps = 20;
+
+      const timer = setInterval(() => {
+        // Random digit 1 to 9
+        const randomNum = Math.floor(Math.random() * 9) + 1;
+        document.getElementById('gambleDigit').textContent = randomNum;
+        soundEngine.playGambleBeep();
+        jumps++;
+
+        if (jumps >= totalJumps) {
+          clearInterval(timer);
+          // Final digit result
+          const finalNum = Math.floor(Math.random() * 9) + 1;
+          document.getElementById('gambleDigit').textContent = finalNum;
+
+          const isSmall = finalNum >= 1 && finalNum <= 4;
+          const isBig = finalNum >= 6 && finalNum <= 9;
+          const isWin = (choice === 'small' && isSmall) || (choice === 'big' && isBig);
+
+          if (isWin) {
+            gameState.win *= 2;
+            showMessage(`🎯 猜中了！數字是 ${finalNum}！得分翻倍為 ${gameState.win}！`);
+            soundEngine.playWinFanfare();
+          } else {
+            showMessage(`❌ 猜錯了！數字是 ${finalNum}，得分歸零！`);
+            gameState.win = 0;
+            soundEngine.playLose();
+          }
+
+          gameState.isGambling = false;
+          updateDisplays();
+        }
+      }, 60);
+    }
+
+    // ----------------------------------------------------
+    // 11. Event Listener & Keyboard Shortcuts Binding
+    // ----------------------------------------------------
+    function setupEventListeners() {
+      document.getElementById('btnStart').onclick = startSpin;
+      document.getElementById('btnExit').onclick = clearBets;
+      document.getElementById('btnDoubleBet').onclick = doubleBets;
+      document.getElementById('btnWinToCredit').onclick = winToCredit;
+      document.getElementById('btnSmall').onclick = () => gamble('small');
+      document.getElementById('btnBig').onclick = () => gamble('big');
+
+      document.getElementById('coinBtn').onclick = () => {
+        gameState.credit += 10;
+        soundEngine.playCoin();
+        updateDisplays();
+        showMessage('投幣成功！ Credit +10');
+      };
+
+      // Modal
+      const helpModal = document.getElementById('helpModal');
+      document.getElementById('helpBtn').onclick = () => helpModal.classList.remove('hidden');
+      document.getElementById('closeHelpBtn').onclick = () => helpModal.classList.add('hidden');
+
+      // Reset
+      document.getElementById('resetScoreBtn').onclick = () => {
+        gameState.credit = 50;
+        gameState.win = 0;
+        for (let f in gameState.bets) gameState.bets[f] = 0;
+        updateDisplays();
+        showMessage('點數已重置為 50 點！');
+      };
+
+      // Keyboard Shortcuts
+      window.addEventListener('keydown', (e) => {
+        if (e.key >= '1' && e.key <= '8') {
+          const fruitIdx = parseInt(e.key, 10) - 1;
+          if (FRUIT_ITEMS[fruitIdx]) {
+            addBet(FRUIT_ITEMS[fruitIdx].id);
+          }
+        } else if (e.code === 'Space') {
+          e.preventDefault();
+          startSpin();
+        } else if (e.key.toLowerCase() === 'c' || e.key === 'Enter') {
+          winToCredit();
+        } else if (e.key.toLowerCase() === 'a') {
+          gamble('small');
+        } else if (e.key.toLowerCase() === 'd') {
+          gamble('big');
+        } else if (e.key.toLowerCase() === 'm') {
+          document.getElementById('coinBtn').click();
+        }
+      });
+    }
+
+    // ----------------------------------------------------
+    // 12. App Initialization on Page Load
+    // ----------------------------------------------------
+    window.onload = function() {
+      drawCenterCanvas();
+      initMatrixBoard();
+      initBettingSection();
+      setupEventListeners();
+      updateDisplays();
+    };
+  </script>
+</body>
+</html>
